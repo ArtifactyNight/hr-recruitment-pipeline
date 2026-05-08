@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { ChevronRightIcon, ClockIcon, TagIcon } from "lucide-react";
+import { ChevronRightIcon, ClockIcon, Star, TagIcon } from "lucide-react";
 
 type TrackerCardProps = {
   row: TrackerApplicant;
@@ -65,6 +65,7 @@ export function TrackerCard({
                     scoreBadgeClass(score),
                   )}
                 >
+                  <Star />
                   {score != null ? score.toFixed(1) : "—"}
                 </Badge>
                 {!isOverlay ? (

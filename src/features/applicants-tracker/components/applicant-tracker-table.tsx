@@ -69,7 +69,7 @@ export function ApplicantTrackerTable({
             list.map((row) => (
               <TableRow
                 key={row.id}
-                className="cursor-pointer"
+                className="cursor-pointer rounded-lg"
                 onClick={() => onRowClick(row)}
               >
                 <TableCell>

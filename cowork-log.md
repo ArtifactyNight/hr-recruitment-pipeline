@@ -1,3 +1,8 @@
+### 2026-05-09 - Jobs table: no column sort, stable row order on status toggle
+**Prompt:** remove sort and dont reorder when toggle status
+**Output:** Dropped TanStack sort UI/state (`getSortedRowModel`, header sort buttons); plain headers + `enableSorting: false` table-wide. GET `/jobs` list `orderBy` changed from `updatedAt` to `createdAt` desc so PATCH `isActive` (bumps `updatedAt`) no longer jumps the row after refetch.
+**Edited:** `src/features/jobs/components/jobs-table.tsx`, `src/server/job-routes.ts`, `cowork-log.md`
+
 ### 2026-05-09 - Applicant tracker header: Tabs for view switch
 **Prompt:** applicant-tracker-header ToggleGroup → use tabs
 **Output:** Replaced `ToggleGroup`/`ToggleGroupItem` with `Tabs`/`TabsList`/`TabsTrigger` from `@/components/ui/tabs`; controlled `value={view}` + `onViewChange` guard for board/table; kept border + trigger spacing/icons.
@@ -109,3 +114,8 @@
 **Prompt:** add kanban card, here's layout i need (reference: avatar left, name+role, score top-right, source+date row, tags pills)
 **Output:** `TrackerCard`: แถวบน `Avatar` size lg สีพื้นหลัง `#FFCC00` + อักษรย่อ, ชื่อหนา + ตำแหน่งรอง, Badge คะแนน + ปุ่มเปิด; แถวกลาง `Tag` + แหล่งที่มา / `Clock` + วันที่ (`EEE, d MMM` locale th); แถวล่าง pill `row.tags` (`rounded-full bg-muted`) เมื่อมีแท็ก
 **Edited:** `src/features/applicants-tracker/components/tracker-card.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Jobs CRUD table (JD + สถานะ)
+**Prompt:** CRUD Jobs (Table) - job description - toggle status (switch) using shadcn table
+**Output:** เพิ่ม `jobRoutes` (`GET/POST /api/jobs`, `PATCH/DELETE /api/jobs/:id`) พร้อม auth แบบ Clerk, ลบ JD ได้เมื่อไม่มีผู้สมัคร (409 ถ้ามี). UI: `JobsPageClient` + TanStack Table (`JobsTable`) คอลัมน์ชื่อ/รายละเอียดงาน/จำนวนผู้สมัคร/Switch รับสมัคร/แก้ไข-ลบ; `JobFormDialog` สร้าง-แก้ title+description+requirements+Switch; invalidate `jobs-admin` และ `screener-jobs` หลัง mutation.
+**Edited:** `src/server/job-routes.ts`, `src/server/elysia-app.ts`, `src/features/jobs/lib/job-description-schema.ts`, `src/features/jobs/components/jobs-table.tsx`, `job-form-dialog.tsx`, `jobs-page-client.tsx`, `src/app/(dashboard)/jobs/page.tsx`, `cowork-log.md`
