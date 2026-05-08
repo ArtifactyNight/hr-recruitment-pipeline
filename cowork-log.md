@@ -1,3 +1,7 @@
+### 2026-05-09 - Tracker dialog prefill fix
+**Prompt:** fix candidate name and email don't set to dialog
+**Output:** Moved draft name/email off Zustand into `ResumeScreener` state (`trackerDraftName`/`trackerDraftEmail`); opening runs `openTrackerDraft()` that copies trimmed `detectedName`/`detectedEmail` then `setTrackerDialogOpen(true)`. Zustand store only tracks `trackerDialogOpen` + JD dialog. `AddToTrackerDialog` is fully controlled via props (no stale subscription vs Radix open lifecycle).
+
 ### 2026-05-09 - Screener feature split + Zustand dialogs
 **Prompt:** split component to feature based; use zustand for dialog
 **Output:** Split `resume-screener.tsx` into `resume-screener-header`, `job-description-dialog` (open button + `useQuery` for JD when dialog open), `add-to-tracker-dialog`, `resume-input-card`, `screener-report-panel`, `fit-row`, `report-bullet-block`; helpers/types in `lib/resume-screener-utils.ts`; `store/screener-dialog-store.ts` holds `jdDialogOpen`, tracker open + name/email + `openTrackerDialog`. `ResumeScreener` composes pieces and keeps jobs/evaluate/add mutations.

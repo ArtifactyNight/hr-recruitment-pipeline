@@ -1,16 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import { trimItems } from "@/features/screener/lib/resume-screener-utils";
-import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
 import {
   AlertTriangleIcon,
   CheckIcon,
@@ -30,6 +23,7 @@ type ScreenerReportPanelProps = {
   analyzePending: boolean;
   trackerJobId: string | null;
   onCopyReport: () => void;
+  onRequestOpenTracker: () => void;
 };
 
 export function ScreenerReportPanel({
@@ -39,16 +33,11 @@ export function ScreenerReportPanel({
   analyzePending,
   trackerJobId,
   onCopyReport,
+  onRequestOpenTracker,
 }: ScreenerReportPanelProps) {
-  const openTrackerDialog = useScreenerDialogStore((s) => s.openTrackerDialog);
-
   return (
-    <Card className="border-border/80">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-        <CardTitle className="text-base">รายงานความเหมาะสม</CardTitle>
-        <CardDescription className="text-xs">ขั้นตอน 2 จาก 2</CardDescription>
-      </CardHeader>
-      <CardContent aria-busy={analyzePending} className="min-h-[20rem]">
+    <Card>
+      <CardContent aria-busy={analyzePending}>
         {analyzePending ? (
           <div
             className="flex flex-col items-center justify-center gap-4 py-16 text-center h-full"
@@ -117,9 +106,7 @@ export function ScreenerReportPanel({
                 <Button
                   type="button"
                   size="sm"
-                  onClick={() =>
-                    openTrackerDialog(detectedName, detectedEmail)
-                  }
+                  onClick={() => onRequestOpenTracker()}
                   disabled={!report || !trackerJobId}
                 >
                   + เพิ่มใน Tracker
@@ -171,8 +158,7 @@ export function ScreenerReportPanel({
               </div>
               {trimItems(report.suggestedQuestions).length === 0 ? (
                 <p className="mt-3 text-sm text-muted-foreground">
-                  ยังไม่มีคำถามแนะนำ (ลองรันวิเคราะห์อีกครั้งหรือปรับเนื้อหา
-                  CV)
+                  ยังไม่มีคำถามแนะนำ (ลองรันวิเคราะห์อีกครั้งหรือปรับเนื้อหา CV)
                 </p>
               ) : (
                 <ol className="mt-3 list-decimal space-y-2 ps-5 text-sm">

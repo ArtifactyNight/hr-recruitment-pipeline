@@ -3,13 +3,7 @@
 import { useRef, type ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { UploadIcon, SparklesIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon, SparklesIcon, UploadIcon } from "lucide-react";
 
 type JobOption = { id: string; title: string };
 
@@ -60,10 +54,9 @@ export function ResumeInputCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <Card className="border-border/80">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+    <Card>
+      <CardHeader>
         <CardTitle className="text-base">Resume และตำแหน่ง</CardTitle>
-        <CardDescription className="text-xs">ขั้นตอน 1 จาก 2</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Field>
@@ -108,9 +101,7 @@ export function ResumeInputCard({
               โหลดรายการตำแหน่งไม่สำเร็จ ลองรีเฟรชหน้าหรือลองใหม่ภายหลัง
             </p>
           ) : null}
-          {!jobsQueryLoading &&
-          !jobsQueryError &&
-          jobs.length === 0 ? (
+          {!jobsQueryLoading && !jobsQueryError && jobs.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               ยังไม่มี JD ในระบบ
               เพิ่มตำแหน่งในเมนูตำแหน่งงานก่อนจึงจะวิเคราะห์ได้
@@ -120,9 +111,7 @@ export function ResumeInputCard({
 
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label htmlFor="screener-resume">
-              Resume (PDF หรือวางข้อความ)
-            </Label>
+            <Label htmlFor="screener-resume">Resume (PDF หรือวางข้อความ)</Label>
             <div className="flex flex-wrap items-center gap-2">
               {selectedFile ? (
                 <span className="max-w-[min(100%,12rem)] truncate text-xs text-muted-foreground">

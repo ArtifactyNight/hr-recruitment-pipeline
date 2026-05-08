@@ -22,12 +22,13 @@ export function ResumeScreener() {
   const [trackerJobId, setTrackerJobId] = useState<string | null>(null);
   const [detectedName, setDetectedName] = useState("");
   const [detectedEmail, setDetectedEmail] = useState("");
+  const [trackerDraftName, setTrackerDraftName] = useState("");
+  const [trackerDraftEmail, setTrackerDraftEmail] = useState("");
 
+  const trackerDialogOpen = useScreenerDialogStore((s) => s.trackerDialogOpen);
   const setTrackerDialogOpen = useScreenerDialogStore(
     (s) => s.setTrackerDialogOpen,
   );
-  const trackerName = useScreenerDialogStore((s) => s.trackerName);
-  const trackerEmail = useScreenerDialogStore((s) => s.trackerEmail);
 
   const jobsQuery = useQuery({
     queryKey: ["screener-jobs"],
@@ -159,13 +160,19 @@ export function ResumeScreener() {
     }
   }, [detectedEmail, detectedName, report]);
 
+  const openTrackerDraft = useCallback(() => {
+    setTrackerDraftName(detectedName.trim());
+    setTrackerDraftEmail(detectedEmail.trim());
+    setTrackerDialogOpen(true);
+  }, [detectedEmail, detectedName, setTrackerDialogOpen]);
+
   const onSubmitTracker = useCallback(async () => {
     if (!report || !trackerJobId) {
       toast.message("ต้องมีผลวิเคราะห์ก่อน");
       return;
     }
-    const nameT = trackerName.trim();
-    const emailT = trackerEmail.trim();
+    const nameT = trackerDraftName.trim();
+    const emailT = trackerDraftEmail.trim();
     if (!nameT || !emailT) {
       toast.message("กรอกชื่อและอีเมล");
       return;
@@ -187,9 +194,9 @@ export function ResumeScreener() {
     addMutation,
     report,
     resumeText,
-    trackerEmail,
+    trackerDraftEmail,
+    trackerDraftName,
     trackerJobId,
-    trackerName,
     setTrackerDialogOpen,
   ]);
 
@@ -230,6 +237,12 @@ export function ResumeScreener() {
     <div className="flex flex-col gap-6">
       <ResumeScreenerHeader selectedJobId={selectedJobId} />
       <AddToTrackerDialog
+        open={trackerDialogOpen}
+        onOpenChange={setTrackerDialogOpen}
+        name={trackerDraftName}
+        email={trackerDraftEmail}
+        onNameChange={setTrackerDraftName}
+        onEmailChange={setTrackerDraftEmail}
         isSaving={addMutation.isPending}
         onSubmit={onSubmitTracker}
       />
@@ -257,6 +270,7 @@ export function ResumeScreener() {
           analyzePending={analyzePending}
           trackerJobId={trackerJobId}
           onCopyReport={onCopyReport}
+          onRequestOpenTracker={openTrackerDraft}
         />
       </div>
     </div>
