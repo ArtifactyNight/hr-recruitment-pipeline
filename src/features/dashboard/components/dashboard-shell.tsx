@@ -23,7 +23,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <SiteHeader>
           <DashboardBreadcrumb />
         </SiteHeader>
-        <div className="flex flex-1 flex-col bg-muted">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col bg-muted">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -13,6 +13,7 @@ import {
   patchEventDetails,
 } from "@/server/google-calendar/google-calendar-service";
 import { findDbInterviewConflict } from "@/server/interview-scheduling-lib";
+import { ensureInterviewerIdsFromEmails } from "@/server/interviewer-email-lib";
 
 const TZ = "Asia/Bangkok";
 
@@ -122,6 +123,32 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       }),
     },
   )
+  .get("/suggested-emails", async ({ set }) => {
+    const { userId } = await auth();
+    if (!userId) {
+      set.status = 401;
+      return { error: "ต้องเข้าสู่ระบบ" };
+    }
+    const dbUser = await ensureUserFromClerkId(userId);
+    const rows = await prisma.interviewer.findMany({
+      where: {
+        interviews: {
+          some: { organizerUserId: dbUser.id },
+        },
+      },
+      select: { email: true, name: true },
+      orderBy: { email: "asc" },
+    });
+    const seen = new Map<string, { email: string; name: string }>();
+    for (const r of rows) {
+      const key = r.email.trim().toLowerCase();
+      if (key.length === 0) continue;
+      if (!seen.has(key)) {
+        seen.set(key, { email: r.email.trim(), name: r.name });
+      }
+    }
+    return { suggestions: Array.from(seen.values()) };
+  })
   .get(
     "/:id",
     async ({ params, set }) => {
@@ -208,14 +235,26 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         return { error: "ไม่พบผู้สมัคร" };
       }
 
-      const interviewerIds = body.interviewerIds ?? [];
-      if (interviewerIds.length > 0) {
-        const n = await prisma.interviewer.count({
-          where: { id: { in: interviewerIds } },
-        });
-        if (n !== interviewerIds.length) {
+      let interviewerIds: Array<string>;
+      if (body.interviewerEmails !== undefined) {
+        const resolved = await ensureInterviewerIdsFromEmails(
+          body.interviewerEmails,
+        );
+        if (!resolved.ok) {
           set.status = 400;
-          return { error: "interviewerIds มีรหัสไม่ถูกต้อง" };
+          return { error: resolved.error };
+        }
+        interviewerIds = resolved.ids;
+      } else {
+        interviewerIds = body.interviewerIds ?? [];
+        if (interviewerIds.length > 0) {
+          const n = await prisma.interviewer.count({
+            where: { id: { in: interviewerIds } },
+          });
+          if (n !== interviewerIds.length) {
+            set.status = 400;
+            return { error: "interviewerIds มีรหัสไม่ถูกต้อง" };
+          }
         }
       }
 
@@ -348,6 +387,8 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         scheduledAt: t.String(),
         durationMinutes: t.Optional(t.Number()),
         interviewerIds: t.Optional(t.Array(t.String())),
+        /** ถ้าส่งฟิลด์นี้ จะใช้แทน `interviewerIds` (อีเมลหลายคน → upsert เป็น Interviewer) */
+        interviewerEmails: t.Optional(t.Array(t.String())),
         extraNotes: t.Optional(t.String()),
         descriptionOverride: t.Optional(t.String()),
       }),
@@ -364,7 +405,8 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       const hasChange =
         body.scheduledAt !== undefined ||
         body.durationMinutes !== undefined ||
-        body.interviewerIds !== undefined;
+        body.interviewerIds !== undefined ||
+        body.interviewerEmails !== undefined;
       if (!hasChange) {
         set.status = 400;
         return { error: "ไม่มีข้อมูลที่แก้ไข" };
@@ -458,18 +500,29 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         }
       }
 
-      const interviewerIds =
-        body.interviewerIds !== undefined
-          ? body.interviewerIds
-          : existing.interviewers.map((i) => i.id);
-      if (interviewerIds.length > 0) {
-        const n = await prisma.interviewer.count({
-          where: { id: { in: interviewerIds } },
-        });
-        if (n !== interviewerIds.length) {
+      let interviewerIds: Array<string>;
+      if (body.interviewerEmails !== undefined) {
+        const resolved = await ensureInterviewerIdsFromEmails(
+          body.interviewerEmails,
+        );
+        if (!resolved.ok) {
           set.status = 400;
-          return { error: "interviewerIds ไม่ถูกต้อง" };
+          return { error: resolved.error };
         }
+        interviewerIds = resolved.ids;
+      } else if (body.interviewerIds !== undefined) {
+        interviewerIds = body.interviewerIds;
+        if (interviewerIds.length > 0) {
+          const n = await prisma.interviewer.count({
+            where: { id: { in: interviewerIds } },
+          });
+          if (n !== interviewerIds.length) {
+            set.status = 400;
+            return { error: "interviewerIds ไม่ถูกต้อง" };
+          }
+        }
+      } else {
+        interviewerIds = existing.interviewers.map((i) => i.id);
       }
 
       const ivRows = await prisma.interviewer.findMany({
@@ -540,6 +593,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         scheduledAt: t.Optional(t.String()),
         durationMinutes: t.Optional(t.Number()),
         interviewerIds: t.Optional(t.Array(t.String())),
+        interviewerEmails: t.Optional(t.Array(t.String())),
       }),
     },
   )

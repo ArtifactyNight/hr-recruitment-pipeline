@@ -1,3 +1,43 @@
+### [2026-05-09] - Interviews: ลบ `calendar-sidebar`
+**Prompt:** remove `src/components/calendar/calendar-sidebar.tsx`
+**Output:** ลบไฟล์; `/interviews` ย้าย Google connect / applicant prefill ไปแถบ `border-b` ด้านบนการ์ดปฏิทิน
+**Edited:** `interviews-calendar-client.tsx`, ลบ `calendar-sidebar.tsx`, `cowork-log.md`
+
+### [2026-05-09] - Interviews: ใช้ `@/components/calendar` แทน big-calendar
+**Prompt:** replace current calendar to `src/components/calendar` (layout ตัวอย่าง Sidebar + Header + Controls + View)
+**Output:** `/interviews` ใช้ `CalendarSidebar` + `CalendarHeader`/`CalendarControls`/`CalendarView`; ไม่ซ้อน `SidebarProvider` (dashboard มี `AppSidebar`) เลย `hideSidebarTrigger`. `calendar-store` `customEvents` sync จาก API; query range ผูก `currentWeekStart`. คลิกการ์ด (`interviewId`) เปิด manage เมื่อลิงก์ Google แล้ว. ลบ `interviews-calendar-header.tsx`. แก้ `initialFocus` บน `Calendar`; lucide `Code2` แทน `Github`
+**Edited:** `interviews-calendar-client.tsx`, `calendar-sidebar.tsx`, `calendar-header.tsx`, `calendar-controls.tsx`, `calendar-view.tsx`, `calendar-store.ts`, `mock-data/events.ts`, `dashboard-shell.tsx`, `create-event-dialog.tsx`, `schedule-popover.tsx`, ลบ `interviews-calendar-header.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interviews: อีเมลผู้สัมภาษณ์ — MultipleSelector (creatable)
+**Prompt:** use `@/components/ui/multiple-selector` creatable example for email
+**Output:** `InterviewerEmailsField` ใช้ `MultipleSelector` แบบควบคุม `value`/`onChange` เป็น `Option[]` ↔ string คั่นด้วย comma เหมือนเดิม; `options` จาก `suggested-emails` (`อีเมล — ชื่อ`); `creatable` สำหรับอีเมลใหม่; `handleOptionsChange` กรองเฉพาะ `isValidInterviewerEmail` + `emailsFromInterviewerField` dedupe; `emptyIndicator` ไทยโหลด/ไม่พบ; `Label` + `inputProps.id` สำหรับ a11y
+**Edited:** `src/features/interviews/components/interviewer-emails-field.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interviews: อีเมลผู้สัมภาษณ์ — shadcn Popover+Command + Badge chip
+**Prompt:** use shadcn combobox and chip
+**Output:** เอา Base UI `Combobox` ออกจาก `InterviewerEmailsField`; ใช้ pattern **Popover + Button (role=combobox) + Command** แบบ combobox-demo, ค้นหาคุมเอง (`shouldFilter={false}` + `CommandInput` controlled); รายการ = กลุ่มเพิ่มอีเมลใหม่ (อีเมลที่พิมพ์ครบและถูกต้อง) + กลุ่ม suggested-emails; **chip** ใช้สไตล์ `badgeVariants` + ปุ่มลบ (ไม่มี `chip` ใน registry radix-nova). ยัง serialize `value` เป็น string comma
+**Edited:** `src/features/interviews/components/interviewer-emails-field.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interviews: ฟิลด์อีเมลผู้สัมภาษณ์เป็น Combobox (chips)
+**Prompt:** use combobox instead of textarea
+**Output:** `InterviewerEmailsField` ใช้ Base UI multi `Combobox` + `ComboboxChips`/`ComboboxChip`/`ComboboxChipsInput` จาก `components/ui/combobox.tsx`; รายการ dropdown = อีเมลที่พิมพ์ครบและถูกต้อง (เพิ่มทาง Enter/คลิก) + อีเมลจาก `suggested-emails`; โชว์ชื่อรองใต้อีเมลเมื่อมีจาก API; parent ยังรับ `value`/`onChange` เป็น string คั่นด้วย comma. `interviewer-email-utils`: `INTERVIEWER_EMAIL_RE`, `isValidInterviewerEmail`, `emailsFromInterviewerField`; ลบ `appendEmailToInterviewerField`.
+**Edited:** `src/features/interviews/components/interviewer-emails-field.tsx`, `src/features/interviews/lib/interviewer-email-utils.ts`, `cowork-log.md`
+
+### 2026-05-09 - Interviews: auto-suggest อีเมลที่เคยเชิญ
+**Prompt:** สามารถทำให้รองรับ auto suggest email ที่เคย invites ได้ไหม
+**Output:** `GET /api/interviews/suggested-emails` คืนรายการ `Interviewer` ที่เคยผูกกับนัดที่ `organizerUserId` เป็นผู้ใช้ปัจจุบัน (dedupe อีเมล). UI ปุ่ม **แนะนำจากที่เคยเชิญ** (Popover + cmdk) ค้นชื่อ/อีเมลแล้วแทรกลง textarea ไม่ซ้ำ. ย้าย `parseEmailsFromTextarea` + `appendEmailToInterviewerField` ไป `interviewer-email-utils.ts`; invalidate cache หลังสร้าง/แก้นัด
+**Edited:** `src/server/routes/interview-routes.ts`, `src/features/interviews/components/interviewer-emails-field.tsx`, `interviewer-email-utils.ts`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interviews: interviewer โดยอีเมล (หลายคน)
+**Prompt:** Interviewers ใส่เป็น email (รองรับหลายคน)
+**Output:** API `POST/PATCH /interviews` รองรับ `interviewerEmails: string[]` — normalize + validate แล้ว `findFirst`/`create` `Interviewer` (อีเมลใหม่ได้) แล้วเชื่อมเหมือนเดิม + Google attendees จากอีเมลเหล่านั้น; ยังรับ `interviewerIds` ได้ถ้าไม่ส่ง emails ฟิลด์นี้ หน้า `/interviews` เปลี่ยน checkbox เป็น textarea (comma/บรรทახ/space/;) + copy ไทย; หลังสร้าง/แก้ invalidate `interviewers` query
+**Edited:** `src/server/interviewer-email-lib.ts`, `src/server/routes/interview-routes.ts`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interviews: lramos33 big-calendar replaces react-big-calendar
+**Prompt:** remove react-big-calendar and use https://github.com/lramos33/big-calendar instead; setup and replace
+**Output:** `/interviews` uses `CalendarProvider` + `ClientContainer` (month/week) and Thai `InterviewsCalendarHeader`; interviews mapped to `IEvent`/`IUser`, `eventsSyncKey` syncs server data, drag calls PATCH via `dragRescheduleMut`, event click opens manage dialog, day-number click opens create at 09:00. Context extended: `eventsSyncKey`, `dndEnabled`, `onRemoteEventUpdate`, `onEventActivate`, `onDayCellDateClick`. `IEvent.id` → `string`. Removed `react-big-calendar` and deleted `shadcn-big-calendar` wrapper/CSS. Added `src/hooks/use-disclosure.ts`, `ni react-hook-form @hookform/resolvers`; `SingleCalendar` wraps shadcn `Calendar`; `tsconfig` excludes vendored `big-calendar/`; fixes for Zod 4 `eventSchema`, `avatar-group` cloneElement types, `date-fns` `set` for slot time.
+**Edited:** `src/features/interviews/components/interviews-calendar-client.tsx`, `interviews-calendar-header.tsx`, `src/calendar/contexts/calendar-context.tsx`, `interfaces.ts`, `mocks.ts`, `hooks/use-update-event.ts`, `components/client-container.tsx`, dnd + `event-details-dialog` + `day-cell`, `schemas.ts`, `src/components/ui/single-calendar.tsx`, `single-day-picker.tsx`, `avatar-group.tsx`, `calendar/.../calendar-day-view.tsx`, `tsconfig.json`, `package.json` / lockfile, `src/hooks/use-disclosure.ts`, deleted `src/components/shadcn-big-calendar/*`, `cowork-log.md`
+
 ### 2026-05-09 - Calendar: email invites to attendees (sendUpdates=all)
 **Prompt:** send meeting scheduler to their email too
 **Output:** `google-calendar-service.ts`: `sendUpdates: "all"` on `events.insert`, `patch`, `delete` so Google emails calendar invites/updates/cancellations to all guests (applicant + interviewer emails already in `attendeeEmails`). README note under Calendar/Meet.
@@ -149,3 +189,23 @@
 **Prompt:** CRUD Jobs (Table) - job description - toggle status (switch) using shadcn table
 **Output:** เพิ่ม `jobRoutes` (`GET/POST /api/jobs`, `PATCH/DELETE /api/jobs/:id`) พร้อม auth แบบ Clerk, ลบ JD ได้เมื่อไม่มีผู้สมัคร (409 ถ้ามี). UI: `JobsPageClient` + TanStack Table (`JobsTable`) คอลัมน์ชื่อ/รายละเอียดงาน/จำนวนผู้สมัคร/Switch รับสมัคร/แก้ไข-ลบ; `JobFormDialog` สร้าง-แก้ title+description+requirements+Switch; invalidate `jobs-admin` และ `screener-jobs` หลัง mutation.
 **Edited:** `src/server/job-routes.ts`, `src/server/elysia-app.ts`, `src/features/jobs/lib/job-description-schema.ts`, `src/features/jobs/components/jobs-table.tsx`, `job-form-dialog.tsx`, `jobs-page-client.tsx`, `src/app/(dashboard)/jobs/page.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interviews header + create sheet
+**Prompt:** (1) ย้ายปุ่มเชื่อมบัญชีไปข้างปุ่มสร้างนัด (2) สร้างนัดใช้ shadcn Sheet
+**Output:** `CalendarHeader` รับ `interviewsBeforePrimary` แสดง Badge เชื่อมแล้วหรือปุ่มเชื่อม Google ก่อนปุ่มสร้างนัด; ลบแถบซ้ำด้านบน (เหลือแถบ applicant prefill เมื่อมี query). ฟอร์มสร้างนัดจาก `Dialog` → `Sheet` slide จากขวา พร้อม footer ปิด/สร้าง.
+**Edited:** `src/components/calendar/calendar-header.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interview EventSheet + GET detail
+**Prompt:** Plan: card → EventSheet (`mode=interview`), `GET /interviews/:id`, ลบ bloc ผู้ร่วมสัมภาษณ์ใน event-sheet
+**Output:** `event-sheet` interview mode ตัดรายชื่อผู้ร่วม เหลือ header + Meet + `children`. `/interviews` ใช้ `CalendarView` + `eventSheetMode="interview"` + `InterviewEventSheetBody` (`useQuery` detail) + `InterviewEventSheetForm` (patch/delete, `key`=`id+updatedAt` หลีก setState ใน effect); ลบ manage `Dialog` และ prop ที่ไม่มีใน `CalendarView`
+**Edited:** `src/components/calendar/event-sheet.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interview EventSheet classic UI
+**Prompt:** keep old event-sheet ui — propose new time, info, attendee list
+**Output:** `InterviewEventSheetContent` คืนแถบเครื่องมือ (Pen/FileText/Layers/Trash2), ปุ่ม Propose new time (scroll ไป `#interview-sheet-reschedule`), รายชื่อ Guests จาก `event.participants`, Google Meet, บล็อก info (reminder/organizer/phone/users/notes) + ข้อความ notes แบบ default; `EventSheet`/`CalendarView` รับ `interviewRescheduleSectionId`; body ห่อฟอร์มแก้ไขด้วย id นั้น
+**Edited:** `src/components/calendar/event-sheet.tsx`, `src/components/calendar/calendar-view.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interview sheet toolbar dialogs
+**Prompt:** ยกเลิกนัด → ไอคอนลบด้านบน; แก้ไข → ไอคอนแก้ไข; กดแล้วเป็น dialog
+**Output:** Export `InterviewEventSheetToolbarHandlers`; `CalendarView` เก็บ state + setter จาก `renderEventSheetChildren` Parm ที่ 3; `EventSheet` ส่ง `interviewToolbar` — Pen/FileText/Layers + Propose new time → `onEdit`, Trash → `onDelete`. ฟอร์มอยู่ใน `Dialog`; ยกเลิกนัดอยู่ใน `AlertDialog` แบบ controlled + ปุ่ม destructive ธรรมดา (`cancelMut`). ตัด `#interview-sheet-reschedule` / `interviewRescheduleSectionId`
+**Edited:** `event-sheet.tsx`, `calendar-view.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
