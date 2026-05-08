@@ -18,7 +18,7 @@ Goal: Cowork Log is a file that records your Claude Cowork sessions during assig
 ```
 
 ## Language
-- Use Thai language to every components that display in website due user is Thai people but codebase still using English 
+- Use Thai language for Frontend 
 
 ## Styling (UX & UI)
 - Mininal and Modern
