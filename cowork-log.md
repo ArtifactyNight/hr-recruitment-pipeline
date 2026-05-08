@@ -1,3 +1,27 @@
+### 2026-05-08 - Screener: name/email in Tracker dialog + AI detect
+**Prompt:** Move name/email to add-to-tracker; auto-detect from analyze and prefill dialog.
+**Output:** Extended AI output with `screeningEvaluateSchema` (`detectedName`, `detectedEmail`); evaluate returns them; removed name/email from evaluate body. `jdPrompt` + system line instruct CV-only extraction. Client: card "Resume และตำแหน่ง" without contact fields; report header shows detected name/email; Add to Tracker opens dialog prefilled from analyze; submit validates then `add-to-tracker`.
+**Edited:** `src/features/screener/lib/fit-report-schemas.ts`, `src/features/screener/lib/screener-prompts.ts`, `src/server/screener-routes.ts`, `src/features/screener/components/resume-screener.tsx`, `cowork-log.md`
+
+### 2026-05-08 - Remove screener auto-match (token cost)
+**Prompt:** Remove auto match with all job descriptions to reduce token cost.
+**Output:** Deleted server branch that loaded every JD + `autoMatchPrompt` / `buildAutoMatchSchema`; `evaluate` now requires `jobDescriptionId`. Removed `buildAutoMatchSchema`, `autoMatchPrompt` and auto Select option; client uses `selectedJobId` (defaults to first job). Removed auto-match result banner.
+**Edited:** `src/server/screener-routes.ts`, `src/features/screener/lib/fit-report-schemas.ts`, `src/features/screener/lib/screener-prompts.ts`, `src/features/screener/components/resume-screener.tsx`, `cowork-log.md`
+
+### 2026-05-08 - Screener: PDF → multipart evaluate, clear/disable textarea
+**Prompt:** PDF upload clears/disables textarea; submit file via Eden multipart; AI SDK file in `generateText`; remove parse-pdf/unpdf.
+**Output:** Replaced `/analyze`+`/parse-pdf` with single `POST /screener/evaluate` (multipart: optional `file`, `cvText`, `jobDescriptionId`, `name`/`email`). Gemini `generateText` + `Output.object` with PDF as `content: [{ type: 'file', data: Buffer, mediaType, filename }, text]` for JD-specific and auto-match flows; `buildAutoMatchSchema` when no JD id. Client: `evaluate` mutation, `selectedFile` clears text + disables textarea, ลบไฟล์ restores text mode; `__auto__` job select; tracker uses `matchedJobId` from response; auto-match banner. Removed `unpdf`.
+**Edited:** `src/server/screener-routes.ts`, `src/features/screener/components/resume-screener.tsx`, `package.json`, `bun.lock`, `cowork-log.md`
+
+**Prompt:** Remove hardcoded sample data (napat/ploy/somchai) from resume screener frontend. Backend already has real logic.
+**Output:** Stripped `sampleResumeMap`/`SampleResumeKey` import, `cn` import, `sampleKey` state, `onPickSample` callback, sample buttons JSX block, `setSampleKey` from `onClear`. Cleared initial `name`/`email`/`resumeText` state to empty strings. Added missing `lucide-react` icon imports and `sonner` toast import.
+**Edited:** `src/features/screener/components/resume-screener.tsx`
+
+### 2026-05-08 - AI Resume Screener (Gemini + Elysia + Eden)
+**Prompt:** Implement AI Resume Screener plan: candidate input + fit report, JD from DB, PDF text extraction, extend ScreeningResult, Add to Tracker → Applicant SCREENING, Clerk, Eden + react-query.
+**Output:** Extended `ScreeningResult` with `overallScore`, `fitStatus`, `panelSummary`, `concerns` (+ defaults); `prisma generate`. Added `src/server/screener-routes.ts` (`/api/screener/jobs`, `jobs/:id`, `analyze` via `generateObject` + Gemini `gemini-2.0-flash`, `parse-pdf` via `unpdf`, `add-to-tracker` Prisma create). Wired `screenerRoutes` in `elysia-app.ts`. Installed `@elysiajs/eden`, `@ap0nia/eden-react-query`, `unpdf`. Client: `src/lib/eden.ts`, `ScreenerRoot` + `ResumeScreener` (Thai UI, samples, JD dialog, yellow CTAs). DB drift prevented `migrate dev`/`db push` safely; applied schema in repo only.
+**Edited:** `prisma/schema.prisma`, `src/server/elysia-app.ts`, `src/server/screener-routes.ts`, `src/features/screener/**`, `src/lib/eden.ts`, `src/app/(dashboard)/screener/page.tsx`, `package.json`, `bun.lock`, `cowork-log.md`
+
 ### 2026-05-08 - dashboard-01 (shadcn block)
 **Prompt:** use dashboard-01 https://ui.shadcn.com/blocks#dashboard-01
 **Output:** Ran `shadcn add dashboard-01` (components + deps). Wired block layout into `(dashboard)`: `DashboardShell` matches block (`SidebarProvider` CSS vars, `AppSidebar` `variant="inset"`, `SiteHeader` + `DashboardBreadcrumb`), home `page.tsx` = `SectionCards` + `ChartAreaInteractive` + `DataTable` + `data.json` co-located. Removed duplicate `/app/dashboard` route and unused block-only `nav-*` + `components/app-sidebar`. Localized KPI/chart chrome to Thai; `chart-area-interactive` uses `activeRange` instead of `useEffect` for mobile band; `useIsMobile` refactored to `useSyncExternalStore` for lint/React 19 hooks rule.

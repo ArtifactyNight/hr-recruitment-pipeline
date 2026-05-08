@@ -71,6 +71,9 @@ model ScreeningResult {
   id                 String    @id @default(cuid())
   applicantId        String    @unique
   applicant          Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  overallScore       Float     @default(0)
+  fitStatus          String    @default("")
+  panelSummary       String    @default("")
   skillFit           Int
   experienceFit      Int
   cultureFit         Int
@@ -78,6 +81,7 @@ model ScreeningResult {
   experienceReason   String
   cultureReason      String
   strengths          Json[]
+  concerns           Json[]
   suggestedQuestions Json[]
   createdAt          DateTime  @default(now())
 }
