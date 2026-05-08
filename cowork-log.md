@@ -1,3 +1,18 @@
+### [2026-05-09 12:00] - แปล UI ปฏิทินและแทร็กเกอร์เป็นไทย
+**Prompt:** translate component to thai (frontend)
+**Output:** Hardcode ข้อความ UI เป็นภาษาไทยใน `calendar-header`, `calendar-controls`, `create-event-dialog`, `event-sheet`, `schedule-popover`; ใช้ `date-fns` `th` locale สำหรับชื่อเดือน/วัน (`PPP`, หัวสัปดาห์ปฏิทิน, เวลาแบบ localized `p`). แก้ `applicant-detail-dialog`, `applicant-tracker-table`, `tracker-card` ให้ `format` วันที่ด้วย `th`. ปรับข้อความเล็กน้อยใน `interviews-calendar-client` (prefill bar).
+**Edited:** `calendar-header.tsx`, `calendar-controls.tsx`, `create-event-dialog.tsx`, `event-sheet.tsx`, `schedule-popover.tsx`, `applicant-detail-dialog.tsx`, `applicant-tracker-table.tsx`, `tracker-card.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### [2026-05-09] - Interviews: สร้างนัดผ่าน `CreateEventDialog`
+**Prompt:** สร้างนัดสัมด้วย `create-event-dialog.tsx` — implement missing feature ให้สอดคล้องคอมโพเนนต์นั้น
+**Output:** โหมด `variant="interviews"`: เลือกผู้สมัคร, วัน, เวลาเริ่ม–จบ (คิดความยาวนัด ≥15 นาที, ข้ามเที่ยงคืนได้), `InterviewerEmailsField`, โน้ต Calendar → `POST /interviews` ผ่าน `CreateInterviewSubmitPayload`. `/interviews` เอา Sheet ออก ใช้ Dialog เดียวกับปฏิทินทั่วไป; `interviewFormSession` + mount เมื่อ `open` เพื่อ seed ฟอร์มโดยไม่ใช้ `useEffect` setState (ผ่าน eslint `react-hooks/set-state-in-effect`). ปิด dialog ถ้ามี `?applicantId=` จะ `router.replace('/interviews')`.
+**Edited:** `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### [2026-05-09] - Remove locale system (calendar + dates)
+**Prompt:** remove locale system
+**Output:** Dropped `CalendarControls` `locale` prop and Thai/English copy switch; interviews use `<CalendarControls />` without `locale`. Removed all `date-fns/locale` `th` usage; dates use default English `format()` patterns. `CalendarHeader` interviews subtitle and primary default label translated to English; interview sheet attendee strings aligned to English where locale-driven.
+**Edited:** `calendar-controls.tsx`, `calendar-header.tsx`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `applicant-tracker-table.tsx`, `tracker-card.tsx`, `applicant-detail-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-09] - Interviews: ลบ `calendar-sidebar`
 **Prompt:** remove `src/components/calendar/calendar-sidebar.tsx`
 **Output:** ลบไฟล์; `/interviews` ย้าย Google connect / applicant prefill ไปแถบ `border-b` ด้านบนการ์ดปฏิทิน

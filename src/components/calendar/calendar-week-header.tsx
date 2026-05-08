@@ -1,8 +1,9 @@
 "use client";
 
-import { format } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { th } from "date-fns/locale";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface CalendarWeekHeaderProps {
   weekDays: Date[];
@@ -41,11 +42,10 @@ export function CalendarWeekHeader({
           className="flex-1 border-r border-border last:border-r-0 p-1.5 md:p-2 min-w-44 flex items-center"
         >
           <div className="text-xs md:text-sm font-medium text-foreground">
-            {format(day, "dd EEE").toUpperCase()}
+            {format(day, "dd EEEE", { locale: th }).toUpperCase()}
           </div>
         </div>
       ))}
     </div>
   );
 }
-

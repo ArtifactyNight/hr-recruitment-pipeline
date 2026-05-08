@@ -12,6 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { th } from "date-fns/locale";
 import { Calendar as CalendarIcon, Clock, Users, Video } from "lucide-react";
 import { useState } from "react";
 
@@ -42,26 +43,30 @@ export function SchedulePopover({ children }: SchedulePopoverProps) {
       <PopoverContent className="w-80 p-4" align="end">
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-semibold mb-3">Schedule Meeting</h4>
+            <h4 className="text-sm font-semibold mb-3">จัดประชุม</h4>
             <p className="text-xs text-muted-foreground mb-4">
-              Quick schedule a meeting or event
+              จองประชุมหรือกิจกรรมอย่างรวดเร็ว
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="grid gap-2">
-              <Label className="text-xs">Date</Label>
+              <Label className="text-xs">วันที่</Label>
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal h-9",
+                      "inline-flex h-9 w-full items-center justify-start gap-2 text-left font-normal",
                       !date && "text-muted-foreground",
                     )}
                   >
-                    <CalendarIcon className="mr-2 size-4" />
-                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
+                    {date ? (
+                      format(date, "PPP", { locale: th })
+                    ) : (
+                      <span>เลือกวันที่</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -79,28 +84,28 @@ export function SchedulePopover({ children }: SchedulePopoverProps) {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
-                <Label className="text-xs">Start</Label>
+                <Label className="text-xs">เริ่ม</Label>
                 <div className="relative">
-                  <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Clock className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="pl-8 h-9 text-xs"
+                    className="h-9 pl-8 text-xs"
                     placeholder="09:00"
                   />
                 </div>
               </div>
 
               <div className="grid gap-2">
-                <Label className="text-xs">End</Label>
+                <Label className="text-xs">สิ้นสุด</Label>
                 <div className="relative">
-                  <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Clock className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="pl-8 h-9 text-xs"
+                    className="h-9 pl-8 text-xs"
                     placeholder="10:00"
                   />
                 </div>
@@ -116,7 +121,7 @@ export function SchedulePopover({ children }: SchedulePopoverProps) {
                 className="h-8 justify-start gap-2 text-xs"
               >
                 <Users className="size-3.5" />
-                <span>Add participants</span>
+                <span>เพิ่มผู้เข้าร่วม</span>
               </Button>
               <Button
                 variant="outline"
@@ -124,7 +129,7 @@ export function SchedulePopover({ children }: SchedulePopoverProps) {
                 className="h-8 justify-start gap-2 text-xs"
               >
                 <Video className="size-3.5" />
-                <span>Add video call</span>
+                <span>เพิ่มวิดีโอประชุม</span>
               </Button>
             </div>
 
@@ -132,18 +137,18 @@ export function SchedulePopover({ children }: SchedulePopoverProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 h-8 text-xs"
+                className="h-8 flex-1 text-xs"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                ยกเลิก
               </Button>
               <Button
                 size="sm"
-                className="flex-1 h-8 text-xs"
+                className="h-8 flex-1 text-xs"
                 onClick={handleSchedule}
                 disabled={!date || !startTime || !endTime}
               >
-                Schedule
+                จัดตาราง
               </Button>
             </div>
           </div>

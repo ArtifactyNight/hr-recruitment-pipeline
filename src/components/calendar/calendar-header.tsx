@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useCalendarStore } from "@/store/calendar-store";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+
 import {
   AlertCircle,
   Bell,
@@ -64,11 +65,7 @@ export function CalendarHeader({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const isInterviews = variant === "interviews";
-  const weekTitle = format(
-    currentWeekStart,
-    isInterviews ? "d MMMM yyyy" : "MMMM dd, yyyy",
-    isInterviews ? { locale: th } : undefined,
-  );
+  const weekTitle = format(currentWeekStart, "d MMMM yyyy", { locale: th });
 
   return (
     <>
@@ -92,16 +89,15 @@ export function CalendarHeader({
                 <p className="hidden md:block text-xs text-muted-foreground">
                   {isInterviews ? (
                     <>
-                      วันนี้มี {todayEvents.length} นัด
+                      วันนี้มีนัด {todayEvents.length} รายการ
                       {meetingsCount > 0
-                        ? ` (ประชุม/โทร ~${meetingsCount})`
+                        ? ` (ประมาณ ${meetingsCount} รายการที่เป็นประชุม/โทร)`
                         : ""}
                     </>
                   ) : (
                     <>
-                      You have {meetingsCount} meeting
-                      {meetingsCount !== 1 ? "s" : ""} and {eventsCount} event
-                      {eventsCount !== 1 ? "s" : ""} today 🗓️
+                      วันนี้มีการประชุม {meetingsCount} ครั้ง และกิจกรรม{" "}
+                      {eventsCount} รายการ 🗓️
                     </>
                   )}
                 </p>
@@ -123,69 +119,68 @@ export function CalendarHeader({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-80">
-                      <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                      <DropdownMenuLabel>การแจ้งเตือน</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
                         <div className="flex items-center gap-2 w-full">
                           <CheckCircle2 className="size-4 text-green-500" />
                           <span className="text-sm font-medium flex-1">
-                            Meeting confirmed
+                            ยืนยันการประชุมแล้ว
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            2m ago
+                            2 นาทีที่แล้ว
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground pl-6">
-                          Daily checkin has been confirmed for tomorrow at 9:00
-                          AM
+                          ยืนยัน Daily check-in สำหรับพรุ่งนี้ 09:00 น. แล้ว
                         </p>
                       </DropdownMenuItem>
                       <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
                         <div className="flex items-center gap-2 w-full">
                           <Clock className="size-4 text-blue-500" />
                           <span className="text-sm font-medium flex-1">
-                            Reminder
+                            แจ้งเตือน
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            15m ago
+                            15 นาทีที่แล้ว
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground pl-6">
-                          Team Standup starts in 30 minutes
+                          Team Standup จะเริ่มในอีก 30 นาที
                         </p>
                       </DropdownMenuItem>
                       <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
                         <div className="flex items-center gap-2 w-full">
                           <AlertCircle className="size-4 text-orange-500" />
                           <span className="text-sm font-medium flex-1">
-                            Event updated
+                            อัปเดตกิจกรรม
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            1h ago
+                            1 ชม. ที่แล้ว
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground pl-6">
-                          Design Workshop time has been changed to 2:00 PM
+                          เวลา Design Workshop เปลี่ยนเป็น 14:00 น.
                         </p>
                       </DropdownMenuItem>
                       <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
                         <div className="flex items-center gap-2 w-full">
                           <CheckCircle2 className="size-4 text-green-500" />
                           <span className="text-sm font-medium flex-1">
-                            New participant
+                            ผู้เข้าร่วมใหม่
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            3h ago
+                            3 ชม. ที่แล้ว
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground pl-6">
-                          Sarah joined the Sprint Planning meeting
+                          Sarah เข้าร่วม Sprint Planning แล้ว
                         </p>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="justify-center cursor-pointer">
                         <span className="text-xs text-muted-foreground">
-                          View all notifications
+                          ดูการแจ้งเตือนทั้งหมด
                         </span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -198,7 +193,7 @@ export function CalendarHeader({
                       className="size-7 md:size-8 shrink-0 md:w-auto md:px-2 md:gap-1.5"
                     >
                       <CalendarIcon className="size-4" />
-                      <span className="hidden lg:inline">Schedule</span>
+                      <span className="hidden lg:inline">จัดตาราง</span>
                     </Button>
                   </SchedulePopover>
 
@@ -208,7 +203,7 @@ export function CalendarHeader({
                     onClick={() => setCreateDialogOpen(true)}
                   >
                     <Plus className="size-4" />
-                    <span className="hidden lg:inline">Create Event</span>
+                    <span className="hidden lg:inline">สร้างกิจกรรม</span>
                   </Button>
 
                   <Link
@@ -243,7 +238,7 @@ export function CalendarHeader({
                   >
                     <Plus className="size-4" />
                     <span className="hidden lg:inline">
-                      {primaryActionLabel ?? "สร้างนัด"}
+                      {primaryActionLabel ?? "สร้างนัดสัมภาษณ์"}
                     </span>
                   </Button>
                 </>

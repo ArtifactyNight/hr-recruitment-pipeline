@@ -59,7 +59,14 @@ function attendeeResponseSummary(
   snapshot: InterviewCalendarUiSnapshot,
 ): string {
   const { total, accepted } = snapshot.attendees;
-  return `${total} คน • ตอบรับ ${accepted}`;
+  return `${total} คน · ${accepted} ยืนยันแล้ว`;
+}
+
+function parseTimeToDate(time: string): Date {
+  const [hour = 0, minute = 0] = time.split(":").map(Number);
+  const d = new Date();
+  d.setHours(hour, Number.isFinite(minute) ? minute : 0, 0, 0);
+  return d;
 }
 
 export type InterviewEventSheetToolbarHandlers = {
@@ -78,15 +85,12 @@ interface EventSheetProps {
 }
 
 function formatTime(time: string): string {
-  const [hour, minute] = time.split(":").map(Number);
-  const period = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  return `${displayHour}:${minute.toString().padStart(2, "0")} ${period}`;
+  return format(parseTimeToDate(time), "p", { locale: th });
 }
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
-  return format(date, "EEEE, MMMM dd");
+  return format(date, "EEEE, d MMMM", { locale: th });
 }
 
 function getMeetingCode(link?: string): string {
@@ -104,7 +108,7 @@ function getMeetingCode(link?: string): string {
 
 function formatInterviewHeaderDate(dateStr: string): string {
   try {
-    return format(parseISO(`${dateStr}T12:00:00`), "EEEE d MMMM yyyy", {
+    return format(parseISO(`${dateStr}T12:00:00`), "EEEE, d MMMM yyyy", {
       locale: th,
     });
   } catch {
@@ -242,9 +246,9 @@ function InterviewEventSheetContent({
   const attendeesLabel =
     snapshot != null
       ? attendeeResponseSummary(snapshot)
-      : `${String(attendeeCount)} คน (จากระบบ — ผู้เข้าร่วมที่ระบุ)` +
+      : `${String(attendeeCount)} คน (จากแอป — รายชื่อผู้เข้าร่วมที่บันทึกไว้)` +
         (detailQuery.isFetching && hasGoogleEventHint
-          ? " · โหลดจาก Google …"
+          ? " · กำลังโหลดจาก Google …"
           : "");
 
   const canUseToolbar = Boolean(toolbar);
@@ -348,7 +352,9 @@ function InterviewEventSheetContent({
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <div className="mx-auto flex max-w-[512px] flex-col gap-4">
           <div className="flex flex-col gap-4">
-            <p className="text-xs font-medium text-muted-foreground">Guests</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              ผู้ร่วมงาน
+            </p>
             {attendeeRows.length === 0 ? (
               <p className="text-muted-foreground text-xs">
                 ไม่มีผู้ร่วมในรายการ
@@ -403,7 +409,7 @@ function InterviewEventSheetContent({
                   Google Meet
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Code: {meetingCode}
+                  รหัส: {meetingCode}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -530,7 +536,7 @@ export function EventSheet({
   const dateStr = formatDate(event.date);
   const startTimeStr = formatTime(event.startTime);
   const endTimeStr = formatTime(event.endTime);
-  const timezone = event.timezone || "GMT+7 Pontianak";
+  const timezone = event.timezone || "Asia/Bangkok";
   const meetingCode = getMeetingCode(event.meetingLink);
 
   const organizer = event.participants[0] || "user1";
@@ -631,7 +637,7 @@ export function EventSheet({
             </div>
 
             <Button variant="outline">
-              <span>Propose new time</span>
+              <span>เสนอเลื่อนเวลา</span>
               <ArrowUpRight className="size-4" />
             </Button>
           </SheetHeader>
@@ -658,12 +664,12 @@ export function EventSheet({
                             </p>
                             {participant.isOrganizer && (
                               <span className="text-[10px] font-medium text-cyan-500 px-0.5 py-0.5 rounded-full">
-                                Organizer
+                                ผู้จัด
                               </span>
                             )}
                             {participant.isYou && (
                               <span className="text-[10px] font-medium text-foreground px-0.5 py-0.5 rounded-full">
-                                You
+                                คุณ
                               </span>
                             )}
                           </div>
@@ -685,7 +691,7 @@ export function EventSheet({
                             }`}
                             onClick={() => setRsvpStatus("yes")}
                           >
-                            Yes
+                            เข้าร่วม
                           </Button>
                           <Button
                             variant={rsvpStatus === "no" ? "default" : "ghost"}
@@ -697,7 +703,7 @@ export function EventSheet({
                             }`}
                             onClick={() => setRsvpStatus("no")}
                           >
-                            No
+                            ไม่ไป
                           </Button>
                           <Button
                             variant={
@@ -711,7 +717,7 @@ export function EventSheet({
                             }`}
                             onClick={() => setRsvpStatus("maybe")}
                           >
-                            Maybe
+                            ไม่แน่ใจ
                           </Button>
                         </div>
                       )}
@@ -737,10 +743,10 @@ export function EventSheet({
                       </svg>
                     </div>
                     <p className="text-xs font-medium text-muted-foreground flex-1">
-                      Meeting in Google Meet
+                      ประชุมใน Google Meet
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Code: {meetingCode}
+                      รหัส: {meetingCode}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -752,7 +758,7 @@ export function EventSheet({
                         }
                       }}
                     >
-                      <span>Join Google Meet meeting</span>
+                      <span>เข้าร่วม Google Meet</span>
                       <div className="flex gap-0.5">
                         <Kbd className="bg-white/14 text-white text-[10.8px] px-1.5 py-1 rounded">
                           ⌘
@@ -773,7 +779,7 @@ export function EventSheet({
                       }}
                     >
                       <LinkIcon className="size-4" />
-                      <span>Copy link</span>
+                      <span>คัดลอกลิงก์</span>
                     </Button>
                   </div>
                 </div>
@@ -784,35 +790,35 @@ export function EventSheet({
                   <div className="p-1">
                     <Bell className="size-4" />
                   </div>
-                  <span>Reminder: 30min before</span>
+                  <span>แจ้งเตือนก่อน 30 นาที</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className="p-1">
                     <CalendarIcon className="size-4" />
                   </div>
-                  <span>Organizer: {organizerEmail}</span>
+                  <span>ผู้จัด: {organizerEmail}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className="p-1">
                     <Phone className="size-4" />
                   </div>
-                  <span>(US) +1 904-330-1131</span>
+                  <span>โทร: (สหรัฐฯ) +1 904-330-1131</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className="p-1">
                     <Users className="size-4" />
                   </div>
                   <span>
-                    {mockParticipants.length} persons
+                    {mockParticipants.length} คน
                     <span className="mx-1">•</span>
-                    {yesCount} yes
+                    {yesCount} คนตอบเข้าร่วม
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className="p-1">
                     <FilePlus className="size-4" />
                   </div>
-                  <span>Notes from Organizer</span>
+                  <span>โน้ตจากผู้จัด</span>
                 </div>
               </div>
             </div>

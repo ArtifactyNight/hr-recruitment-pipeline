@@ -3,6 +3,10 @@
 import { CalendarControls } from "@/components/calendar/calendar-controls";
 import { CalendarHeader } from "@/components/calendar/calendar-header";
 import { CalendarView } from "@/components/calendar/calendar-view";
+import {
+  CreateEventDialog,
+  type CreateInterviewSubmitPayload,
+} from "@/components/calendar/create-event-dialog";
 import type { InterviewEventSheetToolbarHandlers } from "@/components/calendar/event-sheet";
 import {
   AlertDialog,
@@ -22,22 +26,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
 import { InterviewerEmailsField } from "@/features/interviews/components/interviewer-emails-field";
 import { parseEmailsFromTextarea } from "@/features/interviews/lib/interviewer-email-utils";
 import { api } from "@/lib/api";
@@ -485,12 +475,12 @@ export function InterviewsCalendarClient() {
   }, [syncedCalendarRows, setCalendarEvents]);
 
   const [createOpen, setCreateOpen] = useState(false);
-
-  const [formApplicantId, setFormApplicantId] = useState("");
-  const [formStartLocal, setFormStartLocal] = useState("");
-  const [formDuration, setFormDuration] = useState("60");
-  const [formExtraNotes, setFormExtraNotes] = useState("");
-  const [formInterviewerEmails, setFormInterviewerEmails] = useState("");
+  const [interviewSeedAt, setInterviewSeedAt] = useState<Date | null>(null);
+  const [
+    interviewCreatePrefillApplicantId,
+    setInterviewCreatePrefillApplicantId,
+  ] = useState<string | undefined>();
+  const [interviewFormSession, setInterviewFormSession] = useState(0);
 
   const invalidateInterviews = useCallback(() => {
     void queryClient.invalidateQueries({
@@ -515,17 +505,14 @@ export function InterviewsCalendarClient() {
   }, [searchParams, googleStatusQuery]);
 
   const createMut = useMutation({
-    mutationFn: async () => {
-      const start = new Date(formStartLocal);
-      const durationMinutes = Number.parseInt(formDuration, 10);
+    mutationFn: async (payload: CreateInterviewSubmitPayload) => {
       const { data, error } = await api.api.interviews.post(
         {
-          applicantId: formApplicantId,
-          scheduledAt: start.toISOString(),
-          durationMinutes: Number.isNaN(durationMinutes) ? 60 : durationMinutes,
-          interviewerEmails: parseEmailsFromTextarea(formInterviewerEmails),
-          extraNotes:
-            formExtraNotes.trim() !== "" ? formExtraNotes.trim() : undefined,
+          applicantId: payload.applicantId,
+          scheduledAt: payload.scheduledAt.toISOString(),
+          durationMinutes: payload.durationMinutes,
+          interviewerEmails: payload.interviewerEmails,
+          extraNotes: payload.extraNotes,
         },
         { fetch: { credentials: "include" } },
       );
@@ -535,6 +522,7 @@ export function InterviewsCalendarClient() {
     onSuccess: async () => {
       toast.success("สร้างนัดและ Google Meet แล้ว");
       setCreateOpen(false);
+      setInterviewSeedAt(null);
       invalidateInterviews();
       router.replace("/interviews");
     },
@@ -565,8 +553,9 @@ export function InterviewsCalendarClient() {
   );
 
   const openCreateAt = useCallback((d: Date) => {
-    setFormStartLocal(isoForDatetimeLocal(d));
-    setFormInterviewerEmails("");
+    setInterviewFormSession((n) => n + 1);
+    setInterviewSeedAt(d);
+    setInterviewCreatePrefillApplicantId(undefined);
     setCreateOpen(true);
   }, []);
 
@@ -577,7 +566,7 @@ export function InterviewsCalendarClient() {
           <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2 md:px-6">
             <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs">
               <span className="text-muted-foreground">
-                พารามิเตอร์ผู้สมัครจาก Applicant Tracker
+                พารามิเตอร์ผู้สมัครจากแทร็กเกอร์ผู้สมัคร
               </span>
               <Button
                 type="button"
@@ -585,13 +574,14 @@ export function InterviewsCalendarClient() {
                 size="sm"
                 disabled={!linked}
                 onClick={() => {
-                  setFormApplicantId(applicantIdQs);
-                  setFormStartLocal(isoForDatetimeLocal(new Date()));
+                  setInterviewFormSession((n) => n + 1);
+                  setInterviewSeedAt(new Date());
+                  setInterviewCreatePrefillApplicantId(applicantIdQs);
                   setCreateOpen(true);
                 }}
               >
                 <CalendarPlusIcon className="size-4" />
-                เปิดสร้างนัด (prefill)
+                เปิดสร้างนัด (เติมล่วงหน้า)
               </Button>
             </div>
           </div>
@@ -605,7 +595,7 @@ export function InterviewsCalendarClient() {
             onPrimaryAction={() => openCreateAt(new Date())}
             primaryActionLabel="สร้างนัด"
           />
-          <CalendarControls locale="th" />
+          <CalendarControls />
           <div className="min-h-0 flex-1 overflow-hidden">
             <CalendarView
               eventSheetMode="interview"
@@ -635,109 +625,24 @@ export function InterviewsCalendarClient() {
         </Link>
       </div>
 
-      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-        <SheetContent
-          side="right"
-          showCloseButton
-          className="flex size-full max-h-dvh w-full flex-col gap-0 p-0 sm:max-w-md"
-        >
-          <SheetHeader className="gap-2 border-border border-b p-4 text-left">
-            <SheetTitle>สร้างนัดสัมภาษณ์</SheetTitle>
-            <SheetDescription>
-              เลือกผู้สมัคร เวลา และอีเมลผู้ร่วมสัมภาษณ์ (หลายคนคั่นด้วย comma
-              หรือขึ้นบรรทัดใหม่) ระบบจะใส่คำถามจาก AI screener ใน description
-              ของ Google Calendar และสร้าง Meet link
-            </SheetDescription>
-          </SheetHeader>
-          <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto px-4 py-3">
-            <Field>
-              <Label htmlFor="int-applicant">ผู้สมัคร</Label>
-              <NativeSelect
-                id="int-applicant"
-                className="w-full max-w-none"
-                disabled={createMut.isPending}
-                value={formApplicantId}
-                onChange={(e) => setFormApplicantId(e.target.value)}
-              >
-                <NativeSelectOption value="">
-                  — เลือกผู้สมัคร —
-                </NativeSelectOption>
-                {(applicantsQuery.data?.applicants ?? []).map((a) => (
-                  <NativeSelectOption key={a.id} value={a.id}>
-                    {a.name} · {a.email}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field>
-              <Label htmlFor="int-start">เริ่ม</Label>
-              <Input
-                id="int-start"
-                type="datetime-local"
-                value={formStartLocal}
-                onChange={(e) => setFormStartLocal(e.target.value)}
-              />
-            </Field>
-            <Field>
-              <Label htmlFor="int-dur">ระยะเวลา (นาที)</Label>
-              <Input
-                id="int-dur"
-                type="number"
-                min={15}
-                step={15}
-                value={formDuration}
-                onChange={(e) => setFormDuration(e.target.value)}
-              />
-            </Field>
-            <InterviewerEmailsField
-              textareaId="int-iv-emails"
-              label="อีเมลผู้ร่วมสัมภาษณ์ (Google Calendar attendees)"
-              value={formInterviewerEmails}
-              onChange={setFormInterviewerEmails}
-              disabled={createMut.isPending}
-              placeholder={"interviewer1@company.com\ninterviewer2@company.com"}
-              helperText="คั่นด้วย comma เว้นวรรค หรือบรรทัดใหม่ — อีเมลใหม่จะถูกเพิ่มในระบบอัตโนมัติ"
-            />
-            <Field>
-              <Label htmlFor="int-notes">โน้ต Google Meet</Label>
-              <Textarea
-                id="int-notes"
-                rows={3}
-                value={formExtraNotes}
-                onChange={(e) => setFormExtraNotes(e.target.value)}
-              />
-              <FieldDescription className="text-xs text-muted-foreground">
-                ข้อความนี้จะถูกใส่ในรายละเอียดของ Google Calendar
-              </FieldDescription>
-            </Field>
-          </div>
-          <SheetFooter className="border-border border-t p-4 sm:flex-row sm:justify-end sm:gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              disabled={createMut.isPending}
-              onClick={() => {
-                setCreateOpen(false);
-                router.replace("/interviews");
-              }}
-            >
-              ปิด
-            </Button>
-            <Button
-              type="button"
-              disabled={
-                createMut.isPending ||
-                !linked ||
-                !formApplicantId ||
-                !formStartLocal
-              }
-              onClick={() => createMut.mutate()}
-            >
-              {createMut.isPending ? "บันทึก…" : "สร้างนัด"}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      <CreateEventDialog
+        variant="interviews"
+        interviewFormSession={interviewFormSession}
+        open={createOpen}
+        onOpenChange={(next) => {
+          setCreateOpen(next);
+          if (!next) {
+            setInterviewSeedAt(null);
+            if (applicantIdQs) router.replace("/interviews");
+          }
+        }}
+        applicants={applicantsQuery.data?.applicants ?? []}
+        googleLinked={linked}
+        prefillApplicantId={interviewCreatePrefillApplicantId}
+        interviewSeedAt={interviewSeedAt}
+        onCreateInterview={(p) => createMut.mutate(p)}
+        createInterviewPending={createMut.isPending}
+      />
     </div>
   );
 }

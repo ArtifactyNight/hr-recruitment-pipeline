@@ -12,11 +12,11 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useCalendarStore } from "@/store/calendar-store";
 import { format } from "date-fns";
+import { th } from "date-fns/locale";
 import {
   Calendar as CalendarIcon,
   Check,
   Search,
-  Settings,
   SlidersHorizontal,
   Users,
   UserX,
@@ -25,11 +25,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-type CalendarControlsProps = {
-  locale?: "en" | "th";
-};
-
-export function CalendarControls({ locale = "en" }: CalendarControlsProps) {
+export function CalendarControls() {
   const {
     searchQuery,
     setSearchQuery,
@@ -43,45 +39,30 @@ export function CalendarControls({ locale = "en" }: CalendarControlsProps) {
   } = useCalendarStore();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const weekStart = format(currentWeekStart, "MMM dd");
+  const weekStart = format(currentWeekStart, "d MMM", { locale: th });
   const weekEnd = format(
     new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000),
-    "MMM dd yyyy",
+    "d MMM yyyy",
+    { locale: th },
   );
 
   const hasActiveFilters =
     eventTypeFilter !== "all" || participantsFilter !== "all";
 
-  const t =
-    locale === "th"
-      ? {
-          search: "ค้นหาในปฏิทิน…",
-          today: "วันนี้",
-          filter: "ตัวกรอง",
-          eventType: "ประเภท",
-          allEvents: "ทั้งหมด",
-          withMeeting: "มีลิงก์ประชุม",
-          withoutMeeting: "ไม่มีลิงก์ประชุม",
-          participants: "ผู้ร่วม",
-          allParticipants: "ทั้งหมด",
-          withParticipants: "มีผู้ร่วม",
-          withoutParticipants: "ไม่มีผู้ร่วม",
-          clear: "ล้างตัวกรอง",
-        }
-      : {
-          search: "Search in calendar...",
-          today: "Today",
-          filter: "Filter",
-          eventType: "Event Type",
-          allEvents: "All events",
-          withMeeting: "With meeting",
-          withoutMeeting: "Without meeting",
-          participants: "Participants",
-          allParticipants: "All",
-          withParticipants: "With participants",
-          withoutParticipants: "Without participants",
-          clear: "Clear all filters",
-        };
+  const t = {
+    search: "ค้นหาในปฏิทิน...",
+    today: "วันนี้",
+    filter: "ตัวกรอง",
+    eventType: "ประเภทกิจกรรม",
+    allEvents: "ทั้งหมด",
+    withMeeting: "มีการประชุมออนไลน์",
+    withoutMeeting: "ไม่มีการประชุมออนไลน์",
+    participants: "ผู้เข้าร่วม",
+    allParticipants: "ทั้งหมด",
+    withParticipants: "มีผู้เข้าร่วม",
+    withoutParticipants: "ไม่มีผู้เข้าร่วม",
+    clear: "ล้างตัวกรองทั้งหมด",
+  };
 
   return (
     <div className="px-3 md:px-6 py-4 border-b border-border">
@@ -94,13 +75,6 @@ export function CalendarControls({ locale = "en" }: CalendarControlsProps) {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 pr-9 h-8 bg-background"
           />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-1 top-1/2 -translate-y-1/2 size-6"
-          >
-            <Settings className="size-3.5" />
-          </Button>
         </div>
 
         <Button
