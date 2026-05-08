@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HR Recruitment Pipeline
 
-## Getting Started
+Mini recruiting tool: AI resume screener, applicant tracker (kanban/table), job descriptions, **Interview Scheduler** (Google Calendar + Meet).
 
-First, run the development server:
+## Stack
+
+Next.js 16 (App Router), React 19, Tailwind, shadcn/ui, Clerk auth, Elysia API (`/api`), Prisma + PostgreSQL, `@tanstack/react-query` + Eden (`@/lib/api`), `react-big-calendar` ปฏิทินหน้า `/interviews` ใช้สไตล์ [shadcn-ui-big-calendar](https://github.com/list-jonas/shadcn-ui-big-calendar) (`src/components/shadcn-big-calendar/`).
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+ni
+# ตั้งค่า env (ดูด้านล่าง)
+nr prisma db push
+nr dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+เปิด [http://localhost:3000](http://localhost:3000) และล็อกอิน Clerk
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| ตัวแปร | คำอธิบาย |
+|--------|----------|
+| `DATABASE_URL` | Postgres connection string |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk |
+| `CLERK_SECRET_KEY` | Clerk |
+| `NEXT_PUBLIC_APP_URL` | Base URL ของแอป เช่น `http://localhost:3000` (ใช้สร้าง OAuth redirect) |
+| `GOOGLE_CLIENT_ID` | OAuth client (Web) |
+| `GOOGLE_CLIENT_SECRET` | OAuth secret |
+| `GOOGLE_TOKEN_ENCRYPTION_KEY` | สตริงยาว ≥32 ตัวอักษร สำหรับเข้ารหัส refresh token กับ OAuth state |
 
-## Learn More
+หลังเปลี่ยน schema: `nr prisma generate` + `nr prisma db push` (หรือ migrate ตามทีม).
 
-To learn more about Next.js, take a look at the following resources:
+## Google Calendar / Meet (Module Interview Scheduler)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. ใน Google Cloud Console สร้าง OAuth **Web client** ใส่ **Authorized redirect URI** เป็น  
+   `{NEXT_PUBLIC_APP_URL}/api/integrations/google/callback`  
+   (เช่น `http://localhost:3000/api/integrations/google/callback`)
+2. OAuth scope แอปขอ: `https://www.googleapis.com/auth/calendar` (ใน Consent Screen ให้เพิ่ม scope เดียวกัน). ถ้าเคยเชื่อมด้วย scope เก่า ให้ถอนการอนุญาตแอปที่ [ความปลอดภัยบัญชี Google](https://myaccount.google.com/permissions) แล้วกดเชื่อมใหม่จาก `/interviews`
+3. ในแอปเปิด `/interviews` แล้วกด **เชื่อมบัญชี Google** — จะไป `/api/integrations/google/start` และ callback เก็บ refresh token ที่เข้ารหัสใน `UserGoogleCalendar`
+4. **Meet** สร้างผ่าน Calendar API (`conferenceData` / Google Meet) — ไม่ใช้ Meet REST แยก **และ Google ส่งอีเมลปฏิทินไปยัง attendees** (อีเมลผู้สมัคร + กรรมการที่เลือก) ด้วยพารามิเตอร์ `sendUpdates=all` ตอนสร้าง / แก้ / ยกเลิกนัดบน Google
+5. **กันซ้อน**: นัด `Interview` เดียวกันกับ `organizerUserId` + `freebusy.query` ของปฏิทิน `primary` ของผู้จัด
+6. **ยกเลิกนัด**: `Interview.status` → `CANCELLED` และ `Applicant.stage` → `PRE_SCREEN_CALL`
+7. **สร้างนัด**: `Applicant.stage` → `FIRST_INTERVIEW` เมื่อสร้างสำเร็จ
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture (API)
 
-## Deploy on Vercel
+`src/app/api/[[...slugs]]/route.ts` forwards ไป Elysia `src/server/elysia-app.ts`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `/api/interviews` — CRUD นัด + sync Google
+- `/api/interviewers` — list สำหรับเลือกบน UI
+- `/api/integrations/google/status` — สถานะเชื่อม Calendar
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+OAuth start/callback: `src/app/api/integrations/google/*`
+
+## Scripts
+
+```bash
+nr dev      # dev server
+nr build    # production build
+nr lint     # ESLint
+```

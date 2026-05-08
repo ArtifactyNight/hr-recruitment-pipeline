@@ -1,6 +1,12 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)"]);
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  // OAuth: callback มี code/state ครั้งเดียว — ห้าม auth.protect แย่ง redirect;
+  // start ตรวจ session ภายใน route เองแล้วค่อยคืน 401
+  "/api/integrations/google/start(.*)",
+  "/api/integrations/google/callback(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {

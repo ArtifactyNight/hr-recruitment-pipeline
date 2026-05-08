@@ -1,13 +1,14 @@
 import { Elysia } from "elysia";
 
-import { applicantRoutes } from "@/server/applicant-routes";
-import { jobRoutes } from "@/server/job-routes";
-import { screenerRoutes } from "@/server/screener-routes";
+import { applicantRoutes } from "@/server/routes/applicant-routes";
+import {
+  integrationsGoogleRoutes,
+  interviewRoutes,
+  interviewerRoutes,
+} from "@/server/routes/interview-routes";
+import { jobRoutes } from "@/server/routes/job-routes";
+import { screenerRoutes } from "@/server/routes/screener-routes";
 
-/**
- * Elysia app mounted at `/api` via `app/api/[[...slugs]]/route.ts`.
- * Add routes with `.get()`, `.post()`, plugins, etc.
- */
 export const elysiaApp = new Elysia({ prefix: "/api" })
   .get("/", () => ({
     ok: true,
@@ -16,6 +17,9 @@ export const elysiaApp = new Elysia({ prefix: "/api" })
   .get("/health", () => ({ status: "ok" as const }))
   .use(screenerRoutes)
   .use(jobRoutes)
-  .use(applicantRoutes);
+  .use(applicantRoutes)
+  .use(integrationsGoogleRoutes)
+  .use(interviewerRoutes)
+  .use(interviewRoutes);
 
 export type App = typeof elysiaApp;

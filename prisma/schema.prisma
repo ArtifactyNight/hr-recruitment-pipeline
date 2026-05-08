@@ -13,11 +13,24 @@ datasource db {
 }
 
 model User {
-  id          Int          @id @default(autoincrement())
-  clerkId     String       @unique
-  email       String       @unique
-  name        String?
-  interviewer Interviewer?
+  id                  Int                 @id @default(autoincrement())
+  clerkId             String              @unique
+  email               String              @unique
+  name                String?
+  interviewer         Interviewer?
+  googleCalendar      UserGoogleCalendar?
+  interviewsOrganized Interview[]
+}
+
+model UserGoogleCalendar {
+  id                    String   @id @default(cuid())
+  userId                Int      @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenEncrypted String   @db.Text
+  googleEmail           String
+  scopes                String   @default("")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model JobDescription {
@@ -104,6 +117,8 @@ model Interview {
   id              String          @id @default(cuid())
   applicantId     String
   applicant       Applicant       @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  organizerUserId Int?
+  organizer       User?           @relation(fields: [organizerUserId], references: [id], onDelete: SetNull)
   googleMeetLink  String?
   googleEventId   String?
   scheduledAt     DateTime

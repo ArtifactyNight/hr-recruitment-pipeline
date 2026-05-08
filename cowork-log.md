@@ -1,3 +1,33 @@
+### 2026-05-09 - Calendar: email invites to attendees (sendUpdates=all)
+**Prompt:** send meeting scheduler to their email too
+**Output:** `google-calendar-service.ts`: `sendUpdates: "all"` on `events.insert`, `patch`, `delete` so Google emails calendar invites/updates/cancellations to all guests (applicant + interviewer emails already in `attendeeEmails`). README note under Calendar/Meet.
+**Edited:** `src/server/google-calendar/google-calendar-service.ts`, `README.md`, `cowork-log.md`
+
+### 2026-05-09 - Google Calendar OAuth scope: full `calendar` + clearer 403 on insufficient scopes
+**Prompt:** insufficient authentication scopes when creating interview / Meet
+**Output:** `CALENDAR_EVENTS_SCOPE` value → `https://www.googleapis.com/auth/calendar` (meet + insert edge cases); README consent step updated + revoke/reconnect note. Interview POST: detect insufficient-scope errors from API message → 403 + `GOOGLE_INSUFFICIENT_SCOPES` Thai copy.
+**Edited:** `src/server/google-calendar/google-calendar-service.ts`, `src/server/interview-routes.ts`, `README.md`, `cowork-log.md`
+
+### 2026-05-09 - Google OAuth `/start` fix: public API paths + OAuth state env guard
+**Prompt:** localhost unable to handle request on `/api/integrations/google/start`
+**Output:** `proxy.ts`: mark `/api/integrations/google/start` and `callback` public so `auth.protect` doesn’t interfere (callback must preserve `code`/`state`; start still uses `auth()` → 401 ถ้าไม่ได้ล็อกอิน). `start/route.ts`: try/catch `signGoogleOAuthState` → 500 JSON with Thai hint. Align `GOOGLE_TOKEN_ENCRYPTION_KEY` min length to **32** in `google-oauth-state` (match `google-token-crypto`).
+**Edited:** `src/proxy.ts`, `src/app/api/integrations/google/start/route.ts`, `src/lib/google-oauth-state.ts`, `cowork-log.md`
+
+### 2026-05-09 - Google Calendar: modular `@googleapis/calendar` + `google-auth-library`
+**Prompt:** Migrate Calendar client off monolithic `googleapis` to `@googleapis/calendar` + `google-auth-library` (plan).
+**Output:** `google-calendar-service.ts`: `OAuth2Client` for OAuth + token exchange; `calendar({ version: "v3", auth })` for API calls; renamed local vars to `cal` / `primaryCal` vs factory. Removed `googleapis` dependency (`nun googleapis`). `nr build` OK.
+**Edited:** `src/server/google-calendar/google-calendar-service.ts`, `package.json`, `bun.lock`, `cowork-log.md`
+
+### 2026-05-09 - Interviews calendar: Shadcn-themed react-big-calendar
+**Prompt:** use shadcn-big-calendar — example list-jonas/shadcn-ui-big-calendar
+**Output:** Added `src/components/shadcn-big-calendar/shadcn-big-calendar.css` (upstream MIT theme vars for `.rbc-*`) + `shadcn-big-calendar.tsx` (client default export wrapping `Calendar` + importing CSS only). `/interviews` client drops default `react-big-calendar` CSS import, imports calendar from wrapper. README stack line cites upstream repo.
+**Edited:** `src/components/shadcn-big-calendar/shadcn-big-calendar.css`, `src/components/shadcn-big-calendar/shadcn-big-calendar.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `README.md`, `cowork-log.md`
+
+### 2026-05-09 - Interview Scheduler: Google Calendar + Meet + tracker sync
+**Prompt:** Implement plan: Calendar-like UI, OAuth per HR user, Google Meet via Calendar API, conflict (DB + FreeBusy organizer), cancel → Applicant PRE_SCREEN_CALL, reschedule → keep FIRST_INTERVIEW; month/week views.
+**Output:** Prisma `UserGoogleCalendar`, `Interview.organizerUserId`; libs `google-token-crypto`, `google-oauth-state`, `clerk-db-user`; `google-calendar-service` (insert Meet, patch, delete, freebusy); OAuth Next routes `/api/integrations/google/start|callback`; Elysia `integrations/google/status`, `interviewers` list, `/interviews` CRUD + description from `ScreeningResult`; swapped FullCalendar→`react-big-calendar` (no CSS bundles in `@fullcalendar` v6 pkgs); UI `/interviews` Thai copy, dialogs, `?applicantId=` prefill banner. README env + flows.
+**Edited:** `prisma/schema.prisma`, `src/server/**`, `src/app/api/integrations/google/**`, `src/features/interviews/**`, `src/app/(dashboard)/interviews/page.tsx`, `README.md`, `cowork-log.md`
+
 ### 2026-05-09 - Jobs table: no column sort, stable row order on status toggle
 **Prompt:** remove sort and dont reorder when toggle status
 **Output:** Dropped TanStack sort UI/state (`getSortedRowModel`, header sort buttons); plain headers + `enableSorting: false` table-wide. GET `/jobs` list `orderBy` changed from `updatedAt` to `createdAt` desc so PATCH `isActive` (bumps `updatedAt`) no longer jumps the row after refetch.

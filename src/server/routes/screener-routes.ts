@@ -12,7 +12,7 @@ import { auth } from "@clerk/nextjs/server";
 import { generateText, Output, zodSchema } from "ai";
 import { Elysia, t } from "elysia";
 
-import { screeningGenerateText } from "./screener-ai";
+import { screeningGenerateText } from "../screener-ai";
 
 const screeningModel = google("gemini-2.5-flash-lite");
 
