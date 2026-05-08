@@ -39,6 +39,7 @@ model Applicant {
   appliedAt        DateTime         @default(now())
   source           ApplicantSource  @default(OTHER)
   stage            ApplicantStage   @default(APPLIED)
+  notes            String?
   cvText           String?
   cvFileKey        String?
   cvFileName       String?

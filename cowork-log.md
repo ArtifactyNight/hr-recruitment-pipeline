@@ -1,3 +1,8 @@
+### 2026-05-08 - Applicant HR notes in detail dialog
+**Prompt:** have note section below and can update it inside
+**Output:** Added `Applicant.notes` (optional), migration `20260509130000_applicant_notes`. Extended `PATCH /applicants/:id` with optional `notes` (or `stage`, at least one required); list/create responses include `notes`; search matches note text. Tracker: unified `patchApplicantMut`, `ApplicantDetailNotesSection` (textarea + บันทึกหมายเหตุ) under AI scores in detail dialog.
+**Edited:** `prisma/schema.prisma`, `prisma/migrations/20260509130000_applicant_notes/migration.sql`, `src/server/applicant-routes.ts`, `src/features/applicants-tracker/lib/applicant-tracker-model.ts`, `src/features/applicants-tracker/components/applicant-tracker.tsx`, `cowork-log.md`
+
 ### 2026-05-08 - (impeccable polish) Tracker kanban card
 **Prompt:** /impeccable polish: track card
 **Output:** `TrackerCard`: dedicated drag strip with `GripVerticalIcon` + `KanbanItemHandle` (listeners only on grip); main body is `<button>` calling `onOpen` (detail dialog now reachable from board). `role="group"` + `tabIndex={-1}` on `KanbanItem` so focus goes to the open button, not nested `role="button"`. Removed `shadow-sm`; `rounded-xl` aligned to columns; border/hover/focus-within ring via tokens; `motion-safe` transitions with ease-out curve; avatar uses `secondary` tokens; long text `title` tooltips; fallback copy for missing position; meta row `min-h-9` for touch.
@@ -66,6 +71,11 @@
 **Prompt:** setup elysiajs for nextjs use ctx7
 **Output:** Context7 docs from `/elysiajs/documentation` (Next.js integration: `app/api/[[...slugs]]/route.ts`, export `app.fetch` per method). Installed `elysia`, added `src/server/elysia-app.ts` (`prefix: '/api'`, sample `/` and `/health`), catch-all route forwarding GET/POST/PUT/PATCH/DELETE/OPTIONS/HEAD to `elysiaApp.fetch`. Exported `App` type for future Eden. `nr build` compiles app; typecheck still fails on existing `prisma.config.ts` (`prisma/config`).
 **Edited:** `src/server/elysia-app.ts`, `src/app/api/[[...slugs]]/route.ts`, `package.json`, lockfile, `cowork-log.md`
+
+### 2026-05-08 - Applicant detail AI score card
+**Prompt:** applicant detail dialog show ai score below pipeline
+**Output:** Extended `/api/applicants` list/create/patch to return `skillFit`, `experienceFit`, `cultureFit` with `overallScore`/`tags` via `applicantListFields()`. Updated `TrackerApplicant` and optimistic temp rows. Added `ApplicantDetailAiScores` (cream card, SVG ring for overall/10, breakdown ทักษะ/ประสบการณ์/วัฒนธรรม) under pipeline buttons in detail dialog; hidden when no screening data.
+**Edited:** `src/server/applicant-routes.ts`, `src/features/applicants-tracker/lib/applicant-tracker-model.ts`, `src/features/applicants-tracker/components/applicant-tracker.tsx`, `cowork-log.md`
 
 ### 2026-05-08 - R2 + AWS S3 SDK
 **Prompt:** setup r2 with s3 sdk (.env R2_* vars)

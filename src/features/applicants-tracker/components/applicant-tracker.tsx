@@ -39,6 +39,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -54,6 +55,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   buildKanbanColumns,
@@ -69,11 +71,7 @@ import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/ap
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import {
@@ -96,9 +94,6 @@ import { useShallow } from "zustand/react/shallow";
 
 type ListResponse = NonNullable<
   Awaited<ReturnType<typeof api.api.applicants.get>>["data"]
->;
-type JobsResponse = NonNullable<
-  Awaited<ReturnType<typeof api.api.screener.jobs.get>>["data"]
 >;
 
 function canonicalizeKanbanColumns(
@@ -480,23 +475,44 @@ export function ApplicantTracker() {
     void queryClient.invalidateQueries({ queryKey: ["applicants"] });
   }, [queryClient]);
 
-  const patchStageMut = useMutation({
-    mutationFn: async ({ id, stage }: { id: string; stage: ApplicantStage }) => {
-      const { data, error } = await api.api.applicants({ id }).patch(
-        { stage },
-        { fetch: { credentials: "include" } },
-      );
+  const patchApplicantMut = useMutation({
+    mutationFn: async (input: {
+      id: string;
+      stage?: ApplicantStage;
+      notes?: string;
+    }) => {
+      const body: { stage?: ApplicantStage; notes?: string } = {};
+      if (input.stage !== undefined) body.stage = input.stage;
+      if (input.notes !== undefined) body.notes = input.notes;
+      const { data, error } = await api.api
+        .applicants({ id: input.id })
+        .patch(body, { fetch: { credentials: "include" } });
       if (error) throw error.value;
       return data;
     },
-    onMutate: async ({ id, stage }) => {
+    onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: ["applicants"] });
       const prev = queryClient.getQueryData<ListResponse>(applicantsQueryKey);
       queryClient.setQueryData<ListResponse>(applicantsQueryKey, (old) =>
         old
           ? {
               applicants: old.applicants.map((a) =>
-                a.id === id ? { ...a, stage } : a,
+                a.id === input.id
+                  ? {
+                      ...a,
+                      ...(input.stage !== undefined
+                        ? { stage: input.stage }
+                        : {}),
+                      ...(input.notes !== undefined
+                        ? {
+                            notes:
+                              input.notes.trim() === ""
+                                ? null
+                                : input.notes.trim(),
+                          }
+                        : {}),
+                    }
+                  : a,
               ),
             }
           : old,
@@ -505,7 +521,7 @@ export function ApplicantTracker() {
     },
     onError: (_, __, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(applicantsQueryKey, ctx.prev);
-      toast.error("อัปเดตสเตจไม่สำเร็จ");
+      toast.error("บันทึกไม่สำเร็จ");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["applicants"] });
@@ -542,6 +558,10 @@ export function ApplicantTracker() {
         jobDescriptionId: addJobId,
         positionTitle: jobs.find((j) => j.id === addJobId)?.title ?? "",
         overallScore: null,
+        skillFit: null,
+        experienceFit: null,
+        cultureFit: null,
+        notes: null,
         tags: [],
       };
       queryClient.setQueryData<ListResponse>(applicantsQueryKey, (old) =>
@@ -565,10 +585,9 @@ export function ApplicantTracker() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await api.api.applicants({ id }).delete(
-        undefined,
-        { fetch: { credentials: "include" } },
-      );
+      const { data, error } = await api.api
+        .applicants({ id })
+        .delete(undefined, { fetch: { credentials: "include" } });
       if (error) throw error.value;
       return data;
     },
@@ -596,8 +615,8 @@ export function ApplicantTracker() {
 
   const patchStage = useCallback(
     (input: { id: string; stage: ApplicantStage }) =>
-      patchStageMut.mutateAsync(input),
-    [patchStageMut],
+      patchApplicantMut.mutateAsync(input),
+    [patchApplicantMut],
   );
 
   const onKanbanPatchesComplete = useCallback(() => {
@@ -606,9 +625,9 @@ export function ApplicantTracker() {
 
   const onTableStageChange = useCallback(
     (row: TrackerApplicant, stage: ApplicantStage) => {
-      patchStageMut.mutate({ id: row.id, stage });
+      patchApplicantMut.mutate({ id: row.id, stage });
     },
-    [patchStageMut],
+    [patchApplicantMut],
   );
 
   const loading = applicantsQuery.isLoading;
@@ -676,7 +695,7 @@ export function ApplicantTracker() {
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <StageSelect
                     value={row.stage}
-                    disabled={patchStageMut.isPending}
+                    disabled={patchApplicantMut.isPending}
                     onChange={(next) => onTableStageChange(row, next)}
                   />
                 </TableCell>
@@ -893,7 +912,7 @@ export function ApplicantTracker() {
       </Dialog>
 
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="max-w-lg" showCloseButton>
+        <DialogContent>
           {detail ? (
             <>
               <DialogHeader className="flex flex-row items-start gap-3 space-y-0">
@@ -944,10 +963,10 @@ export function ApplicantTracker() {
                         "rounded-full",
                         detailStage === s && "bg-foreground text-background",
                       )}
-                      disabled={patchStageMut.isPending}
+                      disabled={patchApplicantMut.isPending}
                       onClick={() => {
                         if (s === detail.stage) return;
-                        patchStageMut.mutate(
+                        patchApplicantMut.mutate(
                           { id: detail.id, stage: s },
                           {
                             onSuccess: () => {
@@ -962,10 +981,36 @@ export function ApplicantTracker() {
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <ApplicantDetailAiScores row={detail} />
+              <ApplicantDetailNotesSection
+                key={detail.id}
+                applicant={detail}
+                patchPending={patchApplicantMut.isPending}
+                notesSaving={
+                  patchApplicantMut.isPending &&
+                  patchApplicantMut.variables != null &&
+                  patchApplicantMut.variables.notes !== undefined
+                }
+                onSave={(text) => {
+                  patchApplicantMut.mutate(
+                    { id: detail.id, notes: text },
+                    {
+                      onSuccess: () => {
+                        const trimmed = text.trim();
+                        setDetail({
+                          ...detail,
+                          notes: trimmed === "" ? null : trimmed,
+                        });
+                        toast.success("บันทึกหมายเหตุแล้ว");
+                      },
+                    },
+                  );
+                }}
+              />
+              {/* <p className="text-xs text-muted-foreground">
                 แท็กจากผลคัดกรอง:{" "}
                 {detail.tags.length ? detail.tags.join(", ") : "—"}
-              </p>
+              </p> */}
               <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
                 <Button
                   type="button"
@@ -984,11 +1029,7 @@ export function ApplicantTracker() {
                   >
                     ปิด
                   </Button>
-                  <Button
-                    type="button"
-                    className="bg-[#FACC15] font-medium text-black hover:bg-[#EAB308]"
-                    asChild
-                  >
+                  <Button type="button" asChild>
                     <Link href="/interviews">
                       <CalendarIcon className="size-4" />
                       ไปหน้านัดสัมภาษณ์
@@ -1030,6 +1071,149 @@ export function ApplicantTracker() {
   );
 }
 
+function formatScoreOneDecimal(value: number | null): string {
+  return value != null ? value.toFixed(1) : "—";
+}
+
+function ApplicantDetailAiScores({ row }: { row: TrackerApplicant }) {
+  const { overallScore, skillFit, experienceFit, cultureFit } = row;
+  const hasData =
+    overallScore != null ||
+    skillFit != null ||
+    experienceFit != null ||
+    cultureFit != null;
+  if (!hasData) {
+    return null;
+  }
+
+  const r = 38;
+  const c = 2 * Math.PI * r;
+  const pct =
+    overallScore != null ? Math.min(1, Math.max(0, overallScore / 10)) : 0;
+  const dash = pct * c;
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-4">
+      <div className="flex flex-wrap items-center gap-6">
+        <div
+          className="relative flex size-28 shrink-0 items-center justify-center"
+          aria-label={
+            overallScore != null
+              ? `คะแนนรวม ${overallScore.toFixed(1)} จาก 10`
+              : "คะแนนรวม"
+          }
+        >
+          <svg
+            className="absolute size-full -rotate-90"
+            viewBox="0 0 100 100"
+            aria-hidden
+          >
+            <circle
+              cx="50"
+              cy="50"
+              r={r}
+              fill="none"
+              className="stroke-lime-100"
+              strokeWidth="10"
+            />
+            <circle
+              cx="50"
+              cy="50"
+              r={r}
+              fill="none"
+              className="stroke-lime-600 dark:stroke-lime-400"
+              strokeWidth="10"
+              strokeLinecap="round"
+              strokeDasharray={`${dash} ${c}`}
+            />
+          </svg>
+          <span className="relative text-2xl font-bold tabular-nums">
+            {formatScoreOneDecimal(overallScore)}
+          </span>
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            คะแนนความเหมาะสม (AI)
+          </p>
+          <div className="flex flex-wrap gap-x-8 gap-y-2">
+            <div>
+              <p className="text-lg font-bold tabular-nums leading-none">
+                {formatScoreOneDecimal(skillFit)}
+              </p>
+              <p className="text-xs text-muted-foreground">ทักษะ</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold tabular-nums leading-none">
+                {formatScoreOneDecimal(experienceFit)}
+              </p>
+              <p className="text-xs text-muted-foreground">ประสบการณ์</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold tabular-nums leading-none">
+                {formatScoreOneDecimal(cultureFit)}
+              </p>
+              <p className="text-xs text-muted-foreground">วัฒนธรรม</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ApplicantDetailNotesSection({
+  applicant,
+  patchPending,
+  notesSaving,
+  onSave,
+}: {
+  applicant: TrackerApplicant;
+  patchPending: boolean;
+  notesSaving: boolean;
+  onSave: (text: string) => void;
+}) {
+  const [draft, setDraft] = useState(applicant.notes ?? "");
+
+  const normalizedDraft = draft.trim();
+  const normalizedSaved = (applicant.notes ?? "").trim();
+  const dirty = normalizedDraft !== normalizedSaved;
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border/50 bg-background px-4 py-4">
+      <Label
+        htmlFor={`applicant-notes-${applicant.id}`}
+        className="text-sm font-medium"
+      >
+        หมายเหตุ
+      </Label>
+      <Textarea
+        id={`applicant-notes-${applicant.id}`}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="บันทึกข้อมูลเพิ่มเติมจาก HR..."
+        disabled={patchPending}
+        rows={4}
+        className="min-h-24 resize-y"
+      />
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="gap-2"
+          disabled={!dirty || patchPending}
+          onClick={() => onSave(draft)}
+        >
+          {notesSaving ? (
+            <Loader2Icon className="size-4 shrink-0 animate-spin" />
+          ) : null}
+          บันทึกหมายเหตุ
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function DetailRow({
   icon,
   label,
@@ -1040,7 +1224,7 @@ function DetailRow({
   value: string;
 }) {
   return (
-    <div className="flex gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+    <div className="flex gap-2 rounded-lg px-3 py-2">
       <span className="mt-0.5 text-muted-foreground">{icon}</span>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>

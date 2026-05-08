@@ -3,10 +3,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
-import { Google_Sans } from "next/font/google";
+import { Anuphan } from "next/font/google";
 import "./globals.css";
 
-const font = Google_Sans({
+const font = Anuphan({
   subsets: ["latin", "thai"],
   weight: ["400", "500", "600", "700"],
 });

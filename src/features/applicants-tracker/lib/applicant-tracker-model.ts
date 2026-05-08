@@ -11,6 +11,10 @@ export type TrackerApplicant = {
   jobDescriptionId: string;
   positionTitle: string;
   overallScore: number | null;
+  skillFit: number | null;
+  experienceFit: number | null;
+  cultureFit: number | null;
+  notes: string | null;
   tags: Array<string>;
 };
 

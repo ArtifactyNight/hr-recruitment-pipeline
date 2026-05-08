@@ -52,6 +52,33 @@ function strengthsToTags(raw: unknown): Array<string> {
   return out.slice(0, 5);
 }
 
+function applicantListFields(
+  sr: {
+    overallScore: number;
+    skillFit: number;
+    experienceFit: number;
+    cultureFit: number;
+    strengths: unknown;
+  } | null,
+) {
+  if (!sr) {
+    return {
+      overallScore: null as number | null,
+      skillFit: null as number | null,
+      experienceFit: null as number | null,
+      cultureFit: null as number | null,
+      tags: [] as Array<string>,
+    };
+  }
+  return {
+    overallScore: sr.overallScore,
+    skillFit: sr.skillFit,
+    experienceFit: sr.experienceFit,
+    cultureFit: sr.cultureFit,
+    tags: strengthsToTags(sr.strengths),
+  };
+}
+
 export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   .use(applicantAuth)
   .get(
@@ -76,30 +103,40 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           name: true,
           email: true,
           phone: true,
+          notes: true,
           appliedAt: true,
           source: true,
           stage: true,
           jobDescription: { select: { id: true, title: true } },
           screeningResult: {
-            select: { overallScore: true, strengths: true },
+            select: {
+              overallScore: true,
+              skillFit: true,
+              experienceFit: true,
+              cultureFit: true,
+              strengths: true,
+            },
           },
         },
         orderBy: { appliedAt: "desc" },
       });
 
-      let list = applicants.map((row) => ({
-        id: row.id,
-        name: row.name,
-        email: row.email,
-        phone: row.phone,
-        appliedAt: row.appliedAt.toISOString(),
-        source: row.source,
-        stage: row.stage,
-        jobDescriptionId: row.jobDescription.id,
-        positionTitle: row.jobDescription.title,
-        overallScore: row.screeningResult?.overallScore ?? null,
-        tags: strengthsToTags(row.screeningResult?.strengths),
-      }));
+      let list = applicants.map((row) => {
+        const fromScreening = applicantListFields(row.screeningResult);
+        return {
+          id: row.id,
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          notes: row.notes,
+          appliedAt: row.appliedAt.toISOString(),
+          source: row.source,
+          stage: row.stage,
+          jobDescriptionId: row.jobDescription.id,
+          positionTitle: row.jobDescription.title,
+          ...fromScreening,
+        };
+      });
 
       if (search.length > 0) {
         const lower = search.toLowerCase();
@@ -114,6 +151,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             if (tag.toLowerCase().includes(lower)) {
               return true;
             }
+          }
+          if (a.notes?.toLowerCase().includes(lower)) {
+            return true;
           }
           return false;
         });
@@ -154,28 +194,36 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           name: true,
           email: true,
           phone: true,
+          notes: true,
           appliedAt: true,
           source: true,
           stage: true,
           jobDescription: { select: { id: true, title: true } },
           screeningResult: {
-            select: { overallScore: true, strengths: true },
+            select: {
+              overallScore: true,
+              skillFit: true,
+              experienceFit: true,
+              cultureFit: true,
+              strengths: true,
+            },
           },
         },
       });
+      const fromScreening = applicantListFields(created.screeningResult);
       return {
         applicant: {
           id: created.id,
           name: created.name,
           email: created.email,
           phone: created.phone,
+          notes: created.notes,
           appliedAt: created.appliedAt.toISOString(),
           source: created.source,
           stage: created.stage,
           jobDescriptionId: created.jobDescription.id,
           positionTitle: created.jobDescription.title,
-          overallScore: created.screeningResult?.overallScore ?? null,
-          tags: strengthsToTags(created.screeningResult?.strengths),
+          ...fromScreening,
         },
       };
     },
@@ -195,36 +243,56 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     "/:id",
     async ({ params, body, set }) => {
       try {
+        const data: Prisma.ApplicantUpdateInput = {};
+        if (body.stage !== undefined) {
+          data.stage = body.stage as ApplicantStage;
+        }
+        if (body.notes !== undefined) {
+          const n = body.notes.trim();
+          data.notes = n.length > 0 ? n : null;
+        }
+        if (Object.keys(data).length === 0) {
+          set.status = 400;
+          return { error: "ต้องส่ง stage หรือ notes อย่างน้อยหนึ่งค่า" };
+        }
         const updated = await prisma.applicant.update({
           where: { id: params.id },
-          data: { stage: body.stage as ApplicantStage },
+          data,
           select: {
             id: true,
             name: true,
             email: true,
             phone: true,
+            notes: true,
             appliedAt: true,
             source: true,
             stage: true,
             jobDescription: { select: { id: true, title: true } },
             screeningResult: {
-              select: { overallScore: true, strengths: true },
+              select: {
+                overallScore: true,
+                skillFit: true,
+                experienceFit: true,
+                cultureFit: true,
+                strengths: true,
+              },
             },
           },
         });
+        const fromScreening = applicantListFields(updated.screeningResult);
         return {
           applicant: {
             id: updated.id,
             name: updated.name,
             email: updated.email,
             phone: updated.phone,
+            notes: updated.notes,
             appliedAt: updated.appliedAt.toISOString(),
             source: updated.source,
             stage: updated.stage,
             jobDescriptionId: updated.jobDescription.id,
             positionTitle: updated.jobDescription.title,
-            overallScore: updated.screeningResult?.overallScore ?? null,
-            tags: strengthsToTags(updated.screeningResult?.strengths),
+            ...fromScreening,
           },
         };
       } catch {
@@ -234,8 +302,11 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
     {
       params: t.Object({ id: t.String() }),
-      body: t.Object({ stage: stageUnion }),
-      detail: { tags: ["applicants"], summary: "อัปเดตสเตจ" },
+      body: t.Object({
+        stage: t.Optional(stageUnion),
+        notes: t.Optional(t.String({ maxLength: 16_000 })),
+      }),
+      detail: { tags: ["applicants"], summary: "อัปเดตผู้สมัคร" },
     },
   )
   .delete(
