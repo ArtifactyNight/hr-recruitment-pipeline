@@ -1,3 +1,8 @@
+### 2026-05-08 - Applicant tracker feature split
+**Prompt:** separate component to feature (feature based architecture)
+**Output:** Split monolithic `applicant-tracker.tsx` under `features/applicants-tracker/components/`: `tracker-card`, `stage-select`, `applicant-kanban-board-view`, `applicant-tracker-table`, `applicant-tracker-header`, `applicant-tracker-filters`, `add-applicant-dialog`, `applicant-detail-dialog`, `detail-row`, `applicant-detail-ai-scores`, `applicant-detail-notes-section`, `delete-applicant-alert`; pure helpers in `lib/tracker-display-helpers.ts`. `ApplicantTracker` keeps queries/mutations and composes children. Exported `ApplicantTrackerView` from store. `createMut` reads form via `useApplicantTrackerStore.getState()` so submit uses latest fields.
+**Edited:** `src/features/applicants-tracker/components/**`, `src/features/applicants-tracker/lib/tracker-display-helpers.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `cowork-log.md`
+
 ### 2026-05-08 - Applicant HR notes in detail dialog
 **Prompt:** have note section below and can update it inside
 **Output:** Added `Applicant.notes` (optional), migration `20260509130000_applicant_notes`. Extended `PATCH /applicants/:id` with optional `notes` (or `stage`, at least one required); list/create responses include `notes`; search matches note text. Tracker: unified `patchApplicantMut`, `ApplicantDetailNotesSection` (textarea + บันทึกหมายเหตุ) under AI scores in detail dialog.

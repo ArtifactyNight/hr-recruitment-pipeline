@@ -18,7 +18,8 @@ Goal: Cowork Log is a file that records your Claude Cowork sessions during assig
 ```
 
 ## General
-- use zustand for statemanagement
+- Feature-Based Architecture pattern
+- Use zustand for statemanagement
 
 ## Language
 - Use Thai language for Frontend 

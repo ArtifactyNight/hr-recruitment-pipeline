@@ -4,9 +4,11 @@ import type { TrackerApplicant } from "../lib/applicant-tracker-model";
 
 type AddSource = "LINKEDIN" | "JOBSDB" | "REFERRAL" | "OTHER";
 
+export type ApplicantTrackerView = "board" | "table";
+
 interface ApplicantTrackerState {
-  view: "board" | "table";
-  setView: (v: "board" | "table") => void;
+  view: ApplicantTrackerView;
+  setView: (v: ApplicantTrackerView) => void;
 
   searchInput: string;
   debouncedSearch: string;
