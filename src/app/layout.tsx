@@ -1,3 +1,4 @@
+import { QueryProvider } from "@/components/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -32,8 +33,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
-          <TooltipProvider>{children}</TooltipProvider>
-          <Toaster richColors />
+          <QueryProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+            <Toaster richColors />
+          </QueryProvider>
         </ClerkProvider>
       </body>
     </html>
