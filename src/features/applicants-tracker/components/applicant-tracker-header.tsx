@@ -1,9 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApplicantTrackerView } from "@/features/applicants-tracker/store/applicant-tracker-store";
 import { LayoutGridIcon, ListIcon, PlusIcon } from "lucide-react";
+import Link from "next/link";
 
 type ApplicantTrackerHeaderProps = {
   total: number;
@@ -29,30 +30,28 @@ export function ApplicantTrackerHeader({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <ToggleGroup
-          type="single"
+        <Tabs
           value={view}
           onValueChange={(v) => {
             if (v === "board" || v === "table") onViewChange(v);
           }}
-          className="rounded-lg border border-border p-0.5"
         >
-          <ToggleGroupItem value="board" className="gap-1.5 px-3">
-            <LayoutGridIcon className="size-4" />
-            บอร์ด
-          </ToggleGroupItem>
-          <ToggleGroupItem value="table" className="gap-1.5 px-3">
-            <ListIcon className="size-4" />
-            ตาราง
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <Button
-          type="button"
-          className="bg-[#FACC15] font-medium text-black hover:bg-[#EAB308]"
-          onClick={onAddClick}
-        >
-          <PlusIcon className="size-4" />
-          เพิ่มผู้สมัคร
+          <TabsList className="rounded-lg border border-border">
+            <TabsTrigger value="board" className="gap-1.5 px-3">
+              <LayoutGridIcon className="size-4" />
+              บอร์ด
+            </TabsTrigger>
+            <TabsTrigger value="table" className="gap-1.5 px-3">
+              <ListIcon className="size-4" />
+              ตาราง
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button asChild>
+          <Link href="/screener">
+            <PlusIcon className="size-4" />
+            เพิ่มผู้สมัคร
+          </Link>
         </Button>
       </div>
     </header>

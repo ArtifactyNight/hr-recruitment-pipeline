@@ -1,4 +1,8 @@
-### 2026-05-09 - Tracker dialog prefill fix
+### 2026-05-09 - Applicant tracker header: Tabs for view switch
+**Prompt:** applicant-tracker-header ToggleGroup → use tabs
+**Output:** Replaced `ToggleGroup`/`ToggleGroupItem` with `Tabs`/`TabsList`/`TabsTrigger` from `@/components/ui/tabs`; controlled `value={view}` + `onViewChange` guard for board/table; kept border + trigger spacing/icons.
+**Edited:** `src/features/applicants-tracker/components/applicant-tracker-header.tsx`, `cowork-log.md`
+
 **Prompt:** fix candidate name and email don't set to dialog
 **Output:** Moved draft name/email off Zustand into `ResumeScreener` state (`trackerDraftName`/`trackerDraftEmail`); opening runs `openTrackerDraft()` that copies trimmed `detectedName`/`detectedEmail` then `setTrackerDialogOpen(true)`. Zustand store only tracks `trackerDialogOpen` + JD dialog. `AddToTrackerDialog` is fully controlled via props (no stale subscription vs Radix open lifecycle).
 
