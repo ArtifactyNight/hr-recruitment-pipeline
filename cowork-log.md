@@ -1,3 +1,8 @@
+### 2026-05-09 - Screener feature split + Zustand dialogs
+**Prompt:** split component to feature based; use zustand for dialog
+**Output:** Split `resume-screener.tsx` into `resume-screener-header`, `job-description-dialog` (open button + `useQuery` for JD when dialog open), `add-to-tracker-dialog`, `resume-input-card`, `screener-report-panel`, `fit-row`, `report-bullet-block`; helpers/types in `lib/resume-screener-utils.ts`; `store/screener-dialog-store.ts` holds `jdDialogOpen`, tracker open + name/email + `openTrackerDialog`. `ResumeScreener` composes pieces and keeps jobs/evaluate/add mutations.
+**Edited:** `src/features/screener/**`, `cowork-log.md`
+
 ### 2026-05-08 - Applicant tracker feature split
 **Prompt:** separate component to feature (feature based architecture)
 **Output:** Split monolithic `applicant-tracker.tsx` under `features/applicants-tracker/components/`: `tracker-card`, `stage-select`, `applicant-kanban-board-view`, `applicant-tracker-table`, `applicant-tracker-header`, `applicant-tracker-filters`, `add-applicant-dialog`, `applicant-detail-dialog`, `detail-row`, `applicant-detail-ai-scores`, `applicant-detail-notes-section`, `delete-applicant-alert`; pure helpers in `lib/tracker-display-helpers.ts`. `ApplicantTracker` keeps queries/mutations and composes children. Exported `ApplicantTrackerView` from store. `createMut` reads form via `useApplicantTrackerStore.getState()` so submit uses latest fields.
