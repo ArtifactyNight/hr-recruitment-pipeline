@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 
+import { applicantRoutes } from "@/server/applicant-routes";
 import { screenerRoutes } from "@/server/screener-routes";
 
 /**
@@ -12,6 +13,7 @@ export const elysiaApp = new Elysia({ prefix: "/api" })
     message: "Service API is ready",
   }))
   .get("/health", () => ({ status: "ok" as const }))
-  .use(screenerRoutes);
+  .use(screenerRoutes)
+  .use(applicantRoutes);
 
 export type App = typeof elysiaApp;

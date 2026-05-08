@@ -84,6 +84,7 @@ export function AppSidebar({
                       asChild
                       isActive={isActive}
                       tooltip={item.label}
+                      className="data-active:bg-white! data-active:text-black! data-active:shadow-sm! hover:bg-black/10 text-muted-foreground hover:text-black transition-all active:bg-black/10 active:text-black!"
                     >
                       <Link href={item.href}>
                         <item.icon />

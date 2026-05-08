@@ -1,3 +1,13 @@
+### 2026-05-08 - (impeccable polish) Tracker kanban card
+**Prompt:** /impeccable polish: track card
+**Output:** `TrackerCard`: dedicated drag strip with `GripVerticalIcon` + `KanbanItemHandle` (listeners only on grip); main body is `<button>` calling `onOpen` (detail dialog now reachable from board). `role="group"` + `tabIndex={-1}` on `KanbanItem` so focus goes to the open button, not nested `role="button"`. Removed `shadow-sm`; `rounded-xl` aligned to columns; border/hover/focus-within ring via tokens; `motion-safe` transitions with ease-out curve; avatar uses `secondary` tokens; long text `title` tooltips; fallback copy for missing position; meta row `min-h-9` for touch.
+**Edited:** `src/features/applicants-tracker/components/applicant-tracker.tsx`, `cowork-log.md`
+
+### 2026-05-08 - Applicant Tracker (Kanban + table)
+**Prompt:** Implement applicant tracker with ReUI Kanban + shadcn table, board/list views.
+**Output:** Added Elysia `/api/applicants` (list with search/job/source, POST, PATCH stage, DELETE) with Clerk auth; scores/tags from `ScreeningResult`. Wired `applicantRoutes` in `elysia-app`. UI: `ApplicantTracker` on `/candidates`, toggles บอร์ด/ตาราง, filters, add dialog, detail dialog + delete, debounced drag→PATCH. Kanban uses `@/components/reui/kanban` ([ReUI](https://reui.io/docs/components/base/kanban)). Uses app-level `eden.Provider` from `QueryProvider` (no extra root). Fixed lint/build issues in `kanban` overlay (`useSyncExternalStore`), `query-provider` var name, `calendar` table class typing, `eden.ts` client options cast.
+**Edited:** `src/server/applicant-routes.ts`, `src/server/elysia-app.ts`, `src/features/applicants-tracker/**`, `src/app/(dashboard)/candidates/page.tsx`, `src/components/reui/kanban.tsx`, `src/components/ui/calendar.tsx`, `src/components/query-provider.tsx`, `src/lib/eden.ts`
+
 ### 2026-05-08 - Polish screener empty AI fields + jobs error
 **Prompt:** (impeccable polish) handling empty result.
 **Output:** `trimItems` + `ReportBulletBlock` for empty strengths/concerns; numbered questions + panel fallback copy; `FitRow` and copy-to-clipboard handle blank strings; safe overall score display; jobs `isError` alert and empty-JD hint under select; questions block uses design tokens for border/bg (no raw yellow).

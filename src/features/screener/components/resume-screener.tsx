@@ -39,8 +39,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
-import { eden } from "@/lib/eden";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   AlertTriangleIcon,
   CheckIcon,
@@ -53,21 +54,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-type JobsResponse = { jobs: Array<{ id: string; title: string }> };
-
 type JobDetailResponse = {
   id: string;
   title: string;
   description: string;
   requirements: string;
-};
-
-type EvaluateSuccess = {
-  report: FitReport;
-  matchedJobId: string;
-  matchedJobTitle: string | null;
-  detectedName?: string;
-  detectedEmail?: string;
 };
 
 function trimItems(items: ReadonlyArray<string>): Array<string> {
@@ -133,34 +124,62 @@ export function ResumeScreener() {
   const [jdLoading, setJdLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const jobsQuery = eden.useQuery(
-    ["api", "screener", "jobs", "get"] as const,
-    {},
-  );
-
-  const evaluateMutation = eden.useMutation(
-    ["api", "screener", "evaluate", "post"] as const,
-    undefined,
-    {
-      onError: () => {
-        toast.error("วิเคราะห์ไม่สำเร็จ");
-      },
+  const jobsQuery = useQuery({
+    queryKey: ["screener-jobs"],
+    queryFn: async () => {
+      const { data, error } = await api.api.screener.jobs.get({
+        fetch: { credentials: "include" },
+      });
+      if (error) throw error.value;
+      return data;
     },
-  );
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const addMutation = eden.useMutation(
-    ["api", "screener", "add-to-tracker", "post"] as const,
-    undefined,
-    {
-      onError: () => {
-        toast.error("เพิ่มเข้า Tracker ไม่สำเร็จ");
-      },
+  const evaluateMutation = useMutation({
+    mutationFn: async (input: {
+      cvText?: string;
+      jobDescriptionId: string;
+      file?: File;
+    }) => {
+      const { data, error } = await api.api.screener.evaluate.post(
+        {
+          jobDescriptionId: input.jobDescriptionId,
+          file: input.file,
+          cvText: input.cvText,
+        },
+        { fetch: { credentials: "include" } },
+      );
+      if (error) throw error.value;
+      return data;
     },
-  );
+    onError: () => {
+      toast.error("วิเคราะห์ไม่สำเร็จ");
+    },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async (input: {
+      jobDescriptionId: string;
+      name: string;
+      email: string;
+      resumeText?: string;
+      report: FitReport;
+    }) => {
+      const { data, error } = await api.api.screener["add-to-tracker"].post(
+        input,
+        { fetch: { credentials: "include" } },
+      );
+      if (error) throw error.value;
+      return data;
+    },
+    onError: () => {
+      toast.error("เพิ่มเข้า Tracker ไม่สำเร็จ");
+    },
+  });
 
   const jobs = useMemo(() => {
-    const data = jobsQuery.data as JobsResponse | undefined;
-    return data?.jobs ?? [];
+    return jobsQuery.data?.jobs ?? [];
   }, [jobsQuery.data]);
 
   /** Effective JD for API + Select — ค่าเริ่ม = ตำแหน่งแรกในรายการ */
@@ -191,17 +210,15 @@ export function ResumeScreener() {
     }
     setJdLoading(true);
     try {
-      const res = await fetch(
-        `${typeof window !== "undefined" ? window.location.origin : ""}/api/screener/jobs/${selectedJobId}`,
-        { credentials: "include" },
-      );
-      const body = (await res.json()) as JobDetailResponse & { error?: string };
-      if (!res.ok || "error" in body) {
-        toast.error(body.error ?? "โหลด JD ไม่ได้");
+      const { data, error } = await api.api.screener.jobs({
+        id: selectedJobId,
+      }).get({ fetch: { credentials: "include" } });
+      if (error) {
+        toast.error("โหลด JD ไม่ได้");
         setJdDetail(null);
         return;
       }
-      setJdDetail(body);
+      setJdDetail(data as JobDetailResponse);
     } catch {
       toast.error("โหลด JD ไม่ได้");
       setJdDetail(null);
@@ -221,17 +238,13 @@ export function ResumeScreener() {
       return;
     }
     try {
-      const data = (await evaluateMutation.mutateAsync({
+      const data = await evaluateMutation.mutateAsync({
         cvText: selectedFile ? undefined : text || undefined,
         jobDescriptionId: selectedJobId,
         file: selectedFile ?? undefined,
-      } as never)) as EvaluateSuccess & { error?: string; detail?: string };
-      if ("error" in data && data.error) {
-        toast.error(data.error);
-        return;
-      }
-      setReport(data.report);
-      setTrackerJobId(data.matchedJobId);
+      });
+      setReport(data.report ?? null);
+      setTrackerJobId(data.matchedJobId ?? null);
       setDetectedName(data.detectedName ?? "");
       setDetectedEmail(data.detectedEmail ?? "");
       toast.success("วิเคราะห์เสร็จแล้ว");
@@ -284,7 +297,7 @@ export function ResumeScreener() {
         email: emailT,
         resumeText: resumeText.trim() || undefined,
         report,
-      } as never);
+      });
       toast.success("เพิ่มผู้สมัครใน Tracker แล้ว (SCREENING)");
       setTrackerOpen(false);
     } catch {

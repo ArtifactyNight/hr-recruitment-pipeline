@@ -1,10 +1,9 @@
 "use client";
 
+import { createQueryClient } from "@/lib/get-query-client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { useState, type ReactNode } from "react";
-
-import { createQueryClient } from "@/lib/get-query-client";
 
 const ReactQueryDevtools = dynamic(
   () =>
