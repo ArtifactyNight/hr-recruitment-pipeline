@@ -31,7 +31,7 @@ const mainNav: Array<{
   label: string;
   icon: typeof HomeIcon;
 }> = [
-  { href: "/", label: "ภาพรวม", icon: HomeIcon },
+  { href: "/", label: "แดชบอร์ด", icon: HomeIcon },
   { href: "/screener", label: routeSegmentLabels.screener, icon: ScanBarcode },
   {
     href: "/candidates",
