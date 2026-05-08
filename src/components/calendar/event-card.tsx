@@ -1,12 +1,12 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { Event } from "@/mock-data/events";
+import type { CalendarEvent } from "@/types/calendar-event";
+import { ExternalLink } from "lucide-react";
 import { getEventDuration } from "./calendar-utils";
 
 interface EventCardProps {
-  event: Event;
+  event: CalendarEvent;
   style: React.CSSProperties;
   onClick?: () => void;
 }

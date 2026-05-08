@@ -10,7 +10,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Event } from "@/mock-data/events";
+import { api } from "@/lib/api";
+import type { CalendarEvent } from "@/types/calendar-event";
+import type { InterviewCalendarUiSnapshot } from "@/types/interview-calendar-snapshot";
+import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import {
@@ -28,7 +31,36 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useMemo, useState } from "react";
+
+type InterviewCalendarDetailQueryPayload = {
+  interview: {
+    description?: string | null;
+    organizer?: { email?: string | null } | null;
+    googleEventId?: string | null;
+  };
+  calendarSnapshot: InterviewCalendarUiSnapshot | null;
+};
+
+function mergeInterviewNotes(
+  db: string | null | undefined,
+  fromGoogle: string | null | undefined,
+): string | null {
+  const d = db?.trim() ?? "";
+  const g = fromGoogle?.trim() ?? "";
+  if (!d && !g) return null;
+  if (!d) return g;
+  if (!g) return d;
+  if (d === g) return d;
+  return `${d}\n\n— Google Calendar —\n${g}`;
+}
+
+function attendeeResponseSummary(
+  snapshot: InterviewCalendarUiSnapshot,
+): string {
+  const { total, accepted } = snapshot.attendees;
+  return `${total} คน • ตอบรับ ${accepted}`;
+}
 
 export type InterviewEventSheetToolbarHandlers = {
   onEdit: () => void;
@@ -36,7 +68,7 @@ export type InterviewEventSheetToolbarHandlers = {
 };
 
 interface EventSheetProps {
-  event: Event | null;
+  event: CalendarEvent | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode?: "default" | "interview";
@@ -129,7 +161,7 @@ function InterviewEventSheetContent({
   children,
   toolbar,
 }: {
-  event: Event;
+  event: CalendarEvent;
   children?: ReactNode;
   toolbar?: InterviewEventSheetToolbarHandlers | null;
 }) {
@@ -137,10 +169,85 @@ function InterviewEventSheetContent({
   const tz = event.timezone ?? "Asia/Bangkok";
   const meetingCode = getMeetingCode(event.meetingLink);
 
-  const organizerRaw = event.participants[0];
-  const organizerEmail = organizerRaw
-    ? participantDisplay(organizerRaw).email
-    : "—";
+  const attendeeRows = event.participants;
+  const attendeeCount = attendeeRows.length;
+
+  const organizerRaw =
+    attendeeRows.length > 0 ? (attendeeRows[0] ?? null) : null;
+
+  const detailQuery = useQuery({
+    queryKey: ["interviews", "detail", event.interviewId],
+    queryFn: async () => {
+      const { data, error } = await api.api
+        .interviews({ id: event.interviewId! })
+        .get({ fetch: { credentials: "include" } });
+      if (error) throw error.value;
+      return data as InterviewCalendarDetailQueryPayload;
+    },
+    enabled: Boolean(event.interviewId),
+  });
+
+  const snapshot = detailQuery.data?.calendarSnapshot ?? null;
+  const ivInterview = detailQuery.data?.interview;
+
+  const mergedNotes = useMemo(
+    () =>
+      mergeInterviewNotes(
+        ivInterview?.description ?? event.description,
+        snapshot?.calendarDescription,
+      ),
+    [
+      event.description,
+      ivInterview?.description,
+      snapshot?.calendarDescription,
+    ],
+  );
+
+  const organizerParticipantFallbackEmail =
+    organizerRaw !== null ? participantDisplay(organizerRaw).email : null;
+
+  const organizerEmailResolved =
+    snapshot?.organizerEmail ??
+    ivInterview?.organizer?.email ??
+    event.organizerEmail ??
+    organizerParticipantFallbackEmail ??
+    "—";
+
+  const hasGoogleEventHint = Boolean(event.googleEventId);
+
+  const reminderLabel = useMemo(() => {
+    if (!event.interviewId) return "แจ้งเตือนจากระบบทั่วไป (ปฏิทินตัวอย่าง)";
+    if (detailQuery.isFetching && snapshot == null)
+      return "กำลังโหลดการแจ้งเตือนจาก Google Calendar…";
+    if (snapshot?.remindersLabel) return snapshot.remindersLabel;
+    if (hasGoogleEventHint || Boolean(ivInterview?.googleEventId)) {
+      return "ไม่สามารถดึงการแจ้งเตือนจาก Google Calendar ได้ (ลองเปิดฟอร์มแก้ไขและบันทึกอีกครั้ง)";
+    }
+    return "ไม่ได้ซิงก์กับ Google Calendar event";
+  }, [
+    event.interviewId,
+    detailQuery.isFetching,
+    snapshot?.remindersLabel,
+    snapshot,
+    hasGoogleEventHint,
+    ivInterview?.googleEventId,
+  ]);
+
+  const dialInLabel =
+    snapshot?.dialInLabel ??
+    (event.meetingLink?.trim()
+      ? "ไม่มีเบอร์โทรจาก Google Meet (เข้าร่วมผ่านลิงก์วิดีโอได้)"
+      : "ไม่มีเบอร์โทร / การประชุมออฟไลน์");
+
+  const attendeesLabel =
+    snapshot != null
+      ? attendeeResponseSummary(snapshot)
+      : `${String(attendeeCount)} คน (จากระบบ — ผู้เข้าร่วมที่ระบุ)` +
+        (detailQuery.isFetching && hasGoogleEventHint
+          ? " · โหลดจาก Google …"
+          : "");
+
+  const canUseToolbar = Boolean(toolbar);
 
   function openEdit(): void {
     toolbar?.onEdit();
@@ -149,11 +256,6 @@ function InterviewEventSheetContent({
   function openDelete(): void {
     toolbar?.onDelete();
   }
-
-  const attendeeRows = event.participants;
-  const attendeeCount = attendeeRows.length;
-
-  const canUseToolbar = Boolean(toolbar);
 
   return (
     <div className="flex h-full max-h-dvh flex-col">
@@ -238,7 +340,7 @@ function InterviewEventSheetContent({
           disabled={!canUseToolbar}
           onClick={openEdit}
         >
-          <span>Propose new time</span>
+          <span>นัดหมายเวลาใหม่</span>
           <ArrowUpRight className="size-4" />
         </Button>
       </SheetHeader>
@@ -345,46 +447,47 @@ function InterviewEventSheetContent({
               <div className="p-1">
                 <Bell className="size-4" />
               </div>
-              <span>Reminder: 30min before</span>
+              <span>{reminderLabel}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div className="p-1">
                 <CalendarIcon className="size-4" />
               </div>
-              <span>Organizer: {organizerEmail}</span>
+              <span>ผู้จัด: {organizerEmailResolved}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div className="p-1">
                 <Phone className="size-4" />
               </div>
-              <span>(US) +1 904-330-1131</span>
+              <span>{dialInLabel}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div className="p-1">
                 <Users className="size-4" />
               </div>
-              <span>
-                {attendeeCount} persons
-                <span className="mx-1">•</span>
-                {attendeeCount} yes
-              </span>
+              <span>{attendeesLabel}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div className="p-1">
                 <FilePlus className="size-4" />
               </div>
-              <span>Notes from Organizer</span>
+              <span>โน้ต / รายละเอียด</span>
             </div>
           </div>
 
-          <div className="border-border border-t pt-4">
-            <p className="text-muted-foreground text-xs leading-[1.6]">
-              During today&apos;s daily check-in, we had an in-depth discussion
-              about the MVP (Minimum Viable Product). We agreed on the core
-              features that need to be included, focusing on the AI-conducted
-              interviews and the memoir compilation functionality.
-            </p>
-          </div>
+          {mergedNotes != null ? (
+            <div className="border-border border-t pt-4">
+              <p className="text-muted-foreground text-xs whitespace-pre-wrap leading-[1.6]">
+                {mergedNotes}
+              </p>
+            </div>
+          ) : (
+            <div className="border-border border-t pt-4">
+              <p className="text-muted-foreground text-xs leading-[1.6] italic">
+                ไม่มีโน้ต (ทั้งจากระบบและ Google Calendar)
+              </p>
+            </div>
+          )}
 
           {children != null ? (
             <div className="border-border border-t pt-4">{children}</div>
@@ -711,16 +814,6 @@ export function EventSheet({
                   </div>
                   <span>Notes from Organizer</span>
                 </div>
-              </div>
-
-              <div className="pt-4 border-t border-border">
-                <p className="text-xs text-muted-foreground leading-[1.6]">
-                  During today&apos;s daily check-in, we had an in-depth
-                  discussion about the MVP (Minimum Viable Product). We agreed
-                  on the core features that need to be included, focusing on the
-                  AI-conducted interviews and the memoir compilation
-                  functionality.
-                </p>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { Event } from "@/mock-data/events";
 import { useCalendarStore } from "@/store/calendar-store";
+import type { CalendarEvent } from "@/types/calendar-event";
 import { format } from "date-fns";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { CalendarDayColumn } from "./calendar-day-column";
@@ -15,14 +15,14 @@ import {
 
 type CalendarViewProps = {
   /** After a card opens the detail sheet (e.g. sync interview row + form). */
-  onEventDetailOpen?: (event: Event) => void;
+  onEventDetailOpen?: (event: CalendarEvent) => void;
   onEventDetailClose?: () => void;
   /**
    * When set with `eventSheetMode: "interview"`, appended inside the sheet body
    * (dialogs, portals). Callback receives toolbar registration setter for header icons.
    */
   renderEventSheetChildren?: (
-    event: Event,
+    event: CalendarEvent,
     closeSheet: () => void,
     registerToolbar?: (
       handlers: InterviewEventSheetToolbarHandlers | null,
@@ -45,7 +45,9 @@ export function CalendarView({
   const daysScrollRefs = useRef<(HTMLDivElement | null)[]>([]);
   const hasScrolledRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null,
+  );
   const [sheetOpen, setSheetOpen] = useState(false);
   const [interviewToolbar, setInterviewToolbar] =
     useState<InterviewEventSheetToolbarHandlers | null>(null);
@@ -60,7 +62,7 @@ export function CalendarView({
     return () => clearInterval(interval);
   }, []);
 
-  const eventsByDay: Record<string, Event[]> = {};
+  const eventsByDay: Record<string, Array<CalendarEvent>> = {};
   weekDays.forEach((day) => {
     const dayStr = format(day, "yyyy-MM-dd");
     eventsByDay[dayStr] = events.filter((e) => e.date === dayStr);
@@ -110,7 +112,7 @@ export function CalendarView({
       });
     };
 
-  const handleEventClick = (event: Event) => {
+  const handleEventClick = (event: CalendarEvent) => {
     setSelectedEvent(event);
     setSheetOpen(true);
     onEventDetailOpen?.(event);

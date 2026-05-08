@@ -1,25 +1,25 @@
 "use client";
 
-import { Event } from "@/mock-data/events";
+import type { CalendarEvent } from "@/types/calendar-event";
 import {
   HOURS_24,
   HOUR_HEIGHT,
-  getEventTop,
   getEventHeight,
+  getEventTop,
 } from "./calendar-utils";
-import { EventCard } from "./event-card";
 import { CurrentTimeIndicator } from "./current-time-indicator";
+import { EventCard } from "./event-card";
 
 interface CalendarDayColumnProps {
   day: Date;
   dayIndex: number;
-  events: Event[];
+  events: Array<CalendarEvent>;
   today: Date;
   isTodayInWeek: boolean;
   currentTime: Date;
   onScroll: (index: number) => (e: React.UIEvent<HTMLDivElement>) => void;
   scrollRef: (el: HTMLDivElement | null) => void;
-  onEventClick: (event: Event) => void;
+  onEventClick: (event: CalendarEvent) => void;
 }
 
 export function CalendarDayColumn({

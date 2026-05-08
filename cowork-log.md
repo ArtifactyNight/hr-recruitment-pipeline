@@ -209,3 +209,13 @@
 **Prompt:** ยกเลิกนัด → ไอคอนลบด้านบน; แก้ไข → ไอคอนแก้ไข; กดแล้วเป็น dialog
 **Output:** Export `InterviewEventSheetToolbarHandlers`; `CalendarView` เก็บ state + setter จาก `renderEventSheetChildren` Parm ที่ 3; `EventSheet` ส่ง `interviewToolbar` — Pen/FileText/Layers + Propose new time → `onEdit`, Trash → `onDelete`. ฟอร์มอยู่ใน `Dialog`; ยกเลิกนัดอยู่ใน `AlertDialog` แบบ controlled + ปุ่ม destructive ธรรมดา (`cancelMut`). ตัด `#interview-sheet-reschedule` / `interviewRescheduleSectionId`
 **Edited:** `event-sheet.tsx`, `calendar-view.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Event sheet metadata from Google Calendar API
+**Prompt:** `@event-sheet.tsx:343-378` implement real API (Google Calendar or etc.)
+**Output:** เพิ่ม `fetchPrimaryCalendarEvent` + `snapshotFromGoogleCalendarEvent` แมป reminders / organizer.email / เบอร์ dial-in (`conferenceData` phone entryPoints) / นับ RSVP จาก attendees / description จาก `events.get`. `GET /interviews/:id` คืน `calendarSnapshot` เมื่อมี `googleEventId` + เชื่อม Google; include `organizer.email` ใน list+detail; `InterviewEventSheetContent` ใช้ `useQuery` คีย์เดียวกับฟอร์มแก้ไข แสดงข้อความจริง และ merge โน้ต DB+Google แทน placeholder; เติม `Event`/`interviewToCalendarEvent` (`organizerEmail`, `googleEventId`, `description`, รวมอีเมลผู้สมัครเป็น guest)
+**Edited:** `google-calendar-service.ts`, `interview-routes.ts`, `src/types/interview-calendar-snapshot.ts`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `mock-data/events.ts`, `cowork-log.md`
+
+### 2026-05-09 - ลบ mock ปฏิทิน
+**Prompt:** remove calendar mock data
+**Output:** ลบ `src/mock-data/events.ts`; ประเภทเหตุการณ์อยู่ที่ `types/calendar-event.ts` (`CalendarEvent`). Zustand ใช้ `calendarEvents: []` + `setCalendarEvents` แทน `customEvents|null` และ demo-week template; เพิ่ม event จาก Create dialog เขียนลง store ด้วย `crypto.randomUUID()`. `/interviews` sync จาก API และ unmount เคลียร์เป็น `[]`. Header โชว์ "วันนี้" จาก store อย่างเดียว
+**Edited:** `calendar-store.ts`, `calendar-view.tsx`, `calendar-day-column.tsx`, `calendar-header.tsx`, `event-card.tsx`, `event-sheet.tsx`, `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`; ลบ `mock-data/events.ts`

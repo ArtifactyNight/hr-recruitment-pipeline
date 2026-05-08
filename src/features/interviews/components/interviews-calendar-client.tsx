@@ -41,8 +41,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { InterviewerEmailsField } from "@/features/interviews/components/interviewer-emails-field";
 import { parseEmailsFromTextarea } from "@/features/interviews/lib/interviewer-email-utils";
 import { api } from "@/lib/api";
-import type { Event } from "@/mock-data/events";
 import { useCalendarStore } from "@/store/calendar-store";
+import type { CalendarEvent } from "@/types/calendar-event";
+import type { InterviewCalendarUiSnapshot } from "@/types/interview-calendar-snapshot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addDays,
@@ -52,7 +53,7 @@ import {
   parseISO,
   startOfDay,
 } from "date-fns";
-import { CalendarPlusIcon } from "lucide-react";
+import { CalendarPlusIcon, LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -96,7 +97,19 @@ function Field(props: { readonly children: ReactNode }) {
   return <div className="grid gap-1">{props.children}</div>;
 }
 
-function interviewToCalendarEvent(row: InterviewWithRelations): Event {
+function interviewParticipantsFromRow(
+  row: InterviewWithRelations,
+): Array<string> {
+  const fromInterviewers = row.interviewers
+    .map((iv) => (iv.email ?? iv.name).trim())
+    .filter((s): s is string => s.length > 0);
+  const app = row.applicant.email?.trim();
+  const uniq = Array.from(new Set(fromInterviewers));
+  if (app && !uniq.includes(app)) uniq.push(app);
+  return uniq;
+}
+
+function interviewToCalendarEvent(row: InterviewWithRelations): CalendarEvent {
   const startD =
     typeof row.scheduledAt === "string"
       ? parseISO(row.scheduledAt)
@@ -109,14 +122,18 @@ function interviewToCalendarEvent(row: InterviewWithRelations): Event {
     startTime: format(startD, "HH:mm"),
     endTime: format(endD, "HH:mm"),
     date: format(startD, "yyyy-MM-dd"),
-    participants: row.interviewers.map((iv) => iv.email ?? iv.name),
+    participants: interviewParticipantsFromRow(row),
     meetingLink: row.googleMeetLink ?? undefined,
     timezone: "Asia/Bangkok",
+    organizerEmail: row.organizer?.email ?? undefined,
+    googleEventId: row.googleEventId ?? undefined,
+    description: row.description ?? undefined,
   };
 }
 
 type InterviewDetailResponse = {
   interview: InterviewWithRelations;
+  calendarSnapshot: InterviewCalendarUiSnapshot | null;
 };
 
 function interviewRowToFormSeed(row: InterviewWithRelations): {
@@ -246,7 +263,7 @@ function InterviewEventSheetForm(props: {
 }
 
 function InterviewEventSheetBody(props: {
-  readonly event: Event;
+  readonly event: CalendarEvent;
   readonly closeSheet: () => void;
   readonly linked: boolean;
   readonly onInvalidate: () => void;
@@ -400,7 +417,7 @@ export function InterviewsCalendarClient() {
   const applicantIdQs = searchParams.get("applicantId");
   const queryClient = useQueryClient();
   const currentWeekStart = useCalendarStore((s) => s.currentWeekStart);
-  const setCustomEvents = useCalendarStore((s) => s.setCustomEvents);
+  const setCalendarEvents = useCalendarStore((s) => s.setCalendarEvents);
 
   const { rangeFrom, rangeTo } = useMemo(() => {
     const pad = 86400000 * 14;
@@ -457,15 +474,15 @@ export function InterviewsCalendarClient() {
     },
   });
 
-  const calendarEvents = useMemo((): Array<Event> => {
+  const syncedCalendarRows = useMemo((): Array<CalendarEvent> => {
     const rows = interviewsQuery.data?.interviews ?? [];
     return rows.map(interviewToCalendarEvent);
   }, [interviewsQuery.data]);
 
   useEffect(() => {
-    setCustomEvents(calendarEvents);
-    return () => setCustomEvents(null);
-  }, [calendarEvents, setCustomEvents]);
+    setCalendarEvents(syncedCalendarRows);
+    return () => setCalendarEvents([]);
+  }, [syncedCalendarRows, setCalendarEvents]);
 
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -529,12 +546,10 @@ export function InterviewsCalendarClient() {
   const linked = googleStatusQuery.data?.linked === true;
 
   const interviewsBeforePrimary = linked ? (
-    <Badge variant="secondary" className="max-w-full truncate text-xs">
-      เชื่อมแล้ว
-      {googleStatusQuery.data?.googleEmail
-        ? `: ${googleStatusQuery.data.googleEmail}`
-        : ""}
-    </Badge>
+    <Button variant="secondary">
+      <LinkIcon className="size-4" />
+      <span>เชื่อมบัญชี Google แล้ว</span>
+    </Button>
   ) : (
     <Button
       type="button"

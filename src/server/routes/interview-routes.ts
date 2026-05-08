@@ -8,12 +8,15 @@ import { Elysia, t } from "elysia";
 
 import {
   deleteCalendarEvent,
+  fetchPrimaryCalendarEvent,
   hasPrimaryCalendarBusyOverlap,
   insertEventWithMeet,
   patchEventDetails,
+  snapshotFromGoogleCalendarEvent,
 } from "@/server/google-calendar/google-calendar-service";
 import { findDbInterviewConflict } from "@/server/interview-scheduling-lib";
 import { ensureInterviewerIdsFromEmails } from "@/server/interviewer-email-lib";
+import type { InterviewCalendarUiSnapshot } from "@/types/interview-calendar-snapshot";
 
 const TZ = "Asia/Bangkok";
 
@@ -108,6 +111,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
               jobDescription: { select: { title: true } },
             },
           },
+          organizer: { select: { email: true } },
           interviewers: {
             select: { id: true, name: true, email: true },
           },
@@ -173,6 +177,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
               jobDescription: { select: { title: true } },
             },
           },
+          organizer: { select: { email: true } },
           interviewers: { select: { id: true, name: true, email: true } },
         },
       });
@@ -180,7 +185,23 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         set.status = 404;
         return { error: "ไม่พบนัดหมาย" };
       }
-      return { interview: row };
+
+      let calendarSnapshot: InterviewCalendarUiSnapshot | null = null;
+      const eventId = row.googleEventId?.trim();
+      if (eventId) {
+        try {
+          const rt = await googleRefreshTokenForUser(dbUser.id);
+          const gEv = await fetchPrimaryCalendarEvent({
+            refreshToken: rt,
+            eventId,
+          });
+          calendarSnapshot = snapshotFromGoogleCalendarEvent(gEv);
+        } catch {
+          calendarSnapshot = null;
+        }
+      }
+
+      return { interview: row, calendarSnapshot };
     },
     { params: t.Object({ id: t.String() }) },
   )

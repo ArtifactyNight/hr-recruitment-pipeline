@@ -18,8 +18,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Event } from "@/mock-data/events";
 import { useCalendarStore } from "@/store/calendar-store";
+import type { CalendarEvent } from "@/types/calendar-event";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { useState } from "react";
@@ -55,12 +55,12 @@ export function CreateEventDialog({
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
 
-    const newEvent: Omit<Event, "id"> = {
+    const newEvent: Omit<CalendarEvent, "id"> = {
       title,
       date: format(date, "yyyy-MM-dd"),
       startTime,
       endTime,
-      participants: participantsList.length > 0 ? participantsList : ["user1"],
+      participants: participantsList,
       meetingLink: meetingLink || undefined,
       timezone: timezone || undefined,
     };

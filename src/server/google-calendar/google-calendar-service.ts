@@ -1,5 +1,108 @@
-import { calendar } from "@googleapis/calendar";
+import { calendar, type calendar_v3 } from "@googleapis/calendar";
 import { OAuth2Client } from "google-auth-library";
+
+import type { InterviewCalendarUiSnapshot } from "@/types/interview-calendar-snapshot";
+
+function stripHtmlToText(html?: string | null): string | null {
+  if (html == null || html.trim() === "") return null;
+  const noTags = html.replace(/<[^>]+>/gu, " ");
+  const singleLine = noTags.replace(/\s+/gu, " ").trim();
+  return singleLine.length > 0 ? singleLine : null;
+}
+
+function formatReminderSummary(
+  ev: calendar_v3.Schema$Event,
+): InterviewCalendarUiSnapshot["remindersLabel"] {
+  const r = ev.reminders;
+  if (r?.useDefault === true) {
+    return "การแจ้งเตือนเริ่มต้น (ตามปฏิทินหลักใน Google)";
+  }
+  const overrides = r?.overrides;
+  if (!overrides?.length) {
+    return "ไม่มีการแจ้งเตือนใน Google Calendar";
+  }
+  const parts: Array<string> = [];
+  for (const ov of overrides) {
+    const minutes = ov.minutes ?? 0;
+    const method =
+      ov.method === "email"
+        ? "อีเมล"
+        : ov.method === "popup"
+          ? "แจ้งเตือน"
+          : (ov.method ?? "แจ้งเตือน");
+    parts.push(`${method} · ${minutes} นาทีก่อน`);
+  }
+  return parts.join(" · ");
+}
+
+function collectDialIns(ev: calendar_v3.Schema$Event): string | null {
+  const entryPoints =
+    ev.conferenceData?.entryPoints ?? ([] as calendar_v3.Schema$EntryPoint[]);
+  const phones = entryPoints
+    .filter((e: calendar_v3.Schema$EntryPoint) => e.entryPointType === "phone")
+    .map((e: calendar_v3.Schema$EntryPoint) => {
+      const label = e.label?.trim();
+      if (label) return label;
+      const uri = e.uri?.trim();
+      if (!uri) return "";
+      return uri.startsWith("tel:") ? uri.slice(4) : uri;
+    })
+    .filter((s: string): s is string => s.length > 0);
+  if (phones.length === 0) return null;
+  return phones.join(" · ");
+}
+
+export function snapshotFromGoogleCalendarEvent(
+  ev: calendar_v3.Schema$Event,
+): InterviewCalendarUiSnapshot {
+  const rawAttendees = ev.attendees ?? [];
+  const attendees = rawAttendees.filter(
+    (a: calendar_v3.Schema$EventAttendee) => !Boolean(a.resource),
+  );
+  const bag = {
+    accepted: 0,
+    declined: 0,
+    tentative: 0,
+    needsAction: 0,
+  };
+  for (const a of attendees) {
+    switch (a.responseStatus) {
+      case "accepted":
+        bag.accepted += 1;
+        break;
+      case "declined":
+        bag.declined += 1;
+        break;
+      case "tentative":
+        bag.tentative += 1;
+        break;
+      default:
+        bag.needsAction += 1;
+    }
+  }
+
+  const organizerEmailRaw = ev.organizer?.email ?? ev.creator?.email ?? null;
+  const organizerEmail =
+    organizerEmailRaw && organizerEmailRaw.includes("@")
+      ? organizerEmailRaw
+      : null;
+
+  const descriptionPlain = stripHtmlToText(ev.description ?? undefined);
+
+  return {
+    remindersLabel: formatReminderSummary(ev),
+    organizerEmail,
+    dialInLabel: collectDialIns(ev),
+    attendees: {
+      total: attendees.length,
+      accepted: bag.accepted,
+      declined: bag.declined,
+      tentative: bag.tentative,
+      needsAction: bag.needsAction,
+    },
+    calendarDescription: descriptionPlain,
+  };
+}
 
 /**
  * Full Calendar access — required for events.insert with Meet (conferenceData)
@@ -129,6 +232,21 @@ export async function deleteCalendarEvent(opts: {
     eventId: opts.eventId,
     sendUpdates: CALENDAR_SEND_UPDATES,
   });
+}
+
+export async function fetchPrimaryCalendarEvent(opts: {
+  refreshToken: string;
+  eventId: string;
+}): Promise<calendar_v3.Schema$Event> {
+  const cal = calendarAuthorizedClient(opts.refreshToken);
+  const res = await cal.events.get({
+    calendarId: "primary",
+    eventId: opts.eventId,
+  });
+  if (!res.data?.id) {
+    throw new Error("Google Calendar events.get ไม่มี event id");
+  }
+  return res.data;
 }
 
 /** true = slot has clash on primary calendar busy blocks */

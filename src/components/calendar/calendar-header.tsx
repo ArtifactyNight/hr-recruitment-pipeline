@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { getTodayEvents } from "@/mock-data/events";
 import { useCalendarStore } from "@/store/calendar-store";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -48,16 +47,13 @@ export function CalendarHeader({
   primaryActionLabel,
   interviewsBeforePrimary,
 }: CalendarHeaderProps) {
-  const customEvents = useCalendarStore((s) => s.customEvents);
+  const calendarEvents = useCalendarStore((s) => s.calendarEvents);
   const { currentWeekStart } = useCalendarStore();
 
   const todayEvents = useMemo(() => {
-    if (customEvents !== null) {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
-      return customEvents.filter((e) => e.date === todayStr);
-    }
-    return getTodayEvents();
-  }, [customEvents]);
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    return calendarEvents.filter((e) => e.date === todayStr);
+  }, [calendarEvents]);
 
   const meetingsCount = todayEvents.filter(
     (e) =>

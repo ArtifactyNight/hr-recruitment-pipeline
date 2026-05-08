@@ -1,10 +1,8 @@
-import { addEvent as addEventToStore, Event, events } from "@/mock-data/events";
+import type { CalendarEvent } from "@/types/calendar-event";
 import {
   addDays,
   addWeeks,
   endOfDay,
-  format,
-  getDay,
   isWithinInterval,
   parseISO,
   startOfDay,
@@ -18,9 +16,9 @@ interface CalendarState {
   searchQuery: string;
   eventTypeFilter: "all" | "with-meeting" | "without-meeting";
   participantsFilter: "all" | "with-participants" | "without-participants";
-  /** When non-null, week view uses these events instead of demo template data */
-  customEvents: Event[] | null;
-  setCustomEvents: (events: Event[] | null) => void;
+  /** App-wide calendar rows (dashboard local adds / interviews sync from API) */
+  calendarEvents: Array<CalendarEvent>;
+  setCalendarEvents: (events: Array<CalendarEvent>) => void;
   goToNextWeek: () => void;
   goToPreviousWeek: () => void;
   goToToday: () => void;
@@ -32,39 +30,9 @@ interface CalendarState {
   setParticipantsFilter: (
     filter: "all" | "with-participants" | "without-participants",
   ) => void;
-  addEvent: (event: Omit<Event, "id">) => void;
-  getCurrentWeekEvents: () => Event[];
+  addEvent: (event: Omit<CalendarEvent, "id">) => void;
+  getCurrentWeekEvents: () => Array<CalendarEvent>;
   getWeekDays: () => Date[];
-}
-
-function getDayOfWeek(date: Date): number {
-  const day = getDay(date);
-  return day === 0 ? 6 : day - 1;
-}
-
-function getEventsForWeek(startDate: Date): Event[] {
-  const weekEvents: Event[] = [];
-
-  for (let i = 0; i < 7; i++) {
-    const currentDay = addDays(startDate, i);
-    const currentDayOfWeek = getDayOfWeek(currentDay);
-
-    events.forEach((event) => {
-      const eventDate = new Date(event.date);
-      const eventDayOfWeek = getDayOfWeek(eventDate);
-
-      if (eventDayOfWeek === currentDayOfWeek) {
-        const eventDateStr = format(currentDay, "yyyy-MM-dd");
-        weekEvents.push({
-          ...event,
-          id: `${event.id}-${eventDateStr}`,
-          date: eventDateStr,
-        });
-      }
-    });
-  }
-
-  return weekEvents;
 }
 
 export const useCalendarStore = create<CalendarState>((set, get) => ({
@@ -72,9 +40,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   searchQuery: "",
   eventTypeFilter: "all",
   participantsFilter: "all",
-  customEvents: null,
+  calendarEvents: [],
 
-  setCustomEvents: (customEvents) => set({ customEvents }),
+  setCalendarEvents: (calendarEvents) => set({ calendarEvents }),
 
   goToNextWeek: () =>
     set((state) => ({
@@ -103,24 +71,24 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     filter: "all" | "with-participants" | "without-participants",
   ) => set({ participantsFilter: filter }),
 
-  addEvent: (event: Omit<Event, "id">) => {
-    addEventToStore(event);
+  addEvent: (event: Omit<CalendarEvent, "id">) => {
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `evt-${Date.now()}`;
+    set((state) => ({
+      calendarEvents: [...state.calendarEvents, { ...event, id }],
+    }));
   },
 
   getCurrentWeekEvents: () => {
     const state = get();
-    let weekEvents: Event[];
-
-    if (state.customEvents !== null) {
-      const weekStart = startOfDay(state.currentWeekStart);
-      const weekEnd = endOfDay(addDays(state.currentWeekStart, 6));
-      weekEvents = state.customEvents.filter((event) => {
-        const d = parseISO(`${event.date}T12:00:00`);
-        return isWithinInterval(d, { start: weekStart, end: weekEnd });
-      });
-    } else {
-      weekEvents = getEventsForWeek(state.currentWeekStart);
-    }
+    const weekStart = startOfDay(state.currentWeekStart);
+    const weekEnd = endOfDay(addDays(state.currentWeekStart, 6));
+    let weekEvents = state.calendarEvents.filter((event) => {
+      const d = parseISO(`${event.date}T12:00:00`);
+      return isWithinInterval(d, { start: weekStart, end: weekEnd });
+    });
 
     if (state.searchQuery) {
       const query = state.searchQuery.toLowerCase();
@@ -150,7 +118,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
   getWeekDays: () => {
     const state = get();
-    const days: Date[] = [];
+    const days: Array<Date> = [];
     for (let i = 0; i < 7; i++) {
       days.push(addDays(state.currentWeekStart, i));
     }
