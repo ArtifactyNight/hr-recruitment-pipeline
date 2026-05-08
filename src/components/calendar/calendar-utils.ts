@@ -1,9 +1,7 @@
-export const HOURS_24 = Array.from({ length: 24 }, (_, i) => {
-  if (i === 0) return "12 AM";
-  if (i < 12) return `${i} AM`;
-  if (i === 12) return "12 PM";
-  return `${i - 12} PM`;
-});
+export const HOURS_24 = Array.from(
+  { length: 24 },
+  (_, i) => `${String(i).padStart(2, "0")}:00`,
+);
 
 export const HOUR_HEIGHT = 120;
 export const INITIAL_SCROLL_OFFSET = 9 * HOUR_HEIGHT;

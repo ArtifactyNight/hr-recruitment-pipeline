@@ -1,3 +1,8 @@
+### [2026-05-09] - Calendar: แสดงเวลา 24 ชม.
+**Prompt:** use 24 hours instead of 12
+**Output:** `HOURS_24` ใน `calendar-utils` เป็นเลเบล `00:00`–`23:00`; `event-sheet` `formatTime` ใช้ `HH:mm` แทน localized `p`
+**Edited:** `calendar-utils.ts`, `event-sheet.tsx`, `cowork-log.md`
+
 ### [2026-05-09 12:00] - แปล UI ปฏิทินและแทร็กเกอร์เป็นไทย
 **Prompt:** translate component to thai (frontend)
 **Output:** Hardcode ข้อความ UI เป็นภาษาไทยใน `calendar-header`, `calendar-controls`, `create-event-dialog`, `event-sheet`, `schedule-popover`; ใช้ `date-fns` `th` locale สำหรับชื่อเดือน/วัน (`PPP`, หัวสัปดาห์ปฏิทิน, เวลาแบบ localized `p`). แก้ `applicant-detail-dialog`, `applicant-tracker-table`, `tracker-card` ให้ `format` วันที่ด้วย `th`. ปรับข้อความเล็กน้อยใน `interviews-calendar-client` (prefill bar).

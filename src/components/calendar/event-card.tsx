@@ -112,7 +112,7 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
                 />
               </svg>
             </div>
-            <span className="flex-1 truncate">Join on Google Meet</span>
+            <span className="flex-1 truncate">เข้าร่วมผ่าน Google Meet</span>
             <ExternalLink className="size-3 shrink-0" />
           </div>
         )}

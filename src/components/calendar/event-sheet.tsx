@@ -85,7 +85,7 @@ interface EventSheetProps {
 }
 
 function formatTime(time: string): string {
-  return format(parseTimeToDate(time), "p", { locale: th });
+  return format(parseTimeToDate(time), "HH:mm");
 }
 
 function formatDate(dateStr: string): string {
