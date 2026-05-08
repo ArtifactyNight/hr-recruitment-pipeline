@@ -17,13 +17,13 @@ import {
   stageLabel,
   type TrackerApplicant,
 } from "@/features/applicants-tracker/lib/applicant-tracker-model";
-import { sourceLabel } from "@/features/applicants-tracker/lib/tracker-display-helpers";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { CalendarIcon, GlobeIcon, Trash2Icon, UserIcon } from "lucide-react";
 import Link from "next/link";
+import { sourceLabel } from "../lib/tracker-display-helpers";
 
 type ApplicantDetailDialogProps = {
   applicant: TrackerApplicant | null;

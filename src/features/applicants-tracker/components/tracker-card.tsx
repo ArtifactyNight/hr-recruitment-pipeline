@@ -1,6 +1,10 @@
 "use client";
 
 import { KanbanItem, KanbanItemHandle } from "@/components/reui/kanban";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   initialsFromName,
   type TrackerApplicant,
@@ -12,19 +16,104 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { GlobeIcon, GripVerticalIcon, Link2Icon } from "lucide-react";
+import { ChevronRightIcon, ClockIcon, TagIcon } from "lucide-react";
 
 type TrackerCardProps = {
   row: TrackerApplicant;
   onOpen: () => void;
+  asHandle?: boolean;
+  isOverlay?: boolean;
 };
 
-export function TrackerCard({ row, onOpen }: TrackerCardProps) {
-  const applied = format(new Date(row.appliedAt), "EEE d MMM", { locale: th });
+export function TrackerCard({
+  row,
+  onOpen,
+  asHandle = true,
+  isOverlay = false,
+}: TrackerCardProps) {
+  const applied = format(new Date(row.appliedAt), "EEE, d MMM", {
+    locale: th,
+  });
   const src = sourceLabel(row.source);
   const score = row.overallScore;
+  const positionLine = row.positionTitle?.trim() || "ไม่มีตำแหน่ง";
 
-  const cardSummary = `${row.name}, ${row.positionTitle ?? "ไม่มีตำแหน่ง"}`;
+  const cardContent = (
+    <Card size="sm" className="bg-card">
+      <CardContent className="space-y-3">
+        <div className="flex gap-3">
+          <Avatar size="lg" className="after:border-0">
+            <AvatarFallback className="bg-[#FFCC00] text-sm font-semibold text-foreground">
+              {initialsFromName(row.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 space-y-0.5">
+                <p className="text-foreground line-clamp-2 text-sm leading-snug font-semibold">
+                  {row.name}
+                </p>
+                <p className="text-muted-foreground line-clamp-1 text-xs">
+                  {positionLine}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "pointer-events-none h-6 shrink-0 rounded-md border-0 px-2 py-0 text-xs font-medium tabular-nums",
+                    scoreBadgeClass(score),
+                  )}
+                >
+                  {score != null ? score.toFixed(1) : "—"}
+                </Badge>
+                {!isOverlay ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0"
+                    aria-label={`เปิดรายละเอียด: ${row.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpen();
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <ChevronRightIcon />
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-muted-foreground flex items-center justify-between gap-3 text-xs">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <TagIcon className="text-muted-foreground size-3.5 shrink-0 opacity-80" />
+            <span className="truncate">{src}</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5 tabular-nums">
+            <ClockIcon className="text-muted-foreground size-3.5 shrink-0 opacity-80" />
+            <time dateTime={row.appliedAt}>{applied}</time>
+          </span>
+        </div>
+
+        {/* {row.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {row.tags.map((tag, index) => (
+              <span
+                key={`${row.id}-${index}-${tag}`}
+                className="bg-muted text-foreground inline-flex max-w-full rounded-full px-2.5 py-0.5 text-xs leading-normal font-normal"
+              >
+                <span className="truncate">{tag}</span>
+              </span>
+            ))}
+          </div>
+        ) : null} */}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <KanbanItem
@@ -33,72 +122,11 @@ export function TrackerCard({ row, onOpen }: TrackerCardProps) {
       role="group"
       tabIndex={-1}
     >
-      <div className="flex overflow-hidden rounded-xl border border-border bg-card ring-offset-background motion-safe:transition-[border-color] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.33,1,0.68,1)] hover:border-muted-foreground/20 focus-within:border-muted-foreground/25 focus-within:ring-2 focus-within:ring-ring/60 focus-within:ring-offset-2">
-        <KanbanItemHandle
-          cursor
-          aria-label={`ลาก: ${cardSummary}`}
-          className="flex min-h-11 min-w-10 shrink-0 flex-col items-center justify-start border-border border-r bg-muted/30 py-3 transition-colors hover:bg-muted/50 active:bg-muted/60 data-[dragging=true]:opacity-80"
-        >
-          <GripVerticalIcon className="size-4 shrink-0 text-muted-foreground" />
-        </KanbanItemHandle>
-        <button
-          type="button"
-          onClick={onOpen}
-          className="min-w-0 flex-1 cursor-pointer p-3 text-left outline-none motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.33,1,0.68,1)] hover:bg-muted/25 active:bg-muted/35"
-          aria-label={`เปิดรายละเอียด: ${cardSummary}`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 items-start gap-2">
-              <span
-                aria-hidden
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground"
-              >
-                {initialsFromName(row.name)}
-              </span>
-              <div className="min-w-0 text-start">
-                <p
-                  className="truncate font-medium text-foreground"
-                  title={row.name}
-                >
-                  {row.name}
-                </p>
-                <p
-                  className="truncate text-xs text-muted-foreground"
-                  title={row.positionTitle ?? undefined}
-                >
-                  {row.positionTitle ?? "ไม่มีตำแหน่ง"}
-                </p>
-              </div>
-            </div>
-            <span
-              className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
-                scoreBadgeClass(score),
-              )}
-            >
-              {score != null ? score.toFixed(1) : "—"}
-            </span>
-          </div>
-          <div className="mt-2 flex min-h-9 flex-wrap items-center gap-x-1 gap-y-0.5 text-xs text-muted-foreground">
-            {row.source === "LINKEDIN" ? (
-              <GlobeIcon
-                className="size-3.5 shrink-0 self-center"
-                aria-hidden
-              />
-            ) : (
-              <Link2Icon
-                className="size-3.5 shrink-0 self-center"
-                aria-hidden
-              />
-            )}
-            <span>{src}</span>
-            <span className="text-muted-foreground/50" aria-hidden>
-              ·
-            </span>
-            <span className="whitespace-nowrap">{applied}</span>
-          </div>
-        </button>
-      </div>
+      {asHandle && !isOverlay ? (
+        <KanbanItemHandle>{cardContent}</KanbanItemHandle>
+      ) : (
+        cardContent
+      )}
     </KanbanItem>
   );
 }

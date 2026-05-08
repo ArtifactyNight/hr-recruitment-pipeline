@@ -86,3 +86,13 @@
 **Prompt:** setup r2 with s3 sdk (.env R2_* vars)
 **Output:** Installed `@aws-sdk/client-s3`. Added `src/lib/r2-s3.ts`: `getR2S3Client()` (endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`, region `auto`), `getR2BucketName()`, `getR2PublicBaseUrl()`, `getR2PublicObjectUrl(key)` for public R2.dev/custom URLs.
 **Edited:** `src/lib/r2-s3.ts`, `package.json`, `bun.lock`, `cowork-log.md`
+
+### 2026-05-09 - Kanban board pattern (Card + overlay)
+**Prompt:** change kanban style to match reui task board pattern (Card columns, Badge count, Grip column handle, full-card item handle, dashed overlay).
+**Output:** `ApplicantKanbanStageColumn`: `Card`/`CardHeader`/`CardContent` per stage, `Badge` จำนวน, `KanbanColumnHandle` + ghost `Button` + `GripVerticalIcon`; responsive `KanbanBoard` grid. `TrackerCard`: `Card`/`CardContent` แถวชื่อ+คะแนน, รายละเอียดด้วยปุ่ม `ChevronRight` (`stopPropagation`); `KanbanItemHandle` ห่อการ์ดเมื่อลาก; `asHandle`/`isOverlay` สำหรับ overlay. `KanbanOverlay` ฟังก์ชัน children แสดงคอลัมน์/การ์ดจริง พร้อม `border-dashed bg-muted/10`.
+**Edited:** `src/features/applicants-tracker/components/applicant-kanban-board-view.tsx`, `tracker-card.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Kanban tracker card layout
+**Prompt:** add kanban card, here's layout i need (reference: avatar left, name+role, score top-right, source+date row, tags pills)
+**Output:** `TrackerCard`: แถวบน `Avatar` size lg สีพื้นหลัง `#FFCC00` + อักษรย่อ, ชื่อหนา + ตำแหน่งรอง, Badge คะแนน + ปุ่มเปิด; แถวกลาง `Tag` + แหล่งที่มา / `Clock` + วันที่ (`EEE, d MMM` locale th); แถวล่าง pill `row.tags` (`rounded-full bg-muted`) เมื่อมีแท็ก
+**Edited:** `src/features/applicants-tracker/components/tracker-card.tsx`, `cowork-log.md`

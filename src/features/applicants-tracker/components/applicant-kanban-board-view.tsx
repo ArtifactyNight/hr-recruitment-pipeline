@@ -7,9 +7,10 @@ import {
   KanbanBoard,
   KanbanColumn,
   KanbanColumnContent,
-  KanbanColumnHandle,
   KanbanOverlay,
 } from "@/components/reui/kanban";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TrackerCard } from "@/features/applicants-tracker/components/tracker-card";
 import {
   buildKanbanColumns,
@@ -32,6 +33,73 @@ type ApplicantKanbanBoardViewProps = {
   }) => Promise<unknown>;
   onPatchesComplete: () => void;
 };
+
+function findRowById(
+  cols: Record<string, Array<TrackerApplicant>>,
+  id: string,
+): TrackerApplicant | undefined {
+  for (const key of STAGE_ORDER) {
+    const hit = cols[key]?.find((r) => r.id === id);
+    if (hit) {
+      return hit;
+    }
+  }
+  return undefined;
+}
+
+type ApplicantKanbanStageColumnProps = {
+  stageId: ApplicantStage;
+  items: Array<TrackerApplicant>;
+  isOverlay?: boolean;
+  onOpenCard: (row: TrackerApplicant) => void;
+};
+
+function ApplicantKanbanStageColumn({
+  stageId,
+  items,
+  isOverlay = false,
+  onOpenCard,
+}: ApplicantKanbanStageColumnProps) {
+  return (
+    <KanbanColumn value={stageId} className="min-w-0">
+      <Card className="flex h-full min-h-[200px] flex-col" size="sm">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border pb-3">
+          <div className="flex min-w-0 items-center justify-between w-full gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <span
+                className={cn(
+                  "size-2 shrink-0 rounded-full",
+                  stageDotClass[stageId],
+                )}
+                aria-hidden
+              />
+              <span className="truncate text-sm font-semibold">
+                {stageBoardTitle[stageId]}
+              </span>
+            </div>
+            <Badge variant="outline">{items.length}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="flex min-h-0 flex-1 flex-col pt-0">
+          <KanbanColumnContent
+            value={stageId}
+            className="max-h-[min(70vh,560px)] min-h-[120px] flex-1 gap-2.5 overflow-y-auto py-2 px-1"
+          >
+            {items.map((row) => (
+              <TrackerCard
+                key={row.id}
+                row={row}
+                onOpen={() => onOpenCard(row)}
+                asHandle={!isOverlay}
+                isOverlay={isOverlay}
+              />
+            ))}
+          </KanbanColumnContent>
+        </CardContent>
+      </Card>
+    </KanbanColumn>
+  );
+}
 
 export function ApplicantKanbanBoardView({
   list,
@@ -81,54 +149,51 @@ export function ApplicantKanbanBoardView({
       getItemValue={(item) => item.id}
       className="w-full"
     >
-      <KanbanBoard className="flex w-full gap-3 overflow-x-auto pb-2 sm:grid-cols-none">
+      <KanbanBoard className="w-full min-w-0 gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {STAGE_ORDER.map((stageId) => {
           const items = columns[stageId] ?? [];
           return (
-            <KanbanColumn
+            <ApplicantKanbanStageColumn
               key={stageId}
-              value={stageId}
-              className="max-w-[280px] min-w-[260px] shrink-0"
-            >
-              <div className="flex h-full flex-col rounded-xl border border-border bg-muted/20">
-                <KanbanColumnHandle className="opacity-100">
-                  <div className="flex items-center justify-between gap-2 bg-muted border-border px-3 py-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className={cn(
-                          "size-2 shrink-0 rounded-full",
-                          stageDotClass[stageId],
-                        )}
-                        aria-hidden
-                      />
-                      <span className="truncate text-sm font-medium">
-                        {stageBoardTitle[stageId]}
-                      </span>
-                    </div>
-                    <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
-                      {items.length}
-                    </span>
-                  </div>
-                </KanbanColumnHandle>
-                <KanbanColumnContent
-                  value={stageId}
-                  className="max-h-[min(70vh,560px)] flex-1 gap-2 overflow-y-auto px-2 py-2 bg-muted"
-                >
-                  {items.map((row) => (
-                    <TrackerCard
-                      key={row.id}
-                      row={row}
-                      onOpen={() => onOpenCard(row)}
-                    />
-                  ))}
-                </KanbanColumnContent>
-              </div>
-            </KanbanColumn>
+              stageId={stageId}
+              items={items}
+              onOpenCard={onOpenCard}
+            />
           );
         })}
       </KanbanBoard>
-      <KanbanOverlay>
-        <div className="bg-muted size-full max-w-[260px] rounded-lg opacity-80" />
+      <KanbanOverlay className="max-w-none rounded-md border-2 border-dashed bg-muted/10">
+        {({ value, variant }) => {
+          const id = String(value);
+          if (variant === "column") {
+            const sid = id as ApplicantStage;
+            const colItems = columns[sid] ?? [];
+            return (
+              <div className="w-[min(100vw-2rem,280px)] shrink-0">
+                <ApplicantKanbanStageColumn
+                  stageId={sid}
+                  items={colItems}
+                  isOverlay
+                  onOpenCard={onOpenCard}
+                />
+              </div>
+            );
+          }
+          const row = findRowById(columns, id);
+          if (!row) {
+            return <div className="min-h-24 min-w-[240px]" />;
+          }
+          return (
+            <div className="w-[min(100vw-2rem,280px)] shrink-0">
+              <TrackerCard
+                row={row}
+                onOpen={() => onOpenCard(row)}
+                isOverlay
+                asHandle={false}
+              />
+            </div>
+          );
+        }}
       </KanbanOverlay>
     </Kanban>
   );
