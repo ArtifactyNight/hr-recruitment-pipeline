@@ -40,15 +40,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import { eden } from "@/lib/eden";
+import { cn } from "@/lib/utils";
 import {
   AlertTriangleIcon,
   CheckIcon,
   CopyIcon,
   FileTextIcon,
   Loader2Icon,
+  MailQuestion,
   SparklesIcon,
   UploadIcon,
-  ZapIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -69,28 +70,50 @@ type EvaluateSuccess = {
   detectedEmail?: string;
 };
 
+function trimItems(items: ReadonlyArray<string>): Array<string> {
+  const out: Array<string> = [];
+  for (const item of items) {
+    const t = item.trim();
+    if (t) {
+      out.push(t);
+    }
+  }
+  return out;
+}
+
 function formatReportText(name: string, email: string, report: FitReport) {
-  const lines = [
+  const strengths = trimItems(report.strengths);
+  const concerns = trimItems(report.concerns);
+  const questions = trimItems(report.suggestedQuestions);
+  const summary = report.panelSummary.trim();
+  const status = report.fitStatus.trim();
+  const lines: Array<string> = [
     `รายงานความเหมาะสม — ${name} (${email})`,
     "",
     `คะแนนรวม: ${String(report.overallScore)}`,
-    `สถานะ: ${report.fitStatus}`,
+    `สถานะ: ${status || "ไม่ระบุ"}`,
     "",
-    report.panelSummary,
+    summary || "(ยังไม่มีสรุปจากโมเดล)",
     "",
     "มิติย่อย",
-    `- ทักษะ (${String(report.skillFit)}/10): ${report.skillReason}`,
-    `- ประสบการณ์ (${String(report.experienceFit)}/10): ${report.experienceReason}`,
-    `- วัฒนธรรม/สื่อสาร (${String(report.cultureFit)}/10): ${report.cultureReason}`,
+    `- ทักษะ (${String(report.skillFit)}/10): ${report.skillReason.trim() || "—"}`,
+    `- ประสบการณ์ (${String(report.experienceFit)}/10): ${report.experienceReason.trim() || "—"}`,
+    `- วัฒนธรรม/สื่อสาร (${String(report.cultureFit)}/10): ${report.cultureReason.trim() || "—"}`,
     "",
     "จุดแข็ง",
-    ...report.strengths.map((s) => `• ${s}`),
+    ...(strengths.length > 0
+      ? strengths.map((s) => `• ${s}`)
+      : ["• (ไม่มีรายการ)"]),
     "",
     "ข้อกังวล / ช่องว่าง",
-    ...report.concerns.map((c) => `• ${c}`),
+    ...(concerns.length > 0
+      ? concerns.map((c) => `• ${c}`)
+      : ["• (ไม่มีรายการ)"]),
     "",
     "คำถาม pre-screen",
-    ...report.suggestedQuestions.map((q) => `• ${q}`),
+    ...(questions.length > 0
+      ? questions.map((q) => `• ${q}`)
+      : ["• (ไม่มีรายการ)"]),
   ];
   return lines.join("\n");
 }
@@ -421,7 +444,7 @@ export function ResumeScreener() {
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 items-start">
         <Card className="border-border/80">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-base">Resume และตำแหน่ง</CardTitle>
@@ -471,6 +494,19 @@ export function ResumeScreener() {
                   )}
                 </SelectContent>
               </Select>
+              {!jobsQuery.isLoading && jobsQuery.isError ? (
+                <p className="text-sm text-destructive" role="alert">
+                  โหลดรายการตำแหน่งไม่สำเร็จ ลองรีเฟรชหน้าหรือลองใหม่ภายหลัง
+                </p>
+              ) : null}
+              {!jobsQuery.isLoading &&
+              !jobsQuery.isError &&
+              jobs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  ยังไม่มี JD ในระบบ
+                  เพิ่มตำแหน่งในเมนูตำแหน่งงานก่อนจึงจะวิเคราะห์ได้
+                </p>
+              ) : null}
             </Field>
 
             <div className="space-y-2">
@@ -553,8 +589,25 @@ export function ResumeScreener() {
               ขั้นตอน 2 จาก 2
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {!report ? (
+          <CardContent aria-busy={analyzePending} className="min-h-[20rem]">
+            {analyzePending ? (
+              <div
+                className="flex flex-col items-center justify-center gap-4 py-16 text-center h-full"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2Icon
+                  className="size-10 animate-spin text-muted-foreground"
+                  aria-hidden
+                />
+                <div>
+                  <p className="font-medium">กำลังวิเคราะห์</p>
+                  <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                    รอสักครู่ ระบบกำลังเทียบ CV กับตำแหน่งที่เลือก
+                  </p>
+                </div>
+              </div>
+            ) : !report ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                 <SparklesIcon className="size-10 text-muted-foreground" />
                 <div>
@@ -574,7 +627,9 @@ export function ResumeScreener() {
                       className="flex size-20 shrink-0 items-center justify-center rounded-full border-4 border-primary text-2xl font-semibold tabular-nums"
                       aria-label={`คะแนนรวม ${String(report.overallScore)}`}
                     >
-                      {report.overallScore.toFixed(1)}
+                      {Number.isFinite(report.overallScore)
+                        ? report.overallScore.toFixed(1)
+                        : "—"}
                     </div>
                     <div>
                       <p className="text-lg font-semibold">
@@ -586,7 +641,7 @@ export function ResumeScreener() {
                         </p>
                       ) : null}
                       <p className="text-sm text-emerald-600 dark:text-emerald-500">
-                        {report.fitStatus}
+                        {report.fitStatus.trim() || "ไม่ระบุสถานะ"}
                       </p>
                     </div>
                   </div>
@@ -630,53 +685,60 @@ export function ResumeScreener() {
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border border-border/80 p-4">
-                    <p className="text-xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
-                      จุดแข็งที่ควรเน้น
-                    </p>
-                    <ul className="mt-3 space-y-2 text-sm">
-                      {report.strengths.map((item) => (
-                        <li key={item} className="flex gap-2">
-                          <CheckIcon className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="rounded-lg border border-border/80 p-4">
-                    <p className="text-xs font-semibold tracking-wide text-red-700 uppercase dark:text-red-400">
-                      ข้อกังวล / ช่องว่าง
-                    </p>
-                    <ul className="mt-3 space-y-2 text-sm">
-                      {report.concerns.map((item) => (
-                        <li key={item} className="flex gap-2">
-                          <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-amber-600" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <ReportBulletBlock
+                    title="จุดแข็งที่ควรเน้น"
+                    items={report.strengths}
+                    emptyMessage="โมเดลไม่ได้สรุปจุดแข็ง (ลองวิเคราะห์ใหม่หรือตรวจคุณภาพ CV)"
+                    icon={CheckIcon}
+                    iconClassName="text-emerald-600"
+                    titleClassName="text-emerald-700 dark:text-emerald-400"
+                  />
+                  <ReportBulletBlock
+                    title="ข้อกังวล / ช่องว่าง"
+                    items={report.concerns}
+                    emptyMessage="ไม่มีข้อกังวลที่ระบุ"
+                    icon={AlertTriangleIcon}
+                    iconClassName="text-amber-600"
+                    titleClassName="text-red-700 dark:text-red-400"
+                  />
                 </div>
 
-                <div className="rounded-lg border border-[#FACC15]/40 bg-[#FACC15]/10 p-4">
+                <div className="rounded-lg border border-primary/25 bg-primary/5 p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold">
-                    <ZapIcon className="size-4 text-amber-700" />
+                    <MailQuestion className="size-4 " />
                     คำถามในการโทรคัดกรองเบื้องต้น
                   </div>
-                  <ol className="mt-3 list-decimal space-y-2 ps-5 text-sm">
-                    {report.suggestedQuestions.map((question) => (
-                      <li key={question}>{question}</li>
-                    ))}
-                  </ol>
+                  {trimItems(report.suggestedQuestions).length === 0 ? (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      ยังไม่มีคำถามแนะนำ (ลองรันวิเคราะห์อีกครั้งหรือปรับเนื้อหา
+                      CV)
+                    </p>
+                  ) : (
+                    <ol className="mt-3 list-decimal space-y-2 ps-5 text-sm">
+                      {trimItems(report.suggestedQuestions).map(
+                        (question, index) => (
+                          <li key={`${String(index)}-${question.slice(0, 24)}`}>
+                            {question}
+                          </li>
+                        ),
+                      )}
+                    </ol>
+                  )}
                 </div>
 
                 <div className="rounded-lg border border-border/80 p-4">
                   <p className="text-xs font-medium text-muted-foreground">
                     สรุปสำหรับคณะกรรมการ
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
-                    {report.panelSummary}
-                  </p>
+                  {report.panelSummary.trim() ? (
+                    <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
+                      {report.panelSummary}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      ยังไม่มีข้อความสรุปจากโมเดล
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -694,18 +756,70 @@ type FitRowProps = {
 };
 
 function FitRow({ title, score, text }: FitRowProps) {
+  const safeScore = Number.isFinite(score) ? score : 0;
+  const body = text.trim();
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2 text-sm">
         <span className="font-medium">{title}</span>
         <span className="tabular-nums text-muted-foreground">
-          {score.toFixed(1)} / 10
+          <span className="text-black font-bold text-lg">
+            {safeScore.toFixed(1)}
+          </span>{" "}
+          / 10
         </span>
       </div>
-      <Progress value={Math.min(100, Math.max(0, score * 10))} />
+      <Progress value={Math.min(100, Math.max(0, safeScore * 10))} />
       <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
-        {text}
+        {body || "ไม่มีคำอธิบายในผลลัพธ์"}
       </p>
+    </div>
+  );
+}
+
+type ReportBulletBlockProps = {
+  title: string;
+  items: ReadonlyArray<string>;
+  emptyMessage: string;
+  icon: typeof CheckIcon;
+  iconClassName: string;
+  titleClassName: string;
+};
+
+function ReportBulletBlock({
+  title,
+  items,
+  emptyMessage,
+  icon: Icon,
+  iconClassName,
+  titleClassName,
+}: ReportBulletBlockProps) {
+  const list = trimItems(items);
+  return (
+    <div className="rounded-lg border border-border/80 p-4">
+      <p
+        className={cn(
+          "text-xs font-semibold tracking-wide uppercase",
+          titleClassName,
+        )}
+      >
+        {title}
+      </p>
+      {list.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">{emptyMessage}</p>
+      ) : (
+        <ul className="mt-3 space-y-2 text-sm">
+          {list.map((item) => (
+            <li key={item} className="flex gap-2">
+              <Icon
+                className={cn("mt-0.5 size-4 shrink-0", iconClassName)}
+                aria-hidden
+              />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

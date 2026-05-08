@@ -1,3 +1,13 @@
+### 2026-05-08 - Polish screener empty AI fields + jobs error
+**Prompt:** (impeccable polish) handling empty result.
+**Output:** `trimItems` + `ReportBulletBlock` for empty strengths/concerns; numbered questions + panel fallback copy; `FitRow` and copy-to-clipboard handle blank strings; safe overall score display; jobs `isError` alert and empty-JD hint under select; questions block uses design tokens for border/bg (no raw yellow).
+**Edited:** `src/features/screener/components/resume-screener.tsx`, `cowork-log.md`
+
+### 2026-05-08 - Screener report card loading state
+**Prompt:** (impeccable polish) On analyze, replace previous result with spinner/loading.
+**Output:** Right card shows centered loader + Thai copy when `evaluateMutation.isPending`; `aria-busy`, `role="status"`, `min-h` to reduce layout jump; empty vs results unchanged when not loading.
+**Edited:** `src/features/screener/components/resume-screener.tsx`, `cowork-log.md`
+
 ### 2026-05-08 - Screener: name/email in Tracker dialog + AI detect
 **Prompt:** Move name/email to add-to-tracker; auto-detect from analyze and prefill dialog.
 **Output:** Extended AI output with `screeningEvaluateSchema` (`detectedName`, `detectedEmail`); evaluate returns them; removed name/email from evaluate body. `jdPrompt` + system line instruct CV-only extraction. Client: card "Resume และตำแหน่ง" without contact fields; report header shows detected name/email; Add to Tracker opens dialog prefilled from analyze; submit validates then `add-to-tracker`.
