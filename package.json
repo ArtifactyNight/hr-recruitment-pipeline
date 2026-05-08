@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.70",
+    "@aws-sdk/client-s3": "^3.1045.0",
     "@base-ui/react": "^1.4.1",
     "@clerk/nextjs": "^7.3.2",
     "@prisma/adapter-pg": "^7.8.0",

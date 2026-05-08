@@ -13,19 +13,106 @@ datasource db {
 }
 
 model User {
-  id      Int     @id @default(autoincrement())
-  clerkId String  @unique
-  email   String  @unique
-  name    String?
-  posts   Post[]
+  id          Int          @id @default(autoincrement())
+  clerkId     String       @unique
+  email       String       @unique
+  name        String?
+  interviewer Interviewer?
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  Int
-  author    User     @relation(fields: [authorId], references: [id])
-  createdAt DateTime @default(now())
+model JobDescription {
+  id           String      @id @default(cuid())
+  title        String
+  description  String
+  requirements String
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  applicants   Applicant[]
+}
+
+model Applicant {
+  id               String           @id @default(cuid())
+  name             String
+  email            String
+  phone            String?
+  appliedAt        DateTime         @default(now())
+  source           ApplicantSource  @default(OTHER)
+  stage            ApplicantStage   @default(APPLIED)
+  cvText           String?
+  cvFileKey        String?
+  cvFileName       String?
+  jobDescriptionId String
+  jobDescription   JobDescription   @relation(fields: [jobDescriptionId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  screeningResult  ScreeningResult?
+  interviews       Interview[]
+}
+
+enum ApplicantSource {
+  LINKEDIN
+  JOBSDB
+  REFERRAL
+  OTHER
+}
+
+enum ApplicantStage {
+  APPLIED
+  SCREENING
+  PRE_SCREEN_CALL
+  FIRST_INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+}
+
+model ScreeningResult {
+  id                 String    @id @default(cuid())
+  applicantId        String    @unique
+  applicant          Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  skillFit           Int
+  experienceFit      Int
+  cultureFit         Int
+  skillReason        String
+  experienceReason   String
+  cultureReason      String
+  strengths          Json[]
+  suggestedQuestions Json[]
+  createdAt          DateTime  @default(now())
+}
+
+model Interviewer {
+  id         String      @id @default(cuid())
+  userId     Int?        @unique
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name       String
+  email      String      @unique
+  title      String?
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  interviews Interview[]
+}
+
+model Interview {
+  id              String          @id @default(cuid())
+  applicantId     String
+  applicant       Applicant       @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  googleMeetLink  String?
+  googleEventId   String?
+  scheduledAt     DateTime
+  durationMinutes Int             @default(60)
+  status          InterviewStatus @default(SCHEDULED)
+  description     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  interviewers    Interviewer[]
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
 }
