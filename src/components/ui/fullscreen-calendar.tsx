@@ -7,6 +7,7 @@ import {
   endOfWeek,
   format,
   getDay,
+  isBefore,
   isEqual,
   isSameDay,
   isSameMonth,
@@ -74,6 +75,10 @@ export function FullScreenCalendar({ data }: FullScreenCalendarProps) {
   const weekdayLabels = days
     .slice(0, 7)
     .map((day) => format(day, "EEE", { locale: th }));
+
+  function isPastCalendarDay(day: Date): boolean {
+    return isBefore(day, today);
+  }
 
   function previousMonth() {
     const firstDayNextMonth = add(firstDayCurrentMonth, { months: -1 });
@@ -181,7 +186,10 @@ export function FullScreenCalendar({ data }: FullScreenCalendarProps) {
             {days.map((day, dayIdx) =>
               !isDesktop ? (
                 <button
-                  onClick={() => setSelectedDay(day)}
+                  onClick={() => {
+                    if (!isPastCalendarDay(day)) setSelectedDay(day);
+                  }}
+                  disabled={isPastCalendarDay(day)}
                   key={dayIdx}
                   type="button"
                   className={cn(
@@ -196,6 +204,8 @@ export function FullScreenCalendar({ data }: FullScreenCalendarProps) {
                       "text-muted-foreground",
                     (isEqual(day, selectedDay) || isToday(day)) &&
                       "font-semibold",
+                    isPastCalendarDay(day) &&
+                      "cursor-not-allowed opacity-50 hover:bg-transparent",
                     "flex h-14 flex-col border-b border-r px-3 py-2 hover:bg-muted focus:z-10",
                   )}
                 >
@@ -237,20 +247,36 @@ export function FullScreenCalendar({ data }: FullScreenCalendarProps) {
               ) : (
                 <div
                   key={dayIdx}
-                  onClick={() => setSelectedDay(day)}
+                  role="button"
+                  tabIndex={isPastCalendarDay(day) ? -1 : 0}
+                  aria-disabled={isPastCalendarDay(day)}
+                  onClick={() => {
+                    if (!isPastCalendarDay(day)) setSelectedDay(day);
+                  }}
+                  onKeyDown={(e) => {
+                    if (isPastCalendarDay(day)) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedDay(day);
+                    }
+                  }}
                   className={cn(
                     dayIdx === 0 && colStartClasses[getDay(day)],
                     !isEqual(day, selectedDay) &&
                       !isToday(day) &&
                       !isSameMonth(day, firstDayCurrentMonth) &&
                       "bg-accent/50 text-muted-foreground",
-                    "relative flex flex-col border-b border-r hover:bg-muted focus:z-10",
-                    !isEqual(day, selectedDay) && "hover:bg-accent/75",
+                    "relative flex flex-col border-b border-r focus:z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    !isPastCalendarDay(day) && "hover:bg-muted",
+                    !isEqual(day, selectedDay) &&
+                      !isPastCalendarDay(day) &&
+                      "hover:bg-accent/75",
+                    isPastCalendarDay(day) &&
+                      "cursor-not-allowed opacity-60 hover:bg-transparent",
                   )}
                 >
                   <header className="flex items-center justify-between p-2.5">
-                    <button
-                      type="button"
+                    <span
                       className={cn(
                         isEqual(day, selectedDay) && "text-primary-foreground",
                         !isEqual(day, selectedDay) &&
@@ -269,13 +295,14 @@ export function FullScreenCalendar({ data }: FullScreenCalendarProps) {
                           "bg-foreground",
                         (isEqual(day, selectedDay) || isToday(day)) &&
                           "font-semibold",
-                        "flex size-7 items-center justify-center rounded-full text-xs hover:border",
+                        !isPastCalendarDay(day) && "hover:border",
+                        "flex size-7 items-center justify-center rounded-full text-xs",
                       )}
                     >
                       <time dateTime={format(day, "yyyy-MM-dd")}>
                         {format(day, "d")}
                       </time>
-                    </button>
+                    </span>
                   </header>
                   <div className="flex-1 p-2.5">
                     {data
@@ -314,7 +341,10 @@ export function FullScreenCalendar({ data }: FullScreenCalendarProps) {
           <div className="isolate grid w-full grid-cols-7 grid-rows-5 border-x lg:hidden">
             {days.map((day, dayIdx) => (
               <button
-                onClick={() => setSelectedDay(day)}
+                onClick={() => {
+                  if (!isPastCalendarDay(day)) setSelectedDay(day);
+                }}
+                disabled={isPastCalendarDay(day)}
                 key={dayIdx}
                 type="button"
                 className={cn(
@@ -329,6 +359,8 @@ export function FullScreenCalendar({ data }: FullScreenCalendarProps) {
                     "text-muted-foreground",
                   (isEqual(day, selectedDay) || isToday(day)) &&
                     "font-semibold",
+                  isPastCalendarDay(day) &&
+                    "cursor-not-allowed opacity-50 hover:bg-transparent",
                   "flex h-14 flex-col border-b border-r px-3 py-2 hover:bg-muted focus:z-10",
                 )}
               >

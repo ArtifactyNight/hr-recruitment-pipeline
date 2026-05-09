@@ -1,3 +1,8 @@
+### [2026-05-09] - FullScreen calendar: disable past days
+**Prompt:** disabled previous day from today
+**Output:** `isPastCalendarDay` via `isBefore(day, startOfToday())`. Mobile `<button disabled>`; desktop month cell is `role="button"` with guarded click/keyboard, `aria-disabled`, `tabIndex=-1` when past, muted styles + no hover. Inner day control is a `span` so past cells don’t nest a disabled button.
+**Edited:** `src/components/ui/fullscreen-calendar.tsx`, `cowork-log.md`
+
 ### [2026-05-09] - FullScreen calendar date-fns Thai locale
 **Prompt:** add locale th to date-fns
 **Output:** `fullscreen-calendar.tsx` imports `th` from `date-fns/locale`; localized `format`/`parse` for month navigation and headers; `startOfWeek`/`endOfWeek` with `{ locale: th }`; weekday row derived from first week via `EEE` + `th` instead of hardcoded English.
