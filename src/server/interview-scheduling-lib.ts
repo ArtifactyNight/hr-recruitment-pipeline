@@ -3,12 +3,12 @@ import { addMinutes } from "date-fns";
 import type { InterviewStatus } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
 
-export const activeInterviewStatuses: ReadonlyArray<InterviewStatus> = [
+const activeInterviewStatuses: ReadonlyArray<InterviewStatus> = [
   "SCHEDULED",
   "RESCHEDULED",
 ] as const;
 
-export function intervalsOverlap(
+function intervalsOverlap(
   aStart: Date,
   aDurationMin: number,
   bStart: Date,

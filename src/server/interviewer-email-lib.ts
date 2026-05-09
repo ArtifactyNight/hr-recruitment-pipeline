@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Trim, lowercase, dedupe (order preserved). */
-export function normalizeInterviewerEmailList(raw: Array<string>): Array<string> {
+function normalizeInterviewerEmailList(raw: Array<string>): Array<string> {
   const seen = new Set<string>();
   const out: Array<string> = [];
   for (const r of raw) {
@@ -18,9 +18,7 @@ export function normalizeInterviewerEmailList(raw: Array<string>): Array<string>
 
 export async function ensureInterviewerIdsFromEmails(
   raw: Array<string>,
-): Promise<
-  { ok: true; ids: Array<string> } | { ok: false; error: string }
-> {
+): Promise<{ ok: true; ids: Array<string> } | { ok: false; error: string }> {
   const emails = normalizeInterviewerEmailList(raw);
   for (const e of emails) {
     if (!EMAIL_RE.test(e)) {

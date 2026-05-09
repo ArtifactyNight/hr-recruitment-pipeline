@@ -28,23 +28,4 @@ Goal: Cowork Log is a file that records your Claude Cowork sessions during assig
 
 ## API Guideline
 - Use `elysia` for Backend
-- Use `@tanstack/react-query` and `@ap0nia/eden-react-query`  for mutation and query APIs\
-
-# Example how to use `eden-react-query` for fetching client data
-
-```tsx
-import { eden } from './eden'
-
-export function Products() {
-  const { data } = eden.api.products.get.useQuery()
-
-  return (
-    <ul>
-      {data?.map((product) => (
-        <li id={product.id}>{product.name}</li>
-      )}
-    </ul>
-  )
-}
-```
- 
+- Use `@tanstack/react-query` for mutation and query APIs

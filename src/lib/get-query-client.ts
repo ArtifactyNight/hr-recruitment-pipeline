@@ -1,5 +1,4 @@
 import { QueryClient } from "@tanstack/react-query";
-import { cache } from "react";
 
 export function createQueryClient() {
   return new QueryClient({
@@ -13,5 +12,3 @@ export function createQueryClient() {
     },
   });
 }
-
-export const getQueryClient = cache(createQueryClient);

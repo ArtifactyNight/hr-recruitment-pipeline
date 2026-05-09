@@ -1,3 +1,13 @@
+### [2026-05-09] - Remove calendar UI, keep interview API + empty page
+**Prompt:** Remove calendar UI, keep interview API + empty page (plan).
+**Output:** `/interviews` เป็น Server Component เปล่า (หัวข้อ + subtitle). ลบ `InterviewsCalendar`, `interviewer-emails-field`, `interviewer-email-utils`, ทั้ง `src/components/calendar/`, `calendar-store.ts`, `types/calendar-event.ts`, และโฟลเดอร์ลอย `src/calendar/`. `interview-routes`, `google-calendar-service`, `interview-calendar-snapshot` ไม่แตะ.
+**Edited:** `src/app/(dashboard)/interviews/page.tsx`, ลบไฟล์/โฟลเดอร์ตามแผน, `cowork-log.md`
+
+### [2026-05-09] - Dead code sweep (calendar trees + unused exports)
+**Prompt:** scan all dead code and file and remove
+**Output:** ลบโฟลเดอร์ลอย `src/components/calendar/` และ `src/calendar/` (ไม่มี import จากแอป). ตัด `getQueryClient`/`cache` ที่ไม่ถูกใช้, ตัด `getGoogleToken` wrapper, ลบ `description` export จาก `chart-area-interactive`, ทำ `activeInterviewStatuses`/`intervalsOverlap`/`normalizeInterviewerEmailList` เป็น module-private. `/interviews/page.tsx` เป็น Server Component (เอา `use client` ออก).
+**Edited:** ลบโฟลเดอร์ปฏิทินตามข้างบน, `get-query-client.ts`, `get-google-token.ts`, `chart-area-interactive.tsx`, `interview-scheduling-lib.ts`, `interviewer-email-lib.ts`, `interviews/page.tsx`, `cowork-log.md`
+
 ### [2026-05-09] - Calendar: แสดงเวลา 24 ชม.
 **Prompt:** use 24 hours instead of 12
 **Output:** `HOURS_24` ใน `calendar-utils` เป็นเลเบล `00:00`–`23:00`; `event-sheet` `formatTime` ใช้ `HH:mm` แทน localized `p`
