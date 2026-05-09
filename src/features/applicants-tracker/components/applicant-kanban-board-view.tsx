@@ -142,14 +142,16 @@ export function ApplicantKanbanBoardView({
     [onPatchesComplete, patchStage],
   );
 
+  const getItemValue = useCallback((item: TrackerApplicant) => item.id, []);
+
   return (
     <Kanban
       value={columns}
       onValueChange={onKanbanChange}
-      getItemValue={(item) => item.id}
+      getItemValue={getItemValue}
       className="w-full"
     >
-      <KanbanBoard className="w-full min-w-0 gap-4 grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      <KanbanBoard className="w-full min-w-0 gap-4 grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {STAGE_ORDER.map((stageId) => {
           const items = columns[stageId] ?? [];
           return (

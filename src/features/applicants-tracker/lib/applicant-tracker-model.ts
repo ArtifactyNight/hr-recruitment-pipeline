@@ -51,13 +51,13 @@ export const STAGE_ORDER = [
 ] as const satisfies ReadonlyArray<ApplicantStage>;
 
 export const stageLabel: Record<ApplicantStage, string> = {
-  APPLIED: "สมัครแล้ว",
-  SCREENING: "AI คัดกรอง",
-  PRE_SCREEN_CALL: "Pre-Screen",
-  FIRST_INTERVIEW: "สัมภาษณ์รอบแรก",
-  OFFER: "เสนอจ้าง",
-  HIRED: "รับเข้าทำงาน",
-  REJECTED: "ปฏิเสธ",
+  APPLIED: "Applied",
+  SCREENING: "Screening",
+  PRE_SCREEN_CALL: "Pre-Screen Call",
+  FIRST_INTERVIEW: "First Interview",
+  OFFER: "offer",
+  HIRED: "Hired",
+  REJECTED: "Rejected",
 };
 
 /** หัวคอลัมน์บอร์ด — สั้นและอ่านง่าย */

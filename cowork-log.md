@@ -1,3 +1,8 @@
+### [2026-05-10] - Kanban cross-column drag: max update depth fix
+**Prompt:** check error with nextjs mcp and fix — dragging tracker card from board 1 to board 2 (above)
+**Output:** Next.js devtools `get_errors` showed `Maximum update depth exceeded` with stack at `KanbanColumnContent` / `SortableContext`. Root cause: same-column `onDragOver` used `findIndex(over.id)`; when collision reports the column droppable id, index is `-1` and `arrayMove(..., -1)` maps to “near end”, causing repeated controlled reorder → infinite React updates. Fixed by treating `isColumn(over.id)` as append (`length`), skipping when `overIndex < 0`, guarding `activeIndex === -1`, deduping with `kanbanColumnsOrderEqual` before `setColumns`, and mirroring in `handleDragEnd`. Stabilized `getItemValue` with `useCallback` in applicant kanban view.
+**Edited:** `src/components/reui/kanban.tsx`, `src/features/applicants-tracker/components/applicant-kanban-board-view.tsx`, `cowork-log.md`
+
 ### [2026-05-10] - Fit status labels + badge colors
 **Prompt:** generate fit status and color
 **Output:** Added `src/features/screener/lib/fit-status.ts` (`fitStatusLabel`, `fitStatusBadgeClassName`, `getFitStatusLabel`). `FitStatusBadge` wires outline Badge + semantic Tailwind tones (emerald → teal → amber → orange → red). Screener report shows badge; copy-paste report uses `getFitStatusLabel`. Fixed `formatReportText` using `.trim()` on enum.

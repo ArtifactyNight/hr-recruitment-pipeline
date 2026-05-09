@@ -109,6 +109,30 @@ const dropAnimationConfig: DropAnimation = {
   }),
 };
 
+/** Avoid redundant controlled updates that can thrash nested SortableContexts during drag. */
+function kanbanColumnsOrderEqual<T>(
+  prev: Record<string, T[]>,
+  next: Record<string, T[]>,
+  getItemValue: (item: T) => string,
+): boolean {
+  const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+  for (const key of keys) {
+    const a = prev[key];
+    const b = next[key];
+    const aa = a ?? [];
+    const bb = b ?? [];
+    if (aa.length !== bb.length) {
+      return false;
+    }
+    for (let i = 0; i < aa.length; i++) {
+      if (getItemValue(aa[i]) !== getItemValue(bb[i])) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 export interface KanbanMoveEvent {
   event: DragEndEvent;
   activeContainer: string;
@@ -205,6 +229,10 @@ function Kanban<T>({
         const activeIndex = activeItems.findIndex(
           (item: T) => getItemValue(item) === active.id,
         );
+        if (activeIndex === -1) {
+          return;
+        }
+
         let overIndex = overItems.findIndex(
           (item: T) => getItemValue(item) === over.id,
         );
@@ -219,25 +247,50 @@ function Kanban<T>({
         const [movedItem] = newActiveItems.splice(activeIndex, 1);
         newOverItems.splice(overIndex, 0, movedItem);
 
-        setColumns({
+        const nextColumns = {
           ...columns,
           [activeContainer]: newActiveItems,
           [overContainer]: newOverItems,
-        });
+        };
+        if (!kanbanColumnsOrderEqual(columns, nextColumns, getItemValue)) {
+          setColumns(nextColumns);
+        }
       } else {
         const container = activeContainer;
         const activeIndex = columns[container].findIndex(
           (item: T) => getItemValue(item) === active.id,
         );
-        const overIndex = columns[container].findIndex(
+        if (activeIndex === -1) {
+          return;
+        }
+
+        let overIndex = columns[container].findIndex(
           (item: T) => getItemValue(item) === over.id,
         );
 
+        // Hovering the column shell / unknown droppable: treat like append (cross-column uses length too).
+        if (isColumn(over.id)) {
+          overIndex = columns[container].length;
+        }
+
+        // Unknown target — @dnd-kit treats negative `to` as offset from end; avoid bogus reorder loops.
+        if (overIndex < 0) {
+          return;
+        }
+
         if (activeIndex !== overIndex) {
-          setColumns({
+          const nextList = arrayMove(
+            columns[container],
+            activeIndex,
+            overIndex,
+          );
+          const nextColumns = {
             ...columns,
-            [container]: arrayMove(columns[container], activeIndex, overIndex),
-          });
+            [container]: nextList,
+          };
+          if (!kanbanColumnsOrderEqual(columns, nextColumns, getItemValue)) {
+            setColumns(nextColumns);
+          }
         }
       }
     },
@@ -313,15 +366,33 @@ function Kanban<T>({
         const activeIndex = columns[container].findIndex(
           (item: T) => getItemValue(item) === active.id,
         );
-        const overIndex = columns[container].findIndex(
+        if (activeIndex === -1) {
+          return;
+        }
+
+        let overIndex = columns[container].findIndex(
           (item: T) => getItemValue(item) === over.id,
         );
+        if (isColumn(over.id)) {
+          overIndex = columns[container].length;
+        }
+        if (overIndex < 0) {
+          return;
+        }
 
         if (activeIndex !== overIndex) {
-          setColumns({
+          const nextList = arrayMove(
+            columns[container],
+            activeIndex,
+            overIndex,
+          );
+          const nextColumns = {
             ...columns,
-            [container]: arrayMove(columns[container], activeIndex, overIndex),
-          });
+            [container]: nextList,
+          };
+          if (!kanbanColumnsOrderEqual(columns, nextColumns, getItemValue)) {
+            setColumns(nextColumns);
+          }
         }
       }
     },
