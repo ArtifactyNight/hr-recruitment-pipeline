@@ -1,3 +1,8 @@
+### [2026-05-10] - Fit status labels + badge colors
+**Prompt:** generate fit status and color
+**Output:** Added `src/features/screener/lib/fit-status.ts` (`fitStatusLabel`, `fitStatusBadgeClassName`, `getFitStatusLabel`). `FitStatusBadge` wires outline Badge + semantic Tailwind tones (emerald → teal → amber → orange → red). Screener report shows badge; copy-paste report uses `getFitStatusLabel`. Fixed `formatReportText` using `.trim()` on enum.
+**Edited:** `fit-status.ts`, `fit-status-badge.tsx`, `screener-report-panel.tsx`, `resume-screener-utils.ts`, `cowork-log.md`
+
 ### [2026-05-10] - Applicant notes: cancel/save in header row
 **Prompt:** (TH) ยกเลิกและบันทึก อยู่ด้านบน
 **Output:** In edit mode, `ยกเลิก` + `บันทึกหมายเหตุ` moved to the same top row as `หมายเหตุ` (flex-wrap); removed bottom action row.

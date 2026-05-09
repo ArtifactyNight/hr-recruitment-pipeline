@@ -11,9 +11,11 @@ import {
   FileSearchIcon,
   Loader2Icon,
   MailQuestion,
+  PlusIcon,
 } from "lucide-react";
 
 import { FitRow } from "./fit-row";
+import { FitStatusBadge } from "./fit-status-badge";
 import { ReportBulletBlock } from "./report-bullet-block";
 
 type ScreenerReportPanelProps = {
@@ -86,9 +88,10 @@ export function ScreenerReportPanel({
                       {detectedEmail}
                     </p>
                   ) : null}
-                  <p className="text-sm text-emerald-600 dark:text-emerald-500">
-                    {report.fitStatus.trim() || "ไม่ระบุสถานะ"}
-                  </p>
+                  <FitStatusBadge
+                    fitStatus={report.fitStatus}
+                    className="mt-2 rounded-sm"
+                  />
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -96,7 +99,7 @@ export function ScreenerReportPanel({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => void onCopyReport()}
+                  onClick={onCopyReport}
                 >
                   <CopyIcon className="size-4" />
                   คัดลอกรายงาน
@@ -107,7 +110,7 @@ export function ScreenerReportPanel({
                   onClick={() => onRequestOpenTracker()}
                   disabled={!report || !trackerJobId}
                 >
-                  + เพิ่มใน Tracker
+                  <PlusIcon /> เพิ่มใน Tracker
                 </Button>
               </div>
             </div>

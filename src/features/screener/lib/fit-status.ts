@@ -1,0 +1,26 @@
+import { FitStatus } from "@/generated/prisma/enums";
+
+export const fitStatusLabel: Record<FitStatus, string> = {
+  [FitStatus.STRONG_FIT]: "ความเหมาะสมสูงมาก",
+  [FitStatus.GOOD_FIT]: "ความเหมาะสมดี",
+  [FitStatus.AVERAGE_FIT]: "ความเหมาะสมปานกลาง",
+  [FitStatus.WEAK_FIT]: "ความเหมาะสมต่ำ",
+  [FitStatus.NO_FIT]: "ไม่เหมาะสม",
+};
+
+export const fitStatusBadgeClassName: Record<FitStatus, string> = {
+  [FitStatus.STRONG_FIT]:
+    "border-emerald-600/35 bg-emerald-500/10 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
+  [FitStatus.GOOD_FIT]:
+    "border-teal-600/35 bg-teal-500/10 text-teal-900 dark:border-teal-500/45 dark:bg-teal-500/15 dark:text-teal-300",
+  [FitStatus.AVERAGE_FIT]:
+    "border-amber-600/35 bg-amber-500/10 text-amber-950 dark:border-amber-500/45 dark:bg-amber-500/15 dark:text-amber-200",
+  [FitStatus.WEAK_FIT]:
+    "border-orange-600/35 bg-orange-500/12 text-orange-950 dark:border-orange-500/45 dark:bg-orange-500/15 dark:text-orange-200",
+  [FitStatus.NO_FIT]:
+    "border-red-600/35 bg-red-500/10 text-red-900 dark:border-red-500/45 dark:bg-red-500/15 dark:text-red-300",
+};
+
+export function getFitStatusLabel(fitStatus: FitStatus): string {
+  return fitStatusLabel[fitStatus] ?? "ไม่ระบุสถานะ";
+}

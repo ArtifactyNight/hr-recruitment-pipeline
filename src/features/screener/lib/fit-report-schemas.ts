@@ -1,9 +1,10 @@
+import { FitStatus } from "@/generated/prisma/enums";
 import { z } from "zod";
 
 /** AI structured output + API payloads — camelCase + Schema suffix per project rules */
 export const fitReportSchema = z.object({
   overallScore: z.number().min(0).max(10),
-  fitStatus: z.string(),
+  fitStatus: z.nativeEnum(FitStatus),
   panelSummary: z.string(),
   skillFit: z.number().min(0).max(10),
   experienceFit: z.number().min(0).max(10),

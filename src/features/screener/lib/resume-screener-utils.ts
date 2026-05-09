@@ -1,4 +1,5 @@
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
+import { getFitStatusLabel } from "@/features/screener/lib/fit-status";
 
 export type JobDetailResponse = {
   id: string;
@@ -18,17 +19,21 @@ export function trimItems(items: ReadonlyArray<string>): Array<string> {
   return out;
 }
 
-export function formatReportText(name: string, email: string, report: FitReport) {
+export function formatReportText(
+  name: string,
+  email: string,
+  report: FitReport,
+) {
   const strengths = trimItems(report.strengths);
   const concerns = trimItems(report.concerns);
   const questions = trimItems(report.suggestedQuestions);
   const summary = report.panelSummary.trim();
-  const status = report.fitStatus.trim();
+  const status = getFitStatusLabel(report.fitStatus);
   const lines: Array<string> = [
     `รายงานความเหมาะสม — ${name} (${email})`,
     "",
     `คะแนนรวม: ${String(report.overallScore)}`,
-    `สถานะ: ${status || "ไม่ระบุ"}`,
+    `สถานะ: ${status}`,
     "",
     summary || "(ยังไม่มีสรุปจากโมเดล)",
     "",

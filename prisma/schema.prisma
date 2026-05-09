@@ -86,7 +86,7 @@ model ScreeningResult {
   applicantId        String    @unique
   applicant          Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
   overallScore       Float     @default(0)
-  fitStatus          String    @default("")
+  fitStatus          FitStatus @default(AVERAGE_FIT)
   panelSummary       String    @default("")
   skillFit           Int
   experienceFit      Int
@@ -98,6 +98,14 @@ model ScreeningResult {
   concerns           Json[]
   suggestedQuestions Json[]
   createdAt          DateTime  @default(now())
+}
+
+enum FitStatus {
+  STRONG_FIT
+  GOOD_FIT
+  AVERAGE_FIT
+  WEAK_FIT
+  NO_FIT
 }
 
 model Interviewer {
