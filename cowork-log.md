@@ -359,3 +359,8 @@
 **Prompt:** `@src/components/ui/fullscreen-calendar.tsx:537-540 implement add schedule logic`
 **Output:** ปุ่ม `เพิ่มนัด` ใน `FullScreenCalendar` เรียก `onScheduleForDate(selectedDay)` และ disable เมื่อไม่มี handler/เป็นวันอดีต; หน้า `/interviews` เปิด dialog กำหนดนัดจากวันที่เลือก, เลือกผู้สมัครที่ยังไม่มีนัด, ส่ง `POST /interviews`, invalidate calendar/applicants; schedule dialog รองรับ field แทรกก่อนฟอร์ม + seeded datetime จากวันที่เลือก
 **Edited:** `src/components/ui/fullscreen-calendar.tsx`, `src/features/interviews/components/interviews-calendar.tsx`, `src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-10 02:12] - Improve screener prompt strictness
+**Prompt:** `make screener-prompts.ts more strict and better`
+**Output:** Rewrote `jdPrompt` + extracted `SCREENER_SYSTEM_PROMPT` with: explicit scoring rubric (0–10 per range), fitStatus→overallScore mapping rules, per-dimension evaluation criteria (skillFit/experienceFit/cultureFit), evidence-based enforcement (no guessing), field-level constraints (min counts, cite CV), integer-only scores, verbatim name/email extraction. Removed duplicated inline system prompt from `screener-routes.ts` in favor of single export.
+**Edited:** `src/features/screener/lib/screener-prompts.ts`, `src/server/routes/screener-routes.ts`, `cowork-log.md`

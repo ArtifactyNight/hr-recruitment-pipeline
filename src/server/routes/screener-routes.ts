@@ -4,7 +4,10 @@ import {
   fitReportSchema,
   screeningEvaluateSchema,
 } from "@/features/screener/lib/fit-report-schemas";
-import { jdPrompt } from "@/features/screener/lib/screener-prompts";
+import {
+  jdPrompt,
+  SCREENER_SYSTEM_PROMPT,
+} from "@/features/screener/lib/screener-prompts";
 import { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { google } from "@ai-sdk/google";
@@ -126,13 +129,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
         return { error: "ต้องอัปโหลดไฟล์ CV หรือวางข้อความ resume" };
       }
 
-      const systemScreener = `คุณเป็นผู้ช่วยฝ่ายสรรหา (recruiting) ที่เชี่ยวชาญการเทียบ CV กับ JD
-กฎสำคัญ:
-- คะแนน overall และมิติอยู่ในช่วง 0–10 (ข้อความเป็นภาษาไทยที่เป็นทางการ)
-- fitStatus สั้นๆ ภาษาไทย
-- strengths / concerns / suggestedQuestions ชัดเจน อย่างน้อย 2 ข้อสำหรับ pre-screen
-- panelSummary สรุปสำหรับคณะกรรมการ
-- ดึงชื่อและอีเมลจากเอกสาร CV เท่านั้น ลงใน detectedName / detectedEmail ของ JSON ถ้าไม่พบให้เว้นฟิลด์หรือสตริงว่าง ห้ามเดา`;
+      const systemScreener = SCREENER_SYSTEM_PROMPT;
 
       try {
         const job = await prisma.jobDescription.findFirst({
