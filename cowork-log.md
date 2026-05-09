@@ -1,3 +1,13 @@
+### [2026-05-10] - Applicant notes: cancel/save in header row
+**Prompt:** (TH) ยกเลิกและบันทึก อยู่ด้านบน
+**Output:** In edit mode, `ยกเลิก` + `บันทึกหมายเหตุ` moved to the same top row as `หมายเหตุ` (flex-wrap); removed bottom action row.
+**Edited:** `applicant-detail-notes-section.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Applicant notes: edit gate + top action
+**Prompt:** (TH) move edit button to top (notes header); must click Edit before editing note
+**Output:** Header row `หมายเหตุ` + `แก้ไข` (outline, pencil); textarea `readOnly` until edit; edit mode shows `ยกเลิก` + `บันทึกหมายเหตุ`. Display derives from `applicant.notes` when viewing; draft only while editing; exit edit after save when `notesSaving` drops and draft matches server (`key={applicant.id}` already resets on row switch).
+**Edited:** `applicant-detail-notes-section.tsx`, `cowork-log.md`
+
 ### [2026-05-09] - Calendar sidebar: reminder, organizer, guests, notes
 **Prompt:** add more information — reminder, organizer, x person x yes, notes
 **Output:** `GoogleCalendarListEvent` + `Event` gain `remindersLabel`, `organizerEmail`, `attendeeTotal`/`attendeeAccepted`, `notesPlain` (HTML stripped); `sidebarFieldsFromListEvent` in list mapper reuses reminder formatter; sidebar rows with Bell/User/Users/FileText icons + Thai labels (`การแจ้งเตือน`, `ผู้จัด`, `ผู้เข้าร่วม · N คน · ตอบรับ M`, `หมายเหตุ`).
@@ -329,3 +339,18 @@
 **Prompt:** ลบการเชื่อมบัญชี Google — sign-in ได้ permission แล้ว เรียก Calendar ผ่าน `get-google-token.ts`
 **Output:** ลบ `clerkGoogleLinkStatus`, `/api/integrations/google/status`, `integrationsGoogleRoutes`; `NO_GOOGLE_OAUTH_TOKEN` + ข้อ 403 เมื่อไม่มี token; หน้า `/interviews` ไม่ query status / ไม่ปิดการสร้างนัด — ลบปุ่มเชื่อม Badge คำใบ้; `CreateEventDialog` ไม่รับ `googleLinked`; ลบ `ClerkAccountSettings` + คืนหน้า settings เรียบ; README ลบ status route + flow เชื่อมใน settings
 **Edited:** `get-google-token.ts`, `interview-routes.ts`, `elysia-app.ts`, `interviews-calendar.tsx`, `create-event-dialog.tsx`, `settings/page.tsx`, `README.md`, ลบ `clerk-account-settings.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Applicant detail: กำหนดนัด + Meet card
+**Prompt:** Applicant Interview CTA Plan — ปุ่มกำหนดนัดเมื่อยังไม่มี Meet / conflict check; ถ้ามี Meet แสดงข้อมูลใต้ AI score + ลิงก์เข้าประชุม
+**Output:** `GET|POST|PATCH /applicants` แนบ `interview` ล่าสุด (`SCHEDULED`|`RESCHEDULED`) ของ organizer ปัจจุบัน + interviewers; `TrackerApplicant.interview`; `ApplicantDetailInterviewSection` (ฟอร์ม datetime/duration/emails/notes + nested Dialog) + การ์ดสรุปนัด + `Meet` `target=_blank`; `ApplicantTracker` `POST /interviews` + invalidate `applicants` + `interviews-calendar-events` + อัปเดต detail + toast จากร่าง error (`DB_CONFLICT`/`GOOGLE_BUSY` ฯลฯ); `trackerInterviewFromScheduleResponse`; `POST /interviews` include interviewer `title`; cast Prisma `select` interviews→mapper เพราะ inference ไม่ติด nested select
+**Edited:** `applicant-routes.ts`, `interview-routes.ts`, `applicant-tracker-model.ts`, `schedule-interview-schema.ts`, `applicant-detail-interview-section.tsx`, `applicant-detail-dialog.tsx`, `applicant-tracker.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Applicant detail: footer schedule + redirect หลังบันทึกนัด
+**Prompt:** move schedule button to dialog footer (replace with schedule redirect); when schedule redirect to interviews page
+**Output:** `applicant-schedule-interview-dialog.tsx` — dialog ฟอร์มแยกจากเนื้อหาหลัก (portal sibling); state form + open อยู่ `ApplicantDetailDialog`; footer: `กำหนดนัดสัมภาษณ์` เมื่อยังไม่มีนัด, `ไปหน้านัดสัมภาษณ์` → `router.push('/interviews')` แทน `<Link>`; section เดิมเหลือการ์ด/ข้อความว่าง; `scheduleInterviewMut` `onSuccess` → `setDetail(null)` + `router.push('/interviews')`; `key={detail?.id ?? 'closed'}` บน dialog รีเซ็ต state เมื่อสลับผู้สมัคร
+**Edited:** `applicant-schedule-interview-dialog.tsx`, `applicant-detail-dialog.tsx`, `applicant-detail-interview-section.tsx`, `applicant-tracker.tsx`, `cowork-log.md`
+
+### [2026-05-10 00:43] - Interviews calendar: add schedule CTA
+**Prompt:** `@src/components/ui/fullscreen-calendar.tsx:537-540 implement add schedule logic`
+**Output:** ปุ่ม `เพิ่มนัด` ใน `FullScreenCalendar` เรียก `onScheduleForDate(selectedDay)` และ disable เมื่อไม่มี handler/เป็นวันอดีต; หน้า `/interviews` เปิด dialog กำหนดนัดจากวันที่เลือก, เลือกผู้สมัครที่ยังไม่มีนัด, ส่ง `POST /interviews`, invalidate calendar/applicants; schedule dialog รองรับ field แทรกก่อนฟอร์ม + seeded datetime จากวันที่เลือก
+**Edited:** `src/components/ui/fullscreen-calendar.tsx`, `src/features/interviews/components/interviews-calendar.tsx`, `src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx`, `cowork-log.md`

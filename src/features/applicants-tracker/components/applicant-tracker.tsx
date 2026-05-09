@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { AddApplicantDialog } from "@/features/applicants-tracker/components/add-applicant-dialog";
 import { ApplicantDetailDialog } from "@/features/applicants-tracker/components/applicant-detail-dialog";
 import { ApplicantKanbanBoardView } from "@/features/applicants-tracker/components/applicant-kanban-board-view";
+import type { ScheduleInterviewSubmitInput } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
 import { ApplicantTrackerFilters } from "@/features/applicants-tracker/components/applicant-tracker-filters";
 import { ApplicantTrackerHeader } from "@/features/applicants-tracker/components/applicant-tracker-header";
 import { ApplicantTrackerTable } from "@/features/applicants-tracker/components/applicant-tracker-table";
@@ -14,8 +15,22 @@ import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/ap
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+
+function scheduleInterviewErrorMessage(err: unknown): string {
+  if (
+    err &&
+    typeof err === "object" &&
+    "error" in err &&
+    typeof (err as { error: unknown }).error === "string"
+  ) {
+    return (err as { error: string }).error;
+  }
+  if (err instanceof Error) return err.message;
+  return "กำหนดนัดไม่สำเร็จ";
+}
 
 type ListResponse = NonNullable<
   Awaited<ReturnType<typeof api.api.applicants.get>>["data"]
@@ -23,6 +38,7 @@ type ListResponse = NonNullable<
 
 export function ApplicantTracker() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const {
     view,
@@ -214,6 +230,7 @@ export function ApplicantTracker() {
         cultureFit: null,
         notes: null,
         tags: [],
+        interview: null,
       };
       queryClient.setQueryData<ListResponse>(applicantsQueryKey, (old) =>
         old ? { applicants: [tempApplicant, ...old.applicants] } : old,
@@ -231,6 +248,38 @@ export function ApplicantTracker() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["applicants"] });
+    },
+  });
+
+  const scheduleInterviewMut = useMutation({
+    mutationFn: async (input: ScheduleInterviewSubmitInput) => {
+      const { data, error } = await api.api.interviews.post(
+        {
+          applicantId: input.applicantId,
+          scheduledAt: input.scheduledAt,
+          durationMinutes: input.durationMinutes,
+          interviewerEmails: input.interviewerEmails,
+          extraNotes: input.extraNotes,
+        },
+        { fetch: { credentials: "include" } },
+      );
+      if (error) throw error.value;
+      if (!data?.interview) {
+        throw new Error("ไม่มีข้อมูลนัด");
+      }
+      return { input, interview: data.interview };
+    },
+    onSuccess: () => {
+      toast.success("กำหนดนัดแล้ว");
+      void queryClient.invalidateQueries({ queryKey: ["applicants"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews-calendar-events"],
+      });
+      setDetail(null);
+      router.push("/interviews");
+    },
+    onError: (err: unknown) => {
+      toast.error(scheduleInterviewErrorMessage(err));
     },
   });
 
@@ -335,6 +384,7 @@ export function ApplicantTracker() {
       />
 
       <ApplicantDetailDialog
+        key={detail?.id ?? "closed"}
         applicant={detail}
         onOpenChange={(open) => {
           if (!open) setDetail(null);
@@ -345,6 +395,10 @@ export function ApplicantTracker() {
           patchApplicantMut.variables != null &&
           patchApplicantMut.variables.notes !== undefined
         }
+        scheduleInterviewPending={scheduleInterviewMut.isPending}
+        onScheduleInterview={async (input) => {
+          await scheduleInterviewMut.mutateAsync(input);
+        }}
         onStageSelect={(stage) => {
           if (!detail) return;
           patchApplicantMut.mutate(

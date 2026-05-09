@@ -252,7 +252,7 @@ function SelectedDayEventsPanel({
                                 <span className="font-medium text-muted-foreground">
                                   หมายเหตุ ·{" "}
                                 </span>
-                                <span className="whitespace-pre-wrap break-words">
+                                <span className="whitespace-pre-wrap wrap-break-word">
                                   {event.notesPlain}
                                 </span>
                               </span>
@@ -454,6 +454,13 @@ export function FullScreenCalendar({
   );
 
   const selectedDayIsPast = isPastCalendarDay(selectedDay);
+  const canScheduleSelectedDay =
+    Boolean(onScheduleForDate) && !selectedDayIsPast;
+
+  function scheduleSelectedDay() {
+    if (!onScheduleForDate || selectedDayIsPast) return;
+    onScheduleForDate(selectedDay);
+  }
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
@@ -511,7 +518,7 @@ export function FullScreenCalendar({
                 className="w-full rounded-none shadow-none first:rounded-s-lg last:rounded-e-lg focus-visible:z-10 md:w-auto"
                 variant="outline"
               >
-                Today
+                วันนี้
               </Button>
               <Button
                 onClick={nextMonth}
@@ -534,9 +541,14 @@ export function FullScreenCalendar({
               className="block w-full md:hidden"
             />
 
-            <Button className="w-full gap-2 md:w-auto">
+            <Button
+              type="button"
+              className="w-full gap-2 md:w-auto"
+              disabled={!canScheduleSelectedDay}
+              onClick={scheduleSelectedDay}
+            >
               <PlusCircleIcon size={16} strokeWidth={2} aria-hidden="true" />
-              <span>New Event</span>
+              <span>เพิ่มนัด</span>
             </Button>
           </div>
         </div>

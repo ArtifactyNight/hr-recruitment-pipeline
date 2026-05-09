@@ -1,0 +1,41 @@
+import { z } from "zod";
+
+/** Client form before splitting interviewer emails. */
+export const scheduleInterviewFormSchema = z.object({
+  datetimeLocal: z.string().min(1, "เลือกวันและเวลา"),
+  durationMinutes: z.coerce.number().int().min(15).max(480),
+  interviewerEmailsRaw: z.string().optional(),
+  extraNotes: z.string().max(16_000).optional(),
+});
+
+export type ScheduleInterviewFormValues = z.infer<
+  typeof scheduleInterviewFormSchema
+>;
+
+function splitEmailTokens(raw: string): Array<string> {
+  return raw
+    .split(/[\s,;]+/u)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function parseInterviewerEmails(raw: string | undefined):
+  | {
+      ok: true;
+      emails: Array<string> | undefined;
+    }
+  | { ok: false; message: string } {
+  if (raw == null || raw.trim() === "") {
+    return { ok: true, emails: undefined };
+  }
+  const tokens = splitEmailTokens(raw);
+  const emails: Array<string> = [];
+  for (const t of tokens) {
+    const r = z.string().email().safeParse(t);
+    if (!r.success) {
+      return { ok: false, message: `อีเมลผู้สัมภาษณ์ไม่ถูกต้อง: ${t}` };
+    }
+    emails.push(r.data);
+  }
+  return { ok: true, emails };
+}

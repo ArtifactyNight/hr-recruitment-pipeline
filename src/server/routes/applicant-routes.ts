@@ -1,8 +1,10 @@
 import {
   type ApplicantSource,
   type ApplicantStage,
+  type InterviewStatus,
   Prisma,
 } from "@/generated/prisma/client";
+import { ensureUserFromClerkId } from "@/lib/clerk-db-user";
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { Elysia, t } from "elysia";
@@ -52,6 +54,77 @@ function strengthsToTags(raw: unknown): Array<string> {
   return out.slice(0, 5);
 }
 
+function applicantInterviewSubset(
+  organizerUserId: number,
+): Prisma.InterviewFindManyArgs {
+  return {
+    where: {
+      status: { in: ["SCHEDULED", "RESCHEDULED"] },
+      organizerUserId,
+    },
+    orderBy: { scheduledAt: "desc" },
+    take: 1,
+    select: {
+      id: true,
+      scheduledAt: true,
+      durationMinutes: true,
+      status: true,
+      googleMeetLink: true,
+      googleEventId: true,
+      interviewers: {
+        select: { id: true, name: true, email: true, title: true },
+      },
+    },
+  };
+}
+
+type ApplicantInterviewMapRow = {
+  id: string;
+  scheduledAt: Date;
+  durationMinutes: number;
+  status: InterviewStatus;
+  googleMeetLink: string | null;
+  googleEventId: string | null;
+  interviewers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    title: string | null;
+  }>;
+};
+
+function mapApplicantInterview(interviews: Array<ApplicantInterviewMapRow>): {
+  id: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  status: InterviewStatus;
+  googleMeetLink: string | null;
+  googleEventId: string | null;
+  interviewers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    title: string | null;
+  }>;
+} | null {
+  const iv = interviews[0];
+  if (!iv) return null;
+  return {
+    id: iv.id,
+    scheduledAt: iv.scheduledAt.toISOString(),
+    durationMinutes: iv.durationMinutes,
+    status: iv.status,
+    googleMeetLink: iv.googleMeetLink,
+    googleEventId: iv.googleEventId,
+    interviewers: iv.interviewers.map((i) => ({
+      id: i.id,
+      name: i.name,
+      email: i.email,
+      title: i.title ?? null,
+    })),
+  };
+}
+
 function applicantListFields(
   sr: {
     overallScore: number;
@@ -84,6 +157,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   .get(
     "/",
     async ({ query }) => {
+      const { userId } = await auth();
+      const dbUser = await ensureUserFromClerkId(userId!);
       const search = query.search?.trim() ?? "";
       const jobDescriptionId = query.jobDescriptionId?.trim();
       const source = query.source as ApplicantSource | undefined;
@@ -117,6 +192,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
               strengths: true,
             },
           },
+          interviews: applicantInterviewSubset(dbUser.id),
         },
         orderBy: { appliedAt: "desc" },
       });
@@ -134,6 +210,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           stage: row.stage,
           jobDescriptionId: row.jobDescription.id,
           positionTitle: row.jobDescription.title,
+          interview: mapApplicantInterview(
+            row.interviews as unknown as Array<ApplicantInterviewMapRow>,
+          ),
           ...fromScreening,
         };
       });
@@ -173,6 +252,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   .post(
     "/",
     async ({ body, set }) => {
+      const { userId } = await auth();
+      const dbUser = await ensureUserFromClerkId(userId!);
       const job = await prisma.jobDescription.findFirst({
         where: { id: body.jobDescriptionId, isActive: true },
       });
@@ -208,6 +289,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
               strengths: true,
             },
           },
+          interviews: applicantInterviewSubset(dbUser.id),
         },
       });
       const fromScreening = applicantListFields(created.screeningResult);
@@ -223,6 +305,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           stage: created.stage,
           jobDescriptionId: created.jobDescription.id,
           positionTitle: created.jobDescription.title,
+          interview: mapApplicantInterview(
+            created.interviews as unknown as Array<ApplicantInterviewMapRow>,
+          ),
           ...fromScreening,
         },
       };
@@ -242,6 +327,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   .patch(
     "/:id",
     async ({ params, body, set }) => {
+      const { userId } = await auth();
+      const dbUser = await ensureUserFromClerkId(userId!);
       try {
         const data: Prisma.ApplicantUpdateInput = {};
         if (body.stage !== undefined) {
@@ -277,6 +364,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                 strengths: true,
               },
             },
+            interviews: applicantInterviewSubset(dbUser.id),
           },
         });
         const fromScreening = applicantListFields(updated.screeningResult);
@@ -292,6 +380,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             stage: updated.stage,
             jobDescriptionId: updated.jobDescription.id,
             positionTitle: updated.jobDescription.title,
+            interview: mapApplicantInterview(
+              updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
+            ),
             ...fromScreening,
           },
         };

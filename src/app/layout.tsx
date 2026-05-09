@@ -3,12 +3,12 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_Thai } from "next/font/google";
+import { Google_Sans } from "next/font/google";
 import "./globals.css";
 
-const font = IBM_Plex_Sans_Thai({
+const font = Google_Sans({
   subsets: ["latin", "thai"],
-  weight: ["100", "200", "300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {

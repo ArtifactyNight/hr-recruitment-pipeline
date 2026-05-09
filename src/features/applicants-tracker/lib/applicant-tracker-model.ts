@@ -1,4 +1,25 @@
-import type { ApplicantStage } from "@/generated/prisma/client";
+import type {
+  ApplicantStage,
+  InterviewStatus,
+} from "@/generated/prisma/client";
+
+export type TrackerApplicantInterviewer = {
+  id: string;
+  name: string;
+  email: string;
+  title: string | null;
+};
+
+/** Latest active interview for current organizer (see GET /applicants). */
+export type TrackerApplicantInterview = {
+  id: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  status: InterviewStatus;
+  googleMeetLink: string | null;
+  googleEventId: string | null;
+  interviewers: Array<TrackerApplicantInterviewer>;
+};
 
 export type TrackerApplicant = {
   id: string;
@@ -16,6 +37,7 @@ export type TrackerApplicant = {
   cultureFit: number | null;
   notes: string | null;
   tags: Array<string>;
+  interview: TrackerApplicantInterview | null;
 };
 
 export const STAGE_ORDER = [
@@ -101,4 +123,39 @@ export function initialsFromName(name: string): string {
     ).toUpperCase();
   }
   return name.trim().slice(0, 2).toUpperCase() || "?";
+}
+
+/** Map `POST /interviews` embedded interview row → tracker DTO. */
+export function trackerInterviewFromScheduleResponse(interview: {
+  id: string;
+  scheduledAt: Date | string;
+  durationMinutes: number;
+  status: InterviewStatus;
+  googleMeetLink: string | null;
+  googleEventId: string | null;
+  interviewers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    title: string | null;
+  }>;
+}): TrackerApplicantInterview {
+  const scheduledAt =
+    typeof interview.scheduledAt === "string"
+      ? interview.scheduledAt
+      : interview.scheduledAt.toISOString();
+  return {
+    id: interview.id,
+    scheduledAt,
+    durationMinutes: interview.durationMinutes,
+    status: interview.status,
+    googleMeetLink: interview.googleMeetLink,
+    googleEventId: interview.googleEventId,
+    interviewers: interview.interviewers.map((i) => ({
+      id: i.id,
+      name: i.name,
+      email: i.email,
+      title: i.title ?? null,
+    })),
+  };
 }

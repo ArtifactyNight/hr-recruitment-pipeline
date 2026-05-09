@@ -488,7 +488,9 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
                   jobDescription: { select: { title: true } },
                 },
               },
-              interviewers: { select: { id: true, name: true, email: true } },
+              interviewers: {
+                select: { id: true, name: true, email: true, title: true },
+              },
             },
           });
           await tx.applicant.update({
