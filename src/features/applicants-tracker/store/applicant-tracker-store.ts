@@ -1,10 +1,18 @@
 import { create } from "zustand";
 
+import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import type { TrackerApplicant } from "../lib/applicant-tracker-model";
 
 type AddSource = "LINKEDIN" | "JOBSDB" | "REFERRAL" | "OTHER";
 
 export type ApplicantTrackerView = "board" | "table";
+
+/** Add-applicant dialog: pick mode → manual form or AI review → AI confirm */
+export type AddApplicantFlowStep =
+  | "pick"
+  | "manual"
+  | "ai_review"
+  | "ai_confirm";
 
 interface ApplicantTrackerState {
   view: ApplicantTrackerView;
@@ -25,6 +33,21 @@ interface ApplicantTrackerState {
   setAddOpen: (v: boolean) => void;
   setDeleteTarget: (v: TrackerApplicant | null) => void;
 
+  addFlowStep: AddApplicantFlowStep;
+  setAddFlowStep: (v: AddApplicantFlowStep) => void;
+
+  addResumeText: string;
+  setAddResumeText: (v: string) => void;
+  addResumeFile: File | null;
+  setAddResumeFile: (v: File | null) => void;
+
+  addAiReport: FitReport | null;
+  setAddAiReport: (v: FitReport | null) => void;
+  addDetectedName: string;
+  setAddDetectedName: (v: string) => void;
+  addDetectedEmail: string;
+  setAddDetectedEmail: (v: string) => void;
+
   addName: string;
   addEmail: string;
   addPhone: string;
@@ -36,6 +59,7 @@ interface ApplicantTrackerState {
   setAddJobId: (v: string) => void;
   setAddSource: (v: AddSource) => void;
   resetAddForm: () => void;
+  resetAddDialog: () => void;
 }
 
 export const useApplicantTrackerStore = create<ApplicantTrackerState>(
@@ -58,6 +82,21 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
     setAddOpen: (v) => set({ addOpen: v }),
     setDeleteTarget: (v) => set({ deleteTarget: v }),
 
+    addFlowStep: "pick",
+    setAddFlowStep: (v) => set({ addFlowStep: v }),
+
+    addResumeText: "",
+    setAddResumeText: (v) => set({ addResumeText: v }),
+    addResumeFile: null,
+    setAddResumeFile: (v) => set({ addResumeFile: v }),
+
+    addAiReport: null,
+    setAddAiReport: (v) => set({ addAiReport: v }),
+    addDetectedName: "",
+    setAddDetectedName: (v) => set({ addDetectedName: v }),
+    addDetectedEmail: "",
+    setAddDetectedEmail: (v) => set({ addDetectedEmail: v }),
+
     addName: "",
     addEmail: "",
     addPhone: "",
@@ -70,6 +109,20 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
     setAddSource: (v) => set({ addSource: v }),
     resetAddForm: () =>
       set({
+        addName: "",
+        addEmail: "",
+        addPhone: "",
+        addJobId: "",
+        addSource: "OTHER",
+      }),
+    resetAddDialog: () =>
+      set({
+        addFlowStep: "pick",
+        addResumeText: "",
+        addResumeFile: null,
+        addAiReport: null,
+        addDetectedName: "",
+        addDetectedEmail: "",
         addName: "",
         addEmail: "",
         addPhone: "",

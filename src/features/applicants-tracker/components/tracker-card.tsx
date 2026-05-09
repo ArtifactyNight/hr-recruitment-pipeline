@@ -47,7 +47,7 @@ export function TrackerCard({
       )}
       onClick={onOpen}
     >
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-col gap-3">
         <div className="flex gap-3">
           <Avatar size="lg" className="after:border-0">
             <AvatarFallback className="bg-[#FFCC00] text-sm font-semibold text-foreground">
@@ -56,13 +56,21 @@ export function TrackerCard({
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 space-y-0.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <p className="text-foreground line-clamp-2 text-sm leading-snug font-semibold">
                   {row.name}
                 </p>
                 <p className="text-muted-foreground line-clamp-1 text-xs">
                   {positionLine}
                 </p>
+                {score == null ? (
+                  <Badge
+                    variant="secondary"
+                    className="pointer-events-none mt-0.5 w-fit text-[10px] font-normal"
+                  >
+                    ยังไม่วิเคราะห์ AI
+                  </Badge>
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-0.5">
                 <Badge

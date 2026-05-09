@@ -44,6 +44,7 @@ type ApplicantDetailDialogProps = {
   applicant: TrackerApplicant | null;
   onOpenChange: (open: boolean) => void;
   patchPending: boolean;
+  screenAiPending: boolean;
   notesSaving: boolean;
   scheduleInterviewPending: boolean;
   applicantsQueryKey: readonly unknown[];
@@ -51,6 +52,7 @@ type ApplicantDetailDialogProps = {
   onStageSelect: (stage: ApplicantStage) => void;
   onSaveNotes: (text: string) => void;
   onRequestDelete: () => void;
+  onScreenWithAi: () => void;
   onCvPatch: (patch: {
     cvText: string | null;
     cvFileKey: string | null;
@@ -62,6 +64,7 @@ export function ApplicantDetailDialog({
   applicant,
   onOpenChange,
   patchPending,
+  screenAiPending,
   notesSaving,
   scheduleInterviewPending,
   applicantsQueryKey,
@@ -69,6 +72,7 @@ export function ApplicantDetailDialog({
   onStageSelect,
   onSaveNotes,
   onRequestDelete,
+  onScreenWithAi,
   onCvPatch,
 }: ApplicantDetailDialogProps) {
   const detailStage = applicant?.stage;
@@ -159,7 +163,11 @@ export function ApplicantDetailDialog({
                   ))}
                 </div>
               </div>
-              <ApplicantDetailAiScores row={applicant} />
+              <ApplicantDetailAiScores
+                row={applicant}
+                screenAiPending={screenAiPending}
+                onScreenWithAi={onScreenWithAi}
+              />
               <ApplicantDetailResumeSection
                 applicant={applicant}
                 applicantsQueryKey={applicantsQueryKey}
@@ -180,7 +188,7 @@ export function ApplicantDetailDialog({
                   className="border-destructive/40 text-destructive hover:bg-destructive/10"
                   onClick={onRequestDelete}
                 >
-                  <Trash2Icon className="size-4" />
+                  <Trash2Icon data-icon="inline-start" />
                   ลบ
                 </Button>
                 <div className="flex flex-1 flex-wrap justify-end gap-2">

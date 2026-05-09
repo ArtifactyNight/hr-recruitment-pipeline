@@ -19,7 +19,6 @@ import {
   Building2Icon,
   CalendarDaysIcon,
   HomeIcon,
-  ScanBarcode,
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,7 +31,6 @@ const mainNav: Array<{
   icon: typeof HomeIcon;
 }> = [
   { href: "/", label: "แดชบอร์ด", icon: HomeIcon },
-  { href: "/screener", label: routeSegmentLabels.screener, icon: ScanBarcode },
   {
     href: "/candidates",
     label: routeSegmentLabels.candidates,

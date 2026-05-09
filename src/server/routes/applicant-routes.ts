@@ -1,3 +1,4 @@
+import { fitReportSchema } from "@/features/screener/lib/fit-report-schemas";
 import {
   type ApplicantSource,
   type ApplicantStage,
@@ -8,14 +9,21 @@ import { ensureUserFromClerkId } from "@/lib/clerk-db-user";
 import prisma from "@/lib/prisma";
 import {
   deleteResumeFromR2,
+  getResumePdfBytesFromR2,
   getResumeSignedDownloadUrl,
   isR2Configured,
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
+import {
+  evaluateResumeAgainstJob,
+  fileHasBytes,
+  fitReportToScreeningScalars,
+} from "@/server/lib/resume-screening-service";
 import { auth } from "@clerk/nextjs/server";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 
 const applicantAuth = new Elysia({ name: "applicant-auth" })
   .derive(async () => {
@@ -160,14 +168,61 @@ function applicantListFields(
   };
 }
 
-function fileHasBytes(file: unknown): file is File {
-  return (
-    typeof file === "object" &&
-    file !== null &&
-    "size" in file &&
-    typeof (file as { size: unknown }).size === "number" &&
-    (file as File).size > 0
-  );
+const applicantSourceSchema = z.enum([
+  "LINKEDIN",
+  "JOBSDB",
+  "REFERRAL",
+  "OTHER",
+]);
+
+const withResumePayloadSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  jobDescriptionId: z.string().min(1),
+  source: applicantSourceSchema.optional(),
+  cvText: z.string().optional(),
+});
+
+const withScreeningPayloadSchema = z.object({
+  jobDescriptionId: z.string().min(1),
+  name: z.string().min(1),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  source: applicantSourceSchema.optional(),
+  report: fitReportSchema,
+  resumeText: z.string().optional(),
+});
+
+function screeningErrorResponse(error: unknown): {
+  status: number;
+  body: Record<string, unknown>;
+} {
+  const statusCode =
+    error &&
+    typeof error === "object" &&
+    "statusCode" in error &&
+    typeof (error as { statusCode: unknown }).statusCode === "number"
+      ? (error as { statusCode: number }).statusCode
+      : 502;
+  const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาด";
+  const detail =
+    error &&
+    typeof error === "object" &&
+    "detail" in error &&
+    typeof (error as { detail: unknown }).detail === "string"
+      ? (error as { detail: string }).detail
+      : undefined;
+  if (statusCode === 502) {
+    return {
+      status: statusCode,
+      body: {
+        error: message,
+        ...(detail ? { detail } : {}),
+      },
+    };
+  }
+  return { status: statusCode, body: { error: message } };
 }
 
 export const applicantRoutes = new Elysia({ prefix: "/applicants" })
@@ -287,6 +342,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         set.status = 404;
         return { error: "ไม่พบตำแหน่งนี้" };
       }
+      const cvRaw = body.cvText?.trim() ?? "";
       const created = await prisma.applicant.create({
         data: {
           name: body.name.trim(),
@@ -295,6 +351,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           jobDescriptionId: body.jobDescriptionId,
           source: body.source ?? "OTHER",
           stage: (body.stage ?? "APPLIED") as ApplicantStage,
+          ...(cvRaw.length > 0 ? { cvText: cvRaw } : {}),
         },
         select: {
           id: true,
@@ -352,8 +409,413 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         jobDescriptionId: t.String({ minLength: 1 }),
         source: t.Optional(sourceUnion),
         stage: t.Optional(stageUnion),
+        cvText: t.Optional(t.String()),
       }),
       detail: { tags: ["applicants"], summary: "เพิ่มผู้สมัคร" },
+    },
+  )
+  .post(
+    "/analyze-draft",
+    async ({ body, set }) => {
+      const file = body.file;
+      const cvText = body.cvText?.trim() ?? "";
+      const jobDescriptionId = body.jobDescriptionId.trim();
+      if (!jobDescriptionId) {
+        set.status = 400;
+        return { error: "ต้องเลือกตำแหน่งงาน" };
+      }
+      try {
+        const result = await evaluateResumeAgainstJob({
+          jobDescriptionId,
+          cvText: fileHasBytes(file) ? undefined : cvText || undefined,
+          file: fileHasBytes(file) ? file : undefined,
+        });
+        return {
+          report: result.report,
+          detectedName: result.detectedName,
+          detectedEmail: result.detectedEmail,
+          matchedJobId: result.matchedJobId,
+          matchedJobTitle: result.matchedJobTitle,
+        };
+      } catch (error) {
+        const { status, body: errBody } = screeningErrorResponse(error);
+        set.status = status;
+        return errBody;
+      }
+    },
+    {
+      body: t.Object({
+        jobDescriptionId: t.String({ minLength: 1 }),
+        file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
+        cvText: t.Optional(t.String()),
+      }),
+      detail: {
+        tags: ["applicants"],
+        summary: "วิเคราะห์ CV แบบร่าง (ยังไม่บันทึกผู้สมัคร)",
+      },
+    },
+  )
+  .post(
+    "/with-resume",
+    async ({ body, set }) => {
+      let raw: unknown;
+      try {
+        raw = JSON.parse(body.payload) as unknown;
+      } catch {
+        set.status = 400;
+        return { error: "payload ไม่ใช่ JSON ที่อ่านได้" };
+      }
+      const parsed = withResumePayloadSchema.safeParse(raw);
+      if (!parsed.success) {
+        set.status = 400;
+        return { error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() };
+      }
+      const file = body.file;
+      const hasFile = fileHasBytes(file);
+      const cvTrim = parsed.data.cvText?.trim() ?? "";
+      if (!hasFile && cvTrim.length === 0) {
+        set.status = 400;
+        return { error: "ต้องแนบ PDF หรือวางข้อความ resume" };
+      }
+      if (hasFile && !isR2Configured()) {
+        set.status = 503;
+        return {
+          error: "ยังไม่ได้ตั้งค่า Cloudflare R2 (จำเป็นสำหรับอัปโหลด PDF)",
+        };
+      }
+      const job = await prisma.jobDescription.findFirst({
+        where: { id: parsed.data.jobDescriptionId, isActive: true },
+      });
+      if (!job) {
+        set.status = 404;
+        return { error: "ไม่พบตำแหน่งนี้" };
+      }
+      const { userId } = await auth();
+      const dbUser = await ensureUserFromClerkId(userId!);
+      try {
+        const applicant = await prisma.applicant.create({
+          data: {
+            name: parsed.data.name.trim(),
+            email: parsed.data.email.trim(),
+            phone: parsed.data.phone?.trim() || null,
+            jobDescriptionId: parsed.data.jobDescriptionId,
+            source: parsed.data.source ?? "OTHER",
+            stage: "APPLIED",
+            ...(cvTrim.length > 0 ? { cvText: cvTrim } : {}),
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            notes: true,
+            cvText: true,
+            cvFileKey: true,
+            cvFileName: true,
+            appliedAt: true,
+            source: true,
+            stage: true,
+            jobDescription: { select: { id: true, title: true } },
+            screeningResult: {
+              select: {
+                overallScore: true,
+                skillFit: true,
+                experienceFit: true,
+                cultureFit: true,
+                strengths: true,
+              },
+            },
+            interviews: applicantInterviewSubset(dbUser.id),
+          },
+        });
+        if (hasFile) {
+          const bytes = await file!.arrayBuffer();
+          const objectKey = resumeObjectKeyForApplicant(
+            applicant.id,
+            randomUUID(),
+          );
+          await putResumePdfToR2({
+            objectKey,
+            body: new Uint8Array(bytes),
+            contentType: file.type || "application/pdf",
+          });
+          const updated = await prisma.applicant.update({
+            where: { id: applicant.id },
+            data: {
+              cvFileKey: objectKey,
+              cvFileName: file.name?.trim() || "resume.pdf",
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              notes: true,
+              cvText: true,
+              cvFileKey: true,
+              cvFileName: true,
+              appliedAt: true,
+              source: true,
+              stage: true,
+              jobDescription: { select: { id: true, title: true } },
+              screeningResult: {
+                select: {
+                  overallScore: true,
+                  skillFit: true,
+                  experienceFit: true,
+                  cultureFit: true,
+                  strengths: true,
+                },
+              },
+              interviews: applicantInterviewSubset(dbUser.id),
+            },
+          });
+          const fromScreening = applicantListFields(updated.screeningResult);
+          return {
+            applicant: {
+              id: updated.id,
+              name: updated.name,
+              email: updated.email,
+              phone: updated.phone,
+              notes: updated.notes,
+              cvText: updated.cvText,
+              cvFileKey: updated.cvFileKey,
+              cvFileName: updated.cvFileName,
+              appliedAt: updated.appliedAt.toISOString(),
+              source: updated.source,
+              stage: updated.stage,
+              jobDescriptionId: updated.jobDescription.id,
+              positionTitle: updated.jobDescription.title,
+              interview: mapApplicantInterview(
+                updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
+              ),
+              ...fromScreening,
+            },
+          };
+        }
+        const fromScreening = applicantListFields(applicant.screeningResult);
+        return {
+          applicant: {
+            id: applicant.id,
+            name: applicant.name,
+            email: applicant.email,
+            phone: applicant.phone,
+            notes: applicant.notes,
+            cvText: applicant.cvText,
+            cvFileKey: applicant.cvFileKey,
+            cvFileName: applicant.cvFileName,
+            appliedAt: applicant.appliedAt.toISOString(),
+            source: applicant.source,
+            stage: applicant.stage,
+            jobDescriptionId: applicant.jobDescription.id,
+            positionTitle: applicant.jobDescription.title,
+            interview: mapApplicantInterview(
+              applicant.interviews as unknown as Array<ApplicantInterviewMapRow>,
+            ),
+            ...fromScreening,
+          },
+        };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "บันทึกไม่สำเร็จ";
+        set.status = 500;
+        return { error: message };
+      }
+    },
+    {
+      body: t.Object({
+        payload: t.String({ minLength: 2 }),
+        file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
+      }),
+      detail: {
+        tags: ["applicants"],
+        summary: "เพิ่มผู้สมัครพร้อม resume (PDF และ/หรือข้อความ)",
+      },
+    },
+  )
+  .post(
+    "/with-screening",
+    async ({ body, set }) => {
+      let raw: unknown;
+      try {
+        raw = JSON.parse(body.payload) as unknown;
+      } catch {
+        set.status = 400;
+        return { error: "payload ไม่ใช่ JSON ที่อ่านได้" };
+      }
+      const parsed = withScreeningPayloadSchema.safeParse(raw);
+      if (!parsed.success) {
+        set.status = 400;
+        return { error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() };
+      }
+      const file = body.file;
+      const hasFile = fileHasBytes(file);
+      const resumeTrim = parsed.data.resumeText?.trim() ?? "";
+      if (!hasFile && resumeTrim.length === 0) {
+        set.status = 400;
+        return { error: "ต้องแนบ PDF หรือวางข้อความ resume" };
+      }
+      if (hasFile && !isR2Configured()) {
+        set.status = 503;
+        return {
+          error: "ยังไม่ได้ตั้งค่า Cloudflare R2 (จำเป็นสำหรับอัปโหลด PDF)",
+        };
+      }
+      const job = await prisma.jobDescription.findFirst({
+        where: { id: parsed.data.jobDescriptionId, isActive: true },
+      });
+      if (!job) {
+        set.status = 404;
+        return { error: "ไม่พบตำแหน่งนี้" };
+      }
+      const report = parsed.data.report;
+      const screeningData = fitReportToScreeningScalars(report);
+      const { userId } = await auth();
+      const dbUser = await ensureUserFromClerkId(userId!);
+      try {
+        const applicant = await prisma.applicant.create({
+          data: {
+            name: parsed.data.name.trim(),
+            email: parsed.data.email.trim(),
+            phone: parsed.data.phone?.trim() || null,
+            jobDescriptionId: parsed.data.jobDescriptionId,
+            source: parsed.data.source ?? "OTHER",
+            stage: "SCREENING",
+            ...(resumeTrim.length > 0 ? { cvText: resumeTrim } : {}),
+            screeningResult: {
+              create: screeningData,
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            notes: true,
+            cvText: true,
+            cvFileKey: true,
+            cvFileName: true,
+            appliedAt: true,
+            source: true,
+            stage: true,
+            jobDescription: { select: { id: true, title: true } },
+            screeningResult: {
+              select: {
+                overallScore: true,
+                skillFit: true,
+                experienceFit: true,
+                cultureFit: true,
+                strengths: true,
+              },
+            },
+            interviews: applicantInterviewSubset(dbUser.id),
+          },
+        });
+
+        if (!hasFile) {
+          const fromScreening = applicantListFields(applicant.screeningResult);
+          return {
+            applicant: {
+              id: applicant.id,
+              name: applicant.name,
+              email: applicant.email,
+              phone: applicant.phone,
+              notes: applicant.notes,
+              cvText: applicant.cvText,
+              cvFileKey: applicant.cvFileKey,
+              cvFileName: applicant.cvFileName,
+              appliedAt: applicant.appliedAt.toISOString(),
+              source: applicant.source,
+              stage: applicant.stage,
+              jobDescriptionId: applicant.jobDescription.id,
+              positionTitle: applicant.jobDescription.title,
+              interview: mapApplicantInterview(
+                applicant.interviews as unknown as Array<ApplicantInterviewMapRow>,
+              ),
+              ...fromScreening,
+            },
+          };
+        }
+
+        const bytes = await file!.arrayBuffer();
+        const objectKey = resumeObjectKeyForApplicant(
+          applicant.id,
+          randomUUID(),
+        );
+        await putResumePdfToR2({
+          objectKey,
+          body: new Uint8Array(bytes),
+          contentType: file.type || "application/pdf",
+        });
+        const updated = await prisma.applicant.update({
+          where: { id: applicant.id },
+          data: {
+            cvFileKey: objectKey,
+            cvFileName: file.name?.trim() || "resume.pdf",
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            notes: true,
+            cvText: true,
+            cvFileKey: true,
+            cvFileName: true,
+            appliedAt: true,
+            source: true,
+            stage: true,
+            jobDescription: { select: { id: true, title: true } },
+            screeningResult: {
+              select: {
+                overallScore: true,
+                skillFit: true,
+                experienceFit: true,
+                cultureFit: true,
+                strengths: true,
+              },
+            },
+            interviews: applicantInterviewSubset(dbUser.id),
+          },
+        });
+        const fromScreening = applicantListFields(updated.screeningResult);
+        return {
+          applicant: {
+            id: updated.id,
+            name: updated.name,
+            email: updated.email,
+            phone: updated.phone,
+            notes: updated.notes,
+            cvText: updated.cvText,
+            cvFileKey: updated.cvFileKey,
+            cvFileName: updated.cvFileName,
+            appliedAt: updated.appliedAt.toISOString(),
+            source: updated.source,
+            stage: updated.stage,
+            jobDescriptionId: updated.jobDescription.id,
+            positionTitle: updated.jobDescription.title,
+            interview: mapApplicantInterview(
+              updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
+            ),
+            ...fromScreening,
+          },
+        };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "บันทึกไม่สำเร็จ";
+        set.status = 500;
+        return { error: message };
+      }
+    },
+    {
+      body: t.Object({
+        payload: t.String({ minLength: 2 }),
+        file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
+      }),
+      detail: {
+        tags: ["applicants"],
+        summary: "เพิ่มผู้สมัครพร้อมผล AI screening",
+      },
     },
   )
   .get(
@@ -558,6 +1020,132 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         notes: t.Optional(t.String({ maxLength: 16_000 })),
       }),
       detail: { tags: ["applicants"], summary: "อัปเดตผู้สมัคร" },
+    },
+  )
+  .post(
+    "/:id/screen",
+    async ({ params, set }) => {
+      const { userId } = await auth();
+      const dbUser = await ensureUserFromClerkId(userId!);
+      const applicant = await prisma.applicant.findFirst({
+        where: { id: params.id },
+        select: {
+          id: true,
+          jobDescriptionId: true,
+          cvText: true,
+          cvFileKey: true,
+          cvFileName: true,
+        },
+      });
+      if (!applicant) {
+        set.status = 404;
+        return { error: "ไม่พบผู้สมัคร" };
+      }
+      try {
+        let evalResult: Awaited<ReturnType<typeof evaluateResumeAgainstJob>>;
+        if (applicant.cvFileKey) {
+          if (!isR2Configured()) {
+            set.status = 503;
+            return {
+              error:
+                "ยังไม่ได้ตั้งค่า Cloudflare R2 — ไม่สามารถอ่านไฟล์ PDF จากเซิร์ฟเวอร์ได้",
+            };
+          }
+          const { bytes, contentType } = await getResumePdfBytesFromR2(
+            applicant.cvFileKey,
+          );
+          evalResult = await evaluateResumeAgainstJob({
+            jobDescriptionId: applicant.jobDescriptionId,
+            pdfBuffer: bytes,
+            pdfFilename: applicant.cvFileName ?? "resume.pdf",
+            pdfMediaType: contentType,
+          });
+        } else if (applicant.cvText?.trim()) {
+          evalResult = await evaluateResumeAgainstJob({
+            jobDescriptionId: applicant.jobDescriptionId,
+            cvText: applicant.cvText,
+          });
+        } else {
+          set.status = 400;
+          return {
+            error:
+              "ไม่มีข้อมูล resume — วางข้อความหรืออัปโหลด PDF ก่อนวิเคราะห์",
+          };
+        }
+        const screeningData = fitReportToScreeningScalars(evalResult.report);
+        await prisma.screeningResult.upsert({
+          where: { applicantId: applicant.id },
+          create: {
+            applicantId: applicant.id,
+            ...screeningData,
+          },
+          update: screeningData,
+        });
+        const updated = await prisma.applicant.findFirst({
+          where: { id: applicant.id },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            notes: true,
+            cvText: true,
+            cvFileKey: true,
+            cvFileName: true,
+            appliedAt: true,
+            source: true,
+            stage: true,
+            jobDescription: { select: { id: true, title: true } },
+            screeningResult: {
+              select: {
+                overallScore: true,
+                skillFit: true,
+                experienceFit: true,
+                cultureFit: true,
+                strengths: true,
+              },
+            },
+            interviews: applicantInterviewSubset(dbUser.id),
+          },
+        });
+        if (!updated) {
+          set.status = 404;
+          return { error: "ไม่พบผู้สมัคร" };
+        }
+        const fromScreening = applicantListFields(updated.screeningResult);
+        return {
+          applicant: {
+            id: updated.id,
+            name: updated.name,
+            email: updated.email,
+            phone: updated.phone,
+            notes: updated.notes,
+            cvText: updated.cvText,
+            cvFileKey: updated.cvFileKey,
+            cvFileName: updated.cvFileName,
+            appliedAt: updated.appliedAt.toISOString(),
+            source: updated.source,
+            stage: updated.stage,
+            jobDescriptionId: updated.jobDescription.id,
+            positionTitle: updated.jobDescription.title,
+            interview: mapApplicantInterview(
+              updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
+            ),
+            ...fromScreening,
+          },
+        };
+      } catch (error) {
+        const { status, body: errBody } = screeningErrorResponse(error);
+        set.status = status;
+        return errBody;
+      }
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      detail: {
+        tags: ["applicants"],
+        summary: "วิเคราะห์ resume ด้วย AI (บันทึกผล screening)",
+      },
     },
   )
   .delete(

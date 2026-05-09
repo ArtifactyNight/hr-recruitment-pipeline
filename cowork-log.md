@@ -1,3 +1,8 @@
+### [2026-05-10] - Move screening into Applicant Tracker
+**Prompt:** Move resume screening into tracker; add flow manual vs AI; analyze later for manual; tracker card shows unscreened; retire standalone screener nav/route.
+**Output:** Shared `resume-screening-service.ts` + `getResumePdfBytesFromR2`; applicant routes: `cvText` on `POST /`, `POST /analyze-draft`, `POST /with-resume`, `POST /with-screening`, `POST /:id/screen`; refactored `screener-routes` to use service. Tracker: zustand add-flow state, rebuilt `AddApplicantDialog` (pick → manual | AI review → confirm), candidates mutations + detail “วิเคราะห์ด้วย AI”. Board/table badges `ยังไม่วิเคราะห์ AI`. Sidebar removed `/screener`; `screener/page.tsx` redirects to `/candidates`. Jobs/resume copy tweaks.
+**Edited:** `src/server/lib/resume-screening-service.ts`, `src/lib/r2.ts`, `src/server/routes/screener-routes.ts`, `src/server/routes/applicant-routes.ts`, `applicant-tracker-store.ts`, `add-applicant-dialog.tsx`, `candidates/page.tsx`, `applicant-detail-dialog.tsx`, `applicant-detail-ai-scores.tsx`, `tracker-card.tsx`, `applicant-tracker-table.tsx`, `app-sidebar.tsx`, `screener/page.tsx`, `jobs/page.tsx`, `job-form-dialog.tsx`, `applicant-detail-resume-section.tsx`, `cowork-log.md`
+
 ### [2026-05-10] - ลบผลวิเคราะห์/ประวัติ screener + ScreenerHistory
 **Prompt:** ลบผลการวิเคราะห์และประวัติออก พร้อม prisma model
 **Output:** ลบ `ScreenerHistory` จาก schema + migration `20260510180000_drop_screener_history`; ตัด `GET/DELETE /screener/history` และการ persist หลัง evaluate; UI เหลือฟอร์ม (`max-w-2xl`) + dialog รายงานหลังวิเคราะห์; ลบ `screener-history-panel.tsx`, `screener-result-summary.tsx`; อัปเดตคำอธิบาย header
@@ -419,3 +424,8 @@
 **Prompt:** Change screener-prompts.ts instructions to English but keep output in Thai.
 **Output:** Rewrote system prompt and jdPrompt template from Thai to English. Rule #1 still mandates "All output text must be in Thai". Saves token cost since English tokenizes more efficiently than Thai.
 **Edited:** `screener-prompts.ts`, `cowork-log.md`
+
+### [2026-05-10 04:07] - Gmail resume intake brainstorming
+**Prompt:** brainstorm idea; pain point: HR need to get resume data and person from Gmail automatically and make it easy to use
+**Output:** Proposed Gmail resume intake concepts: watched inbox/label, automatic resume parsing, duplicate detection, review queue, job matching, applicant creation, candidate communication, and a pragmatic MVP path.
+**Edited:** `cowork-log.md`

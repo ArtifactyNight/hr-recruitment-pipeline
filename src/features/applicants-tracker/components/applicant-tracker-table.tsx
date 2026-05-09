@@ -101,7 +101,21 @@ export function ApplicantTrackerTable({
                   />
                 </TableCell>
                 <TableCell className="tabular-nums">
-                  {row.overallScore != null ? row.overallScore.toFixed(1) : "—"}
+                  <div className="flex flex-col gap-1">
+                    <span>
+                      {row.overallScore != null
+                        ? row.overallScore.toFixed(1)
+                        : "—"}
+                    </span>
+                    {row.overallScore == null ? (
+                      <Badge
+                        variant="secondary"
+                        className="w-fit px-1.5 py-0 text-[10px] font-normal"
+                      >
+                        ยังไม่วิเคราะห์ AI
+                      </Badge>
+                    ) : null}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {format(new Date(row.appliedAt), "EEE d MMM yyyy", {

@@ -187,8 +187,8 @@ export default function JobsPage() {
           title="ตำแหน่งงาน"
           description={
             <>
-              จัดการ JD สถานะรับสมัคร และรายละเอียดตำแหน่ง (ใช้ในหน้า Screener
-              และ Tracker)
+              จัดการ JD สถานะรับสมัคร และรายละเอียดตำแหน่ง (ใช้ใน Applicant
+              Tracker / AI screening)
             </>
           }
           actions={

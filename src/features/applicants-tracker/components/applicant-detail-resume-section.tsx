@@ -207,7 +207,7 @@ export function ApplicantDetailResumeSection({
           {hasText ? (
             <div className="flex flex-col gap-2">
               <p className="text-xs font-medium text-muted-foreground">
-                ข้อความ CV (จากการวาง / screener)
+                ข้อความ CV (จากการวางใน Tracker)
               </p>
               <ScrollArea className="h-48 rounded-md border border-border/80 bg-muted/30">
                 <pre className="m-0 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words">

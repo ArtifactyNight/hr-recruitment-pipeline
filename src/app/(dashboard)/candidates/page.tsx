@@ -13,6 +13,7 @@ import { ApplicantTrackerTable } from "@/features/applicants-tracker/components/
 import { DeleteApplicantAlert } from "@/features/applicants-tracker/components/delete-applicant-alert";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
+import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,6 +39,19 @@ type ListResponse = NonNullable<
   Awaited<ReturnType<typeof api.api.applicants.get>>["data"]
 >;
 
+function mutationErrorMessage(err: unknown): string {
+  if (
+    err &&
+    typeof err === "object" &&
+    "error" in err &&
+    typeof (err as { error: unknown }).error === "string"
+  ) {
+    return (err as { error: string }).error;
+  }
+  if (err instanceof Error) return err.message;
+  return "ดำเนินการไม่สำเร็จ";
+}
+
 export default function CandidatesPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -57,9 +71,12 @@ export default function CandidatesPage() {
     setAddOpen,
     deleteTarget,
     setDeleteTarget,
-    addJobId,
     setAddJobId,
-    resetAddForm,
+    resetAddDialog,
+    setAddAiReport,
+    setAddFlowStep,
+    setAddName,
+    setAddEmail,
   } = useApplicantTrackerStore(
     useShallow((s) => ({
       view: s.view,
@@ -76,9 +93,12 @@ export default function CandidatesPage() {
       setAddOpen: s.setAddOpen,
       deleteTarget: s.deleteTarget,
       setDeleteTarget: s.setDeleteTarget,
-      addJobId: s.addJobId,
       setAddJobId: s.setAddJobId,
-      resetAddForm: s.resetAddForm,
+      resetAddDialog: s.resetAddDialog,
+      setAddAiReport: s.setAddAiReport,
+      setAddFlowStep: s.setAddFlowStep,
+      setAddName: s.setAddName,
+      setAddEmail: s.setAddEmail,
     })),
   );
 
@@ -188,9 +208,27 @@ export default function CandidatesPage() {
     },
   });
 
-  const createMut = useMutation({
+  const manualCreateMut = useMutation({
     mutationFn: async () => {
       const state = useApplicantTrackerStore.getState();
+      const file = state.addResumeFile;
+      const cvTrim = state.addResumeText.trim();
+      if (file) {
+        const payload = JSON.stringify({
+          name: state.addName.trim(),
+          email: state.addEmail.trim(),
+          phone: state.addPhone.trim() || undefined,
+          jobDescriptionId: state.addJobId,
+          source: state.addSource,
+          cvText: cvTrim.length > 0 ? cvTrim : undefined,
+        });
+        const { data, error } = await api.api.applicants["with-resume"].post(
+          { payload, file },
+          { fetch: { credentials: "include" } },
+        );
+        if (error) throw error.value;
+        return data;
+      }
       const { data, error } = await api.api.applicants.post(
         {
           name: state.addName.trim(),
@@ -199,6 +237,7 @@ export default function CandidatesPage() {
           jobDescriptionId: state.addJobId,
           source: state.addSource,
           stage: "APPLIED",
+          cvText: cvTrim.length > 0 ? cvTrim : undefined,
         },
         { fetch: { credentials: "include" } },
       );
@@ -224,9 +263,9 @@ export default function CandidatesPage() {
         experienceFit: null,
         cultureFit: null,
         notes: null,
-        cvText: null,
+        cvText: state.addResumeText.trim() || null,
         cvFileKey: null,
-        cvFileName: null,
+        cvFileName: state.addResumeFile?.name ?? null,
         tags: [],
         interview: null,
       };
@@ -238,14 +277,122 @@ export default function CandidatesPage() {
     onSuccess: () => {
       toast.success("เพิ่มผู้สมัครแล้ว");
       setAddOpen(false);
-      resetAddForm();
+      resetAddDialog();
     },
-    onError: (e: Error, _, ctx) => {
+    onError: (e: unknown, _, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(applicantsQueryKey, ctx.prev);
-      toast.error(e.message);
+      toast.error(mutationErrorMessage(e));
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["applicants"] });
+    },
+  });
+
+  const analyzeDraftMut = useMutation({
+    mutationFn: async () => {
+      const state = useApplicantTrackerStore.getState();
+      const { data, error } = await api.api.applicants["analyze-draft"].post(
+        {
+          jobDescriptionId: state.addJobId,
+          cvText: state.addResumeFile
+            ? undefined
+            : state.addResumeText.trim() || undefined,
+          file: state.addResumeFile ?? undefined,
+        },
+        { fetch: { credentials: "include" } },
+      );
+      if (error) throw error.value;
+      return data;
+    },
+    onSuccess: (data) => {
+      if (
+        !data ||
+        typeof data !== "object" ||
+        !("report" in data) ||
+        !data.report ||
+        typeof data.report !== "object"
+      ) {
+        toast.error("ไม่ได้รับผลวิเคราะห์");
+        return;
+      }
+      const report = data.report as FitReport;
+      const detectedName =
+        "detectedName" in data && typeof data.detectedName === "string"
+          ? data.detectedName
+          : "";
+      const detectedEmail =
+        "detectedEmail" in data && typeof data.detectedEmail === "string"
+          ? data.detectedEmail
+          : "";
+      const s = useApplicantTrackerStore.getState();
+      setAddAiReport(report);
+      setAddName(detectedName.trim() || s.addName.trim() || "ผู้สมัคร");
+      setAddEmail(detectedEmail.trim() || s.addEmail.trim());
+      setAddFlowStep("ai_confirm");
+      toast.success("วิเคราะห์เสร็จแล้ว — ตรวจข้อมูลแล้วบันทึก");
+    },
+    onError: (e: unknown) => {
+      toast.error(mutationErrorMessage(e));
+    },
+  });
+
+  const aiConfirmMut = useMutation({
+    mutationFn: async () => {
+      const state = useApplicantTrackerStore.getState();
+      if (!state.addAiReport) {
+        throw new Error("ไม่มีผลวิเคราะห์");
+      }
+      const resumeTrim = state.addResumeText.trim();
+      const payload = JSON.stringify({
+        jobDescriptionId: state.addJobId,
+        name: state.addName.trim(),
+        email: state.addEmail.trim(),
+        phone: state.addPhone.trim() || undefined,
+        source: state.addSource,
+        report: state.addAiReport,
+        resumeText: resumeTrim.length > 0 ? resumeTrim : undefined,
+      });
+      const { data, error } = await api.api.applicants["with-screening"].post(
+        {
+          payload,
+          file: state.addResumeFile ?? undefined,
+        },
+        { fetch: { credentials: "include" } },
+      );
+      if (error) throw error.value;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("เพิ่มผู้สมัครพร้อมผล AI แล้ว");
+      setAddOpen(false);
+      resetAddDialog();
+    },
+    onError: (e: unknown) => {
+      toast.error(mutationErrorMessage(e));
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["applicants"] });
+    },
+  });
+
+  const screenApplicantMut = useMutation({
+    mutationFn: async (applicantId: string) => {
+      const { data, error } = await api.api
+        .applicants({ id: applicantId })
+        .screen.post({}, { fetch: { credentials: "include" } });
+      if (error) throw error.value;
+      return data;
+    },
+    onSuccess: (data) => {
+      const applicant = data?.applicant;
+      if (applicant && typeof applicant === "object" && "id" in applicant) {
+        setDetail(applicant as TrackerApplicant);
+      }
+      void queryClient.invalidateQueries({ queryKey: ["applicants"] });
+      toast.success("วิเคราะห์ด้วย AI แล้ว");
+    },
+    onError: (e: unknown) => {
+      toast.error(mutationErrorMessage(e));
     },
   });
 
@@ -338,9 +485,10 @@ export default function CandidatesPage() {
         view={view}
         onViewChange={setView}
         onAddClick={() => {
+          resetAddDialog();
           setAddOpen(true);
-          if (jobs[0] && !addJobId) {
-            setAddJobId(jobs[0]!.id);
+          if (jobs[0]) {
+            setAddJobId(jobs[0].id);
           }
         }}
       />
@@ -377,8 +525,12 @@ export default function CandidatesPage() {
         open={addOpen}
         onOpenChange={setAddOpen}
         jobs={jobs}
-        isSaving={createMut.isPending}
-        onSubmit={() => createMut.mutate()}
+        jobsLoading={jobsQuery.isLoading}
+        isSaving={manualCreateMut.isPending || aiConfirmMut.isPending}
+        isAnalyzing={analyzeDraftMut.isPending}
+        onManualSubmit={() => manualCreateMut.mutate()}
+        onAiAnalyze={() => analyzeDraftMut.mutate()}
+        onAiConfirmSubmit={() => aiConfirmMut.mutate()}
       />
 
       <ApplicantDetailDialog
@@ -388,6 +540,7 @@ export default function CandidatesPage() {
           if (!open) setDetail(null);
         }}
         patchPending={patchApplicantMut.isPending}
+        screenAiPending={screenApplicantMut.isPending}
         notesSaving={
           patchApplicantMut.isPending &&
           patchApplicantMut.variables != null &&
@@ -431,6 +584,10 @@ export default function CandidatesPage() {
         }}
         onRequestDelete={() => {
           if (detail) setDeleteTarget(detail);
+        }}
+        onScreenWithAi={() => {
+          if (!detail) return;
+          screenApplicantMut.mutate(detail.id);
         }}
       />
 

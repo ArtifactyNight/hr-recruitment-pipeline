@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, type ChangeEvent } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -16,8 +19,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
-import { Loader2Icon } from "lucide-react";
+import { FitRow } from "@/features/screener/components/fit-row";
+import { FitStatusBadge } from "@/features/screener/components/fit-status-badge";
+import { cn } from "@/lib/utils";
+import {
+  ArrowLeftIcon,
+  Loader2Icon,
+  PenLineIcon,
+  SparklesIcon,
+  UploadIcon,
+} from "lucide-react";
+import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 
 type JobOption = { id: string; title: string };
@@ -26,18 +41,37 @@ type AddApplicantDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   jobs: Array<JobOption>;
+  jobsLoading?: boolean;
   isSaving: boolean;
-  onSubmit: () => void;
+  isAnalyzing: boolean;
+  onManualSubmit: () => void;
+  onAiAnalyze: () => void;
+  onAiConfirmSubmit: () => void;
 };
 
 export function AddApplicantDialog({
   open,
   onOpenChange,
   jobs,
+  jobsLoading = false,
   isSaving,
-  onSubmit,
+  isAnalyzing,
+  onManualSubmit,
+  onAiAnalyze,
+  onAiConfirmSubmit,
 }: AddApplicantDialogProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const {
+    addFlowStep,
+    setAddFlowStep,
+    addResumeText,
+    setAddResumeText,
+    addResumeFile,
+    setAddResumeFile,
+    addAiReport,
+    addDetectedName,
+    addDetectedEmail,
     addName,
     setAddName,
     addEmail,
@@ -48,8 +82,19 @@ export function AddApplicantDialog({
     setAddJobId,
     addSource,
     setAddSource,
+    setAddAiReport,
+    resetAddDialog,
   } = useApplicantTrackerStore(
     useShallow((s) => ({
+      addFlowStep: s.addFlowStep,
+      setAddFlowStep: s.setAddFlowStep,
+      addResumeText: s.addResumeText,
+      setAddResumeText: s.setAddResumeText,
+      addResumeFile: s.addResumeFile,
+      setAddResumeFile: s.setAddResumeFile,
+      addAiReport: s.addAiReport,
+      addDetectedName: s.addDetectedName,
+      addDetectedEmail: s.addDetectedEmail,
       addName: s.addName,
       setAddName: s.setAddName,
       addEmail: s.addEmail,
@@ -60,94 +105,459 @@ export function AddApplicantDialog({
       setAddJobId: s.setAddJobId,
       addSource: s.addSource,
       setAddSource: s.setAddSource,
+      setAddAiReport: s.setAddAiReport,
+      resetAddDialog: s.resetAddDialog,
     })),
   );
 
-  const canSave =
-    Boolean(addName.trim()) && Boolean(addEmail.trim()) && Boolean(addJobId);
+  function handleOpenChange(next: boolean) {
+    if (!next) {
+      resetAddDialog();
+    }
+    onOpenChange(next);
+  }
+
+  function goPick() {
+    setAddFlowStep("pick");
+    setAddResumeText("");
+    setAddResumeFile(null);
+    setAddAiReport(null);
+  }
+
+  function goBackFromAiConfirm() {
+    setAddFlowStep("ai_review");
+    setAddAiReport(null);
+  }
+
+  function onPdfSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const okPdf =
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf");
+    if (!okPdf) {
+      toast.error("กรุณาเลือกไฟล์ PDF");
+      return;
+    }
+    setAddResumeText("");
+    setAddResumeFile(file);
+    toast.message(`เลือกไฟล์ ${file.name}`);
+  }
+
+  const resumeTextTrim = addResumeText.trim();
+  const hasResumeEvidence = addResumeFile !== null || resumeTextTrim.length > 0;
+  const canManualSave =
+    Boolean(addName.trim()) &&
+    Boolean(addEmail.trim()) &&
+    Boolean(addJobId) &&
+    hasResumeEvidence;
+  const canAnalyze =
+    Boolean(addJobId) && hasResumeEvidence && !jobsLoading && jobs.length > 0;
+  const canAiConfirmSave =
+    Boolean(addName.trim()) &&
+    Boolean(addEmail.trim()) &&
+    Boolean(addJobId) &&
+    addAiReport !== null;
+
+  const dialogTitle =
+    addFlowStep === "pick"
+      ? "เพิ่มผู้สมัคร"
+      : addFlowStep === "manual"
+        ? "กรอกข้อมูลผู้สมัคร"
+        : addFlowStep === "ai_review"
+          ? "วิเคราะห์เรซูเม่ด้วย AI"
+          : "ยืนยันข้อมูลและบันทึก";
+
+  const jobSelectDisabled = jobsLoading || jobs.length === 0;
+  const jobSelectValue = addJobId || "";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>เพิ่มผู้สมัคร</DialogTitle>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className={cn(
+          "flex max-h-[min(90vh,880px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl",
+          addFlowStep === "ai_confirm" && "sm:max-w-2xl",
+        )}
+      >
+        <DialogHeader className="flex shrink-0 flex-row items-start gap-3 border-b border-border px-6 py-4">
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-left">{dialogTitle}</DialogTitle>
+            <p className="mt-1 text-left text-sm text-muted-foreground">
+              {addFlowStep === "pick"
+                ? "เลือกวิธีเพิ่ม — ข้อมูลและการคัดกรองอยู่ใน Applicant Tracker"
+                : null}
+              {addFlowStep === "manual"
+                ? "ต้องมีข้อความ resume หรือไฟล์ PDF อย่างใดอย่างหนึ่ง"
+                : null}
+              {addFlowStep === "ai_review"
+                ? "เลือกตำแหน่งงาน แล้วแนบ resume เพื่อให้ AI สรุปคะแนน"
+                : null}
+              {addFlowStep === "ai_confirm"
+                ? "ตรวจชื่อ อีเมล และคะแนนก่อนบันทึก (สเตจ SCREENING)"
+                : null}
+            </p>
+          </div>
         </DialogHeader>
-        <div className="grid gap-3 py-2">
-          <div className="grid gap-1.5">
-            <span className="text-sm font-medium">ชื่อ</span>
-            <Input
-              value={addName}
-              onChange={(e) => setAddName(e.target.value)}
-              placeholder="ชื่อ-นามสกุล"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-sm font-medium">อีเมล</span>
-            <Input
-              type="email"
-              value={addEmail}
-              onChange={(e) => setAddEmail(e.target.value)}
-              placeholder="email@บริษัท.com"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-sm font-medium">โทรศัพท์</span>
-            <Input
-              value={addPhone}
-              onChange={(e) => setAddPhone(e.target.value)}
-              placeholder="ไม่บังคับ"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-sm font-medium">ตำแหน่ง</span>
-            <Select value={addJobId} onValueChange={setAddJobId}>
-              <SelectTrigger>
-                <SelectValue placeholder="เลือกตำแหน่ง" />
-              </SelectTrigger>
-              <SelectContent>
-                {jobs.map((j) => (
-                  <SelectItem key={j.id} value={j.id}>
-                    {j.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-sm font-medium">แหล่งที่มา</span>
-            <Select
-              value={addSource}
-              onValueChange={(v) => setAddSource(v as typeof addSource)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="LINKEDIN">LinkedIn</SelectItem>
-                <SelectItem value="JOBSDB">JobsDB</SelectItem>
-                <SelectItem value="REFERRAL">แนะนำ</SelectItem>
-                <SelectItem value="OTHER">อื่นๆ</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+          {addFlowStep === "pick" ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-auto flex-1 flex-col gap-2 py-6"
+                  disabled={jobsLoading || jobs.length === 0}
+                  onClick={() => setAddFlowStep("manual")}
+                >
+                  <PenLineIcon className="size-8 text-muted-foreground" />
+                  <span className="font-semibold">กรอกข้อมูลเอง</span>
+                  <span className="text-center text-xs font-normal text-muted-foreground">
+                    PDF หรือวางข้อความ — วิเคราะห์ AI ทีหลังได้
+                  </span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-auto flex-1 flex-col gap-2 py-6"
+                  disabled={jobsLoading || jobs.length === 0}
+                  onClick={() => setAddFlowStep("ai_review")}
+                >
+                  <SparklesIcon className="size-8 text-muted-foreground" />
+                  <span className="font-semibold">วิเคราะห์ด้วย AI</span>
+                  <span className="text-center text-xs font-normal text-muted-foreground">
+                    เลือก JD แล้วส่ง resume เข้า AI ก่อนบันทึก
+                  </span>
+                </Button>
+              </div>
+              {jobs.length === 0 && !jobsLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  ยังไม่มีตำแหน่งที่เปิดรับ — เพิ่ม JD ในเมนูตำแหน่งงานก่อน
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {addFlowStep === "manual" || addFlowStep === "ai_review" ? (
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="add-applicant-job">ตำแหน่ง</FieldLabel>
+                <Select
+                  value={jobSelectValue}
+                  onValueChange={setAddJobId}
+                  disabled={jobSelectDisabled}
+                >
+                  <SelectTrigger id="add-applicant-job" className="w-full">
+                    <SelectValue
+                      placeholder={
+                        jobsLoading
+                          ? "กำลังโหลด…"
+                          : jobs.length === 0
+                            ? "ไม่มีตำแหน่ง"
+                            : "เลือกตำแหน่ง"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobs.map((j) => (
+                      <SelectItem key={j.id} value={j.id}>
+                        {j.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              {addFlowStep === "manual" ? (
+                <>
+                  <Field>
+                    <FieldLabel htmlFor="add-applicant-name">ชื่อ</FieldLabel>
+                    <Input
+                      id="add-applicant-name"
+                      value={addName}
+                      onChange={(e) => setAddName(e.target.value)}
+                      placeholder="ชื่อ-นามสกุล"
+                      autoComplete="name"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="add-applicant-email">อีเมล</FieldLabel>
+                    <Input
+                      id="add-applicant-email"
+                      type="email"
+                      value={addEmail}
+                      onChange={(e) => setAddEmail(e.target.value)}
+                      placeholder="example@email.com"
+                      autoComplete="email"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="add-applicant-phone">
+                      โทรศัพท์
+                    </FieldLabel>
+                    <Input
+                      id="add-applicant-phone"
+                      value={addPhone}
+                      onChange={(e) => setAddPhone(e.target.value)}
+                      placeholder="ไม่บังคับ"
+                      autoComplete="tel"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="add-applicant-source">
+                      แหล่งที่มา
+                    </FieldLabel>
+                    <Select
+                      value={addSource}
+                      onValueChange={(v) => setAddSource(v as typeof addSource)}
+                    >
+                      <SelectTrigger id="add-applicant-source">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="LINKEDIN">LinkedIn</SelectItem>
+                        <SelectItem value="JOBSDB">JobsDB</SelectItem>
+                        <SelectItem value="REFERRAL">แนะนำ</SelectItem>
+                        <SelectItem value="OTHER">อื่นๆ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </>
+              ) : null}
+
+              <Separator />
+
+              <Field className="gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <FieldLabel htmlFor="add-applicant-resume" className="w-auto">
+                    Resume (PDF หรือข้อความ)
+                  </FieldLabel>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {addResumeFile ? (
+                      <span className="max-w-[min(100%,12rem)] truncate text-xs text-muted-foreground">
+                        {addResumeFile.name}
+                      </span>
+                    ) : null}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      className="hidden"
+                      onChange={onPdfSelected}
+                    />
+                    {addResumeFile ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAddResumeFile(null)}
+                      >
+                        ลบไฟล์
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <UploadIcon data-icon="inline-start" />
+                      อัปโหลด PDF
+                    </Button>
+                  </div>
+                </div>
+                <Textarea
+                  id="add-applicant-resume"
+                  value={addResumeText}
+                  onChange={(e) => setAddResumeText(e.target.value)}
+                  disabled={addResumeFile !== null}
+                  className="min-h-40 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                  placeholder={
+                    addResumeFile
+                      ? "ปิดการแก้ไขขณะใช้ไฟล์ PDF"
+                      : "วางข้อความ resume ที่นี่"
+                  }
+                  aria-label="ข้อความเรซูเม่"
+                />
+              </Field>
+            </FieldGroup>
+          ) : null}
+
+          {addFlowStep === "ai_confirm" && addAiReport ? (
+            <FieldGroup className="gap-4">
+              <div className="flex flex-wrap items-start gap-4 rounded-lg border border-border/80 bg-muted/20 p-4">
+                <div
+                  className="flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-primary text-lg font-semibold tabular-nums"
+                  aria-label={`คะแนนรวม ${String(addAiReport.overallScore)}`}
+                >
+                  {Number.isFinite(addAiReport.overallScore)
+                    ? addAiReport.overallScore.toFixed(1)
+                    : "—"}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <FitStatusBadge
+                    fitStatus={addAiReport.fitStatus}
+                    className="w-fit rounded-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    ตรวจทานและแก้ชื่อ/อีเมลหาก AI อ่านจาก CV ไม่ตรง
+                  </p>
+                </div>
+              </div>
+
+              <Field>
+                <FieldLabel htmlFor="add-ai-name">ชื่อ</FieldLabel>
+                <Input
+                  id="add-ai-name"
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                  placeholder={addDetectedName.trim() || "ชื่อ-นามสกุล"}
+                  autoComplete="name"
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="add-ai-email">อีเมล</FieldLabel>
+                <Input
+                  id="add-ai-email"
+                  type="email"
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                  placeholder={addDetectedEmail.trim() || "email"}
+                  autoComplete="email"
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="add-ai-phone">โทรศัพท์</FieldLabel>
+                <Input
+                  id="add-ai-phone"
+                  value={addPhone}
+                  onChange={(e) => setAddPhone(e.target.value)}
+                  placeholder="ไม่บังคับ"
+                  autoComplete="tel"
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="add-ai-source">แหล่งที่มา</FieldLabel>
+                <Select
+                  value={addSource}
+                  onValueChange={(v) => setAddSource(v as typeof addSource)}
+                >
+                  <SelectTrigger id="add-ai-source">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LINKEDIN">LinkedIn</SelectItem>
+                    <SelectItem value="JOBSDB">JobsDB</SelectItem>
+                    <SelectItem value="REFERRAL">แนะนำ</SelectItem>
+                    <SelectItem value="OTHER">อื่นๆ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Separator />
+
+              <div className="flex flex-col gap-4">
+                <FitRow
+                  title="ความเหมาะสมด้านทักษะ"
+                  score={addAiReport.skillFit}
+                  text={addAiReport.skillReason}
+                />
+                <FitRow
+                  title="ความเหมาะสมด้านประสบการณ์"
+                  score={addAiReport.experienceFit}
+                  text={addAiReport.experienceReason}
+                />
+                <FitRow
+                  title="วัฒนธรรม / การสื่อสาร"
+                  score={addAiReport.cultureFit}
+                  text={addAiReport.cultureReason}
+                />
+              </div>
+            </FieldGroup>
+          ) : null}
         </div>
+
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            ยกเลิก
-          </Button>
-          <Button
-            type="button"
-            className="bg-[#FACC15] font-medium text-black hover:bg-[#EAB308]"
-            disabled={isSaving || !canSave}
-            onClick={onSubmit}
-          >
-            {isSaving ? <Loader2Icon className="size-4 animate-spin" /> : null}
-            บันทึก
-          </Button>
+          {addFlowStep === "pick" ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              onClick={() => handleOpenChange(false)}
+            >
+              ปิด
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              onClick={() => {
+                if (addFlowStep === "ai_confirm") {
+                  goBackFromAiConfirm();
+                } else {
+                  goPick();
+                }
+              }}
+            >
+              <ArrowLeftIcon data-icon="inline-start" />
+              {addFlowStep === "ai_confirm" ? "วิเคราะห์ใหม่" : "กลับ"}
+            </Button>
+          )}
+
+          {addFlowStep === "manual" ? (
+            <Button
+              type="button"
+              className="flex-1 bg-[#FACC15] font-medium text-black hover:bg-[#EAB308] sm:flex-none"
+              disabled={isSaving || !canManualSave}
+              onClick={() => onManualSubmit()}
+            >
+              {isSaving ? (
+                <Loader2Icon
+                  data-icon="inline-start"
+                  className="animate-spin"
+                />
+              ) : null}
+              บันทึก
+            </Button>
+          ) : null}
+
+          {addFlowStep === "ai_review" ? (
+            <Button
+              type="button"
+              className="flex-1 sm:flex-none"
+              disabled={isAnalyzing || !canAnalyze}
+              onClick={() => void onAiAnalyze()}
+            >
+              {isAnalyzing ? (
+                <Loader2Icon
+                  data-icon="inline-start"
+                  className="animate-spin"
+                />
+              ) : (
+                <SparklesIcon data-icon="inline-start" />
+              )}
+              วิเคราะห์ด้วย AI
+            </Button>
+          ) : null}
+
+          {addFlowStep === "ai_confirm" ? (
+            <Button
+              type="button"
+              className="flex-1 bg-[#FACC15] font-medium text-black hover:bg-[#EAB308] sm:flex-none"
+              disabled={isSaving || !canAiConfirmSave}
+              onClick={() => onAiConfirmSubmit()}
+            >
+              {isSaving ? (
+                <Loader2Icon
+                  data-icon="inline-start"
+                  className="animate-spin"
+                />
+              ) : null}
+              บันทึกใน Tracker
+            </Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

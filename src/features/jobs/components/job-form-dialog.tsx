@@ -151,7 +151,7 @@ export function JobFormDialog({
             <div>
               <p className="text-sm font-medium">รับสมัคร</p>
               <p className="text-xs text-muted-foreground">
-                ปิดเมื่อไม่ต้องการให้โผล่ใน screener / การเพิ่มผู้สมัคร
+                ปิดเมื่อไม่ต้องการให้โผล่ในการเพิ่มผู้สมัคร / AI screening
               </p>
             </div>
             <Switch

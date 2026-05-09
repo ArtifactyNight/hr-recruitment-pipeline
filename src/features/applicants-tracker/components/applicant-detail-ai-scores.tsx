@@ -1,21 +1,63 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import { formatScoreOneDecimal } from "@/features/applicants-tracker/lib/tracker-display-helpers";
+import { Loader2Icon, SparklesIcon } from "lucide-react";
 
 type ApplicantDetailAiScoresProps = {
   row: TrackerApplicant;
+  screenAiPending?: boolean;
+  onScreenWithAi?: () => void;
 };
 
-export function ApplicantDetailAiScores({ row }: ApplicantDetailAiScoresProps) {
+export function ApplicantDetailAiScores({
+  row,
+  screenAiPending = false,
+  onScreenWithAi,
+}: ApplicantDetailAiScoresProps) {
   const { overallScore, skillFit, experienceFit, cultureFit } = row;
   const hasData =
     overallScore != null ||
     skillFit != null ||
     experienceFit != null ||
     cultureFit != null;
+
+  const hasResumeEvidence =
+    Boolean(row.cvText?.trim()) || Boolean(row.cvFileKey);
+
   if (!hasData) {
-    return null;
+    return (
+      <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">ยังไม่วิเคราะห์ด้วย AI</p>
+            <p className="text-xs text-muted-foreground">
+              {hasResumeEvidence
+                ? "ให้ AI ให้คะแนนตาม JD ของตำแหน่งนี้ (ใช้ข้อความหรือไฟล์ PDF ที่บันทึกไว้)"
+                : "เพิ่มข้อความหรือไฟล์ resume ในส่วน Resume / CV ก่อน"}
+            </p>
+          </div>
+          {onScreenWithAi ? (
+            <Button
+              type="button"
+              disabled={screenAiPending || !hasResumeEvidence}
+              onClick={onScreenWithAi}
+            >
+              {screenAiPending ? (
+                <Loader2Icon
+                  data-icon="inline-start"
+                  className="animate-spin"
+                />
+              ) : (
+                <SparklesIcon data-icon="inline-start" />
+              )}
+              วิเคราะห์ด้วย AI
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
   }
 
   const r = 38;
@@ -63,7 +105,7 @@ export function ApplicantDetailAiScores({ row }: ApplicantDetailAiScoresProps) {
             {formatScoreOneDecimal(overallScore)}
           </span>
         </div>
-        <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             คะแนนความเหมาะสม (AI)
           </p>

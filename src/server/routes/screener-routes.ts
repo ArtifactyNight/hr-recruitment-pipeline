@@ -1,37 +1,19 @@
-import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
-import {
-  addToTrackerBodySchema,
-  fitReportSchema,
-  screeningEvaluateSchema,
-} from "@/features/screener/lib/fit-report-schemas";
-import {
-  jdPrompt,
-  SCREENER_SYSTEM_PROMPT,
-} from "@/features/screener/lib/screener-prompts";
-import { Prisma } from "@/generated/prisma/client";
+import { addToTrackerBodySchema } from "@/features/screener/lib/fit-report-schemas";
 import prisma from "@/lib/prisma";
 import {
   isR2Configured,
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
-import { google } from "@ai-sdk/google";
+import {
+  evaluateResumeAgainstJob,
+  fileHasBytes,
+  fitReportToScreeningScalars,
+} from "@/server/lib/resume-screening-service";
 import { auth } from "@clerk/nextjs/server";
-import { generateText, Output, zodSchema } from "ai";
-import { createFallback } from "ai-fallback";
 import { randomUUID } from "node:crypto";
 
 import { Elysia, t } from "elysia";
-
-const model = createFallback({
-  models: [
-    google("gemini-2.0-flash-lite"),
-    google("gemini-2.0-flash"),
-    google("gemini-2.5-flash-lite"),
-    google("gemini-2.5-flash"),
-    google("gemini-2.5-pro-latest"),
-  ],
-});
 
 const screenerAuth = new Elysia({ name: "screener-auth" })
   .derive(async () => {
@@ -44,47 +26,6 @@ const screenerAuth = new Elysia({ name: "screener-auth" })
       return { error: "ต้องเข้าสู่ระบบ" };
     }
   });
-
-function toJsonArray(values: Array<string>): Prisma.InputJsonValue[] {
-  const out: Prisma.InputJsonValue[] = [];
-  for (const value of values) {
-    out.push(value);
-  }
-  return out;
-}
-
-function fileHasBytes(file: unknown): file is File {
-  return (
-    typeof file === "object" &&
-    file !== null &&
-    "size" in file &&
-    typeof (file as { size: unknown }).size === "number" &&
-    (file as File).size > 0
-  );
-}
-
-function splitEvaluateModelOutput(raw: unknown): {
-  report: FitReport;
-  detectedName: string | undefined;
-  detectedEmail: string | undefined;
-} {
-  const parsed = screeningEvaluateSchema.parse(raw);
-  const { detectedName, detectedEmail, ...rest } = parsed;
-  const report = fitReportSchema.parse(rest);
-  const nameTrim =
-    detectedName === null || detectedName === undefined
-      ? undefined
-      : detectedName.trim();
-  const emailTrim =
-    detectedEmail === null || detectedEmail === undefined
-      ? undefined
-      : detectedEmail.trim();
-  return {
-    report,
-    detectedName: nameTrim ? nameTrim : undefined,
-    detectedEmail: emailTrim ? emailTrim : undefined,
-  };
-}
 
 export const screenerRoutes = new Elysia({ prefix: "/screener" })
   .use(screenerAuth)
@@ -123,7 +64,6 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
     "/evaluate",
     async ({ body, set }) => {
       const file = body.file;
-      const hasFile = fileHasBytes(file);
       const cvText = body.cvText?.trim() ?? "";
       const jobDescriptionId = body.jobDescriptionId.trim();
       if (!jobDescriptionId) {
@@ -131,105 +71,51 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
         return { error: "ต้องเลือกตำแหน่งงาน" };
       }
 
-      if (!hasFile && !cvText) {
-        set.status = 400;
-        return { error: "ต้องอัปโหลดไฟล์ CV หรือวางข้อความ resume" };
-      }
-
-      const systemScreener = SCREENER_SYSTEM_PROMPT;
-
       try {
-        const job = await prisma.jobDescription.findFirst({
-          where: { id: jobDescriptionId, isActive: true },
-        });
-        if (!job) {
-          set.status = 404;
-          return { error: "ไม่พบตำแหน่งนี้" };
-        }
-
         const { userId } = await auth();
         if (!userId) {
           set.status = 401;
           return { error: "ต้องเข้าสู่ระบบ" };
         }
 
-        const prompt = jdPrompt(job.title, job.description, job.requirements);
-
-        if (hasFile) {
-          const bytes = await file!.arrayBuffer();
-          const buffer = Buffer.from(bytes);
-          const { output } = await generateText({
-            model,
-            system: systemScreener,
-            output: Output.object({
-              schema: zodSchema(screeningEvaluateSchema),
-            }),
-            messages: [
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "file",
-                    data: buffer,
-                    mediaType: file.type || "application/pdf",
-                    filename: file.name || "resume.pdf",
-                  },
-                  { type: "text", text: prompt },
-                ],
-              },
-            ],
-          });
-
-          if (!output) {
-            set.status = 502;
-            return { error: "ไม่ได้รับผลลัพธ์จาก AI" };
-          }
-
-          const { report, detectedName, detectedEmail } =
-            splitEvaluateModelOutput(output);
-
-          return {
-            report,
-            detectedName,
-            detectedEmail,
-            matchedJobId: job.id,
-            matchedJobTitle: job.title,
-          };
-        }
-
-        const { output } = await generateText({
-          model,
-          system: systemScreener,
-          output: Output.object({
-            schema: zodSchema(screeningEvaluateSchema),
-          }),
-          messages: [
-            {
-              role: "user",
-              content: `${prompt}\n\nCANDIDATE CV:\n${cvText}`,
-            },
-          ],
+        const result = await evaluateResumeAgainstJob({
+          jobDescriptionId,
+          cvText: fileHasBytes(file) ? undefined : cvText || undefined,
+          file: fileHasBytes(file) ? file : undefined,
         });
 
-        if (!output) {
-          set.status = 502;
-          return { error: "ไม่ได้รับผลลัพธ์จาก AI" };
-        }
-
-        const { report, detectedName, detectedEmail } =
-          splitEvaluateModelOutput(output);
         return {
-          report,
-          detectedName,
-          detectedEmail,
-          matchedJobId: job.id,
-          matchedJobTitle: job.title,
+          report: result.report,
+          detectedName: result.detectedName,
+          detectedEmail: result.detectedEmail,
+          matchedJobId: result.matchedJobId,
+          matchedJobTitle: result.matchedJobTitle,
         };
       } catch (error) {
+        const statusCode =
+          error &&
+          typeof error === "object" &&
+          "statusCode" in error &&
+          typeof (error as { statusCode: unknown }).statusCode === "number"
+            ? (error as { statusCode: number }).statusCode
+            : 502;
         const message =
           error instanceof Error ? error.message : "เกิดข้อผิดพลาด";
-        set.status = 502;
-        return { error: "ไม่สามารถวิเคราะห์ได้", detail: message };
+        const detail =
+          error &&
+          typeof error === "object" &&
+          "detail" in error &&
+          typeof (error as { detail: unknown }).detail === "string"
+            ? (error as { detail: string }).detail
+            : undefined;
+        set.status = statusCode;
+        if (statusCode === 502) {
+          return {
+            error: message,
+            ...(detail ? { detail } : {}),
+          };
+        }
+        return { error: message };
       }
     },
     {
@@ -279,8 +165,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       }
 
       const report = parsed.data.report;
-      const roundFit = (value: number) =>
-        Math.min(10, Math.max(0, Math.round(value)));
+      const screeningData = fitReportToScreeningScalars(report);
 
       try {
         const applicant = await prisma.applicant.create({
@@ -291,20 +176,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
             jobDescriptionId: parsed.data.jobDescriptionId,
             cvText: parsed.data.resumeText ?? null,
             screeningResult: {
-              create: {
-                overallScore: report.overallScore,
-                fitStatus: report.fitStatus,
-                panelSummary: report.panelSummary,
-                skillFit: roundFit(report.skillFit),
-                experienceFit: roundFit(report.experienceFit),
-                cultureFit: roundFit(report.cultureFit),
-                skillReason: report.skillReason,
-                experienceReason: report.experienceReason,
-                cultureReason: report.cultureReason,
-                strengths: toJsonArray(report.strengths),
-                concerns: toJsonArray(report.concerns),
-                suggestedQuestions: toJsonArray(report.suggestedQuestions),
-              },
+              create: screeningData,
             },
           },
           select: { id: true },

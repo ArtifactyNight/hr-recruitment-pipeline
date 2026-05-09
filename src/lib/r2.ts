@@ -76,6 +76,30 @@ export async function deleteResumeFromR2(objectKey: string): Promise<void> {
   );
 }
 
+/** Read PDF bytes from R2 for server-side AI screening (not a signed URL). */
+export async function getResumePdfBytesFromR2(objectKey: string): Promise<{
+  bytes: Uint8Array;
+  contentType: string;
+}> {
+  const c = getR2Client();
+  const res = await c.send(
+    new GetObjectCommand({
+      Bucket: r2Bucket(),
+      Key: objectKey,
+    }),
+  );
+  const body = res.Body;
+  if (!body) {
+    throw new Error("ไฟล์ว่าง");
+  }
+  const buf = await body.transformToByteArray();
+  const contentType =
+    typeof res.ContentType === "string" && res.ContentType.length > 0
+      ? res.ContentType
+      : "application/pdf";
+  return { bytes: buf, contentType };
+}
+
 export async function getResumeSignedDownloadUrl(options: {
   objectKey: string;
   /** seconds — default 15 minutes */

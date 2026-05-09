@@ -1,10 +1,5 @@
-import { Container } from "@/components/layout/container";
-import { ResumeScreener } from "@/features/screener/components/resume-screener";
+import { redirect } from "next/navigation";
 
 export default function ScreenerPage() {
-  return (
-    <Container>
-      <ResumeScreener />
-    </Container>
-  );
+  redirect("/candidates");
 }
