@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import { Container } from "@/components/layout/container";
 import { AddApplicantDialog } from "@/features/applicants-tracker/components/add-applicant-dialog";
@@ -18,6 +18,7 @@ import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useDebounceValue } from "usehooks-ts";
 import { useShallow } from "zustand/react/shallow";
 
 function scheduleInterviewErrorMessage(err: unknown): string {
@@ -46,8 +47,6 @@ export default function CandidatesPage() {
     setView,
     searchInput,
     setSearchInput,
-    debouncedSearch,
-    setDebouncedSearch,
     jobFilter,
     setJobFilter,
     sourceFilter,
@@ -67,8 +66,6 @@ export default function CandidatesPage() {
       setView: s.setView,
       searchInput: s.searchInput,
       setSearchInput: s.setSearchInput,
-      debouncedSearch: s.debouncedSearch,
-      setDebouncedSearch: s.setDebouncedSearch,
       jobFilter: s.jobFilter,
       setJobFilter: s.setJobFilter,
       sourceFilter: s.sourceFilter,
@@ -85,12 +82,9 @@ export default function CandidatesPage() {
     })),
   );
 
-  const filterSig = `${jobFilter}|${debouncedSearch}|${sourceFilter}`;
+  const [debouncedSearch] = useDebounceValue(searchInput, 250);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchInput), 250);
-    return () => clearTimeout(t);
-  }, [searchInput, setDebouncedSearch]);
+  const filterSig = `${jobFilter}|${debouncedSearch}|${sourceFilter}`;
 
   const applicantsQueryKey = [
     "applicants",

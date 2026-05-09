@@ -41,9 +41,9 @@ import {
   useContext,
   useMemo,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
+import { useIsClient } from "usehooks-ts";
 
 import { cn } from "@/lib/utils";
 
@@ -702,11 +702,7 @@ export interface KanbanOverlayProps extends Omit<
 
 function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
   const { activeId, isColumn, modifiers } = useContext(KanbanContext);
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
+  const isClient = useIsClient();
 
   const variant = activeId ? (isColumn(activeId) ? "column" : "item") : "item";
 
@@ -717,7 +713,7 @@ function KanbanOverlay({ children, className, ...props }: KanbanOverlayProps) {
         : children
       : null;
 
-  if (!mounted) return null;
+  if (!isClient) return null;
 
   return createPortal(
     <DragOverlay

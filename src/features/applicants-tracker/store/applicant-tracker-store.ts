@@ -11,9 +11,7 @@ interface ApplicantTrackerState {
   setView: (v: ApplicantTrackerView) => void;
 
   searchInput: string;
-  debouncedSearch: string;
   setSearchInput: (v: string) => void;
-  setDebouncedSearch: (v: string) => void;
 
   jobFilter: string;
   sourceFilter: string;
@@ -46,9 +44,7 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
     setView: (v) => set({ view: v }),
 
     searchInput: "",
-    debouncedSearch: "",
     setSearchInput: (v) => set({ searchInput: v }),
-    setDebouncedSearch: (v) => set({ debouncedSearch: v }),
 
     jobFilter: "",
     sourceFilter: "",

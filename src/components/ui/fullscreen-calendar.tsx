@@ -51,6 +51,7 @@ import { Separator } from "@/components/ui/separator";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useCopyToClipboard } from "usehooks-ts";
 
 export type CalendarEventStatus = "confirmed" | "tentative" | "cancelled";
 
@@ -139,6 +140,7 @@ function SelectedDayEventsPanel({
   onCancelCalendarEvent,
   cancelCalendarPending = false,
 }: SelectedDayEventsPanelProps) {
+  const [, copyToClipboard] = useCopyToClipboard();
   const title = format(selectedDay, "EEEE d MMMM yyyy", { locale: th });
   const [eventToCancel, setEventToCancel] = React.useState<Event | null>(null);
 
@@ -282,12 +284,9 @@ function SelectedDayEventsPanel({
                             size="sm"
                             className="gap-1.5"
                             onClick={async () => {
-                              try {
-                                await navigator.clipboard.writeText(meetUrl);
-                                toast.success("คัดลอกลิงก์แล้ว");
-                              } catch {
-                                toast.error("คัดลอกไม่ได้");
-                              }
+                              const ok = await copyToClipboard(meetUrl);
+                              if (ok) toast.success("คัดลอกลิงก์แล้ว");
+                              else toast.error("คัดลอกไม่ได้");
                             }}
                           >
                             <ClipboardCopyIcon

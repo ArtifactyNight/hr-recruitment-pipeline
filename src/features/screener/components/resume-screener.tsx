@@ -8,6 +8,7 @@ import { useScreenerDialogStore } from "@/features/screener/store/screener-dialo
 import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useCopyToClipboard } from "usehooks-ts";
 
 import { AddToTrackerDialog } from "./add-to-tracker-dialog";
 import { ResumeInputCard } from "./resume-input-card";
@@ -15,6 +16,7 @@ import { ResumeScreenerHeader } from "./resume-screener-header";
 import { ScreenerReportPanel } from "./screener-report-panel";
 
 export function ResumeScreener() {
+  const [, copyToClipboard] = useCopyToClipboard();
   const queryClient = useQueryClient();
   const [jobId, setJobId] = useState<string | null>(null);
   const [resumeText, setResumeText] = useState<string>("");
@@ -150,19 +152,15 @@ export function ResumeScreener() {
 
   const onCopyReport = useCallback(async () => {
     if (!report) return;
-    try {
-      await navigator.clipboard.writeText(
-        formatReportText(
-          detectedName.trim() || "—",
-          detectedEmail.trim() || "—",
-          report,
-        ),
-      );
-      toast.success("คัดลอกรายงานแล้ว");
-    } catch {
-      toast.error("คัดลอกไม่ได้");
-    }
-  }, [detectedEmail, detectedName, report]);
+    const text = formatReportText(
+      detectedName.trim() || "—",
+      detectedEmail.trim() || "—",
+      report,
+    );
+    const ok = await copyToClipboard(text);
+    if (ok) toast.success("คัดลอกรายงานแล้ว");
+    else toast.error("คัดลอกไม่ได้");
+  }, [copyToClipboard, detectedEmail, detectedName, report]);
 
   const openTrackerDraft = useCallback(() => {
     setTrackerDraftName(detectedName.trim());

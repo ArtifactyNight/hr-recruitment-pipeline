@@ -369,3 +369,8 @@
 **Prompt:** create `container.tsx`, `header-section.tsx` and apply to all pages (from jobs header snippet)
 **Output:** Added `src/components/layout/container.tsx` (`px-4 py-6 md:px-6` + merge className) and `header-section.tsx` (title, optional description, optional actions). Wired jobs, interviews, settings, screener, candidates pages; refactored `ApplicantTrackerHeader` + `ResumeScreenerHeader` to compose `HeaderSection`. Tracker «เพิ่มผู้สมัคร» now calls `onAddClick` (opens add dialog) instead of unused prop + Link to `/screener`. Dashboard home unchanged (different chrome).
 **Edited:** `container.tsx`, `header-section.tsx`, `jobs/page.tsx`, `interviews/page.tsx`, `settings/page.tsx`, `screener/page.tsx`, `candidates/page.tsx`, `applicant-tracker-header.tsx`, `resume-screener-header.tsx`, `cowork-log.md`
+
+### [2026-05-10] - usehooks-ts: debounce, clipboard, isClient
+**Prompt:** Implement scoped plan — `useDebounceValue` on candidates search, `useCopyToClipboard` in screener + calendar, `useIsClient` in Kanban overlay; do not edit plan file.
+**Output:** `candidates/page.tsx` debounces via `usehooks-ts`; removed `debouncedSearch`/`setDebouncedSearch` from `applicant-tracker-store`. `resume-screener.tsx` + `fullscreen-calendar.tsx` (`SelectedDayEventsPanel`) use `useCopyToClipboard` + boolean success toasts. `kanban.tsx` `KanbanOverlay` gates portal with `useIsClient()` instead of `useSyncExternalStore`.
+**Edited:** `applicant-tracker-store.ts`, `candidates/page.tsx`, `resume-screener.tsx`, `fullscreen-calendar.tsx`, `kanban.tsx`, `cowork-log.md`
