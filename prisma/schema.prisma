@@ -20,6 +20,22 @@ model User {
   interviewer         Interviewer?
   googleCalendar      UserGoogleCalendar?
   interviewsOrganized Interview[]
+  screenerHistories   ScreenerHistory[]
+}
+
+/** One saved AI screening run per authenticated user (resume screener). */
+model ScreenerHistory {
+  id               String   @id @default(cuid())
+  userId           Int
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobDescriptionId String
+  jobTitle         String
+  detectedName     String   @default("")
+  detectedEmail    String   @default("")
+  report           Json
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model UserGoogleCalendar {

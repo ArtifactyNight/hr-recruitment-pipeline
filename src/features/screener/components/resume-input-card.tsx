@@ -5,7 +5,6 @@ import { useRef, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -53,14 +52,19 @@ export function ResumeInputCard({
 }: ResumeInputCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const analyzeBlockedByJob = !selectedJobId && !jobsQueryLoading;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Resume และตำแหน่ง</CardTitle>
+        <CardTitle className="text-base">
+          อัปโหลดเรซูเม่และเลือกตำแหน่ง
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <Field>
           <FieldLabel htmlFor="screener-job">จับคู่กับตำแหน่ง</FieldLabel>
+
           <Select
             value={jobSelectValue}
             onValueChange={(value) => {
@@ -109,9 +113,11 @@ export function ResumeInputCard({
           ) : null}
         </Field>
 
-        <div className="space-y-2">
+        <Field className="gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label htmlFor="screener-resume">Resume (PDF หรือวางข้อความ)</Label>
+            <FieldLabel htmlFor="screener-resume" className="w-auto">
+              Resume (PDF หรือวางข้อความ)
+            </FieldLabel>
             <div className="flex flex-wrap items-center gap-2">
               {selectedFile ? (
                 <span className="max-w-[min(100%,12rem)] truncate text-xs text-muted-foreground">
@@ -154,28 +160,48 @@ export function ResumeInputCard({
             className="min-h-56 text-sm disabled:cursor-not-allowed disabled:opacity-70"
             placeholder={
               selectedFile
-                ? "ปิดการแก้ไขขณะใช้ไฟล์ PDF — กด ลบไฟล์ เพื่อวางข้อความแทน"
+                ? "ปิดการแก้ไขขณะใช้ไฟล์ PDF (กด ลบไฟล์ เพื่อวางข้อความแทน)"
                 : "วางข้อความ resume ที่นี่"
             }
+            aria-label="ข้อความเรซูเม่สำหรับวิเคราะห์"
           />
-        </div>
+        </Field>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            onClick={() => void onAnalyze()}
-            disabled={analyzePending || !selectedJobId}
-          >
-            {analyzePending ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              <SparklesIcon className="size-4" />
-            )}
-            วิเคราะห์ด้วย AI
-          </Button>
-          <Button type="button" variant="ghost" onClick={onClear}>
-            ล้าง
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              onClick={() => void onAnalyze()}
+              disabled={analyzePending || !selectedJobId}
+              aria-busy={analyzePending}
+              aria-describedby={
+                analyzeBlockedByJob ? "screener-analyze-blocker" : undefined
+              }
+            >
+              {analyzePending ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <SparklesIcon className="size-4" />
+              )}
+              วิเคราะห์ด้วย AI
+            </Button>
+            <Button type="button" variant="ghost" onClick={onClear}>
+              ล้าง
+            </Button>
+          </div>
+          {analyzeBlockedByJob ? (
+            <p
+              id="screener-analyze-blocker"
+              className="text-xs text-muted-foreground"
+            >
+              เลือกตำแหน่งงานให้ครบก่อน จึงจะกดวิเคราะห์ได้
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              หลังสำเร็จ รายงานจะเปิดในหน้าต่าง
+              สรุปผลและประวัติจะอยู่คอลัมถัดจากฟอร์ม (บนมือถือ: ด้านล่าง)
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

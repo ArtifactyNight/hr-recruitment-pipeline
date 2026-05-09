@@ -1,10 +1,7 @@
 "use client";
 
 import { HeaderSection } from "@/components/layout/header-section";
-import {
-  JobDescriptionDialog,
-  JobDescriptionOpenButton,
-} from "./job-description-dialog";
+import { JobDescriptionDialog } from "./job-description-dialog";
 
 type ResumeScreenerHeaderProps = {
   selectedJobId: string | null;
@@ -17,8 +14,7 @@ export function ResumeScreenerHeader({
     <>
       <HeaderSection
         title="AI Resume Screener"
-        description="ระบบสรุป Resume ด้วย AI"
-        actions={<JobDescriptionOpenButton disabled={!selectedJobId} />}
+        description="กรองและสรุปเรซูเม่ตาม JD ที่เลือก ผลลัพธ์ล่าสุดและประวัติอยู่คอลัมเดียวกัน"
       />
       <JobDescriptionDialog selectedJobId={selectedJobId} />
     </>

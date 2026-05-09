@@ -1,3 +1,18 @@
+### [2026-05-10] - Screener: summary + history one panel
+**Prompt:** combine screener result summary and history to one place
+**Output:** `ScreenerHistoryPanel` owns `currentResult` and renders `ScreenerResultSummary` `embedded` under "ผลลัพธ์ล่าสุด", then "บันทึกก่อนหน้า" + list/empty/skeleton. Title "ผลการวิเคราะห์และประวัติ". Left column only `ResumeInputCard` (`max-w-2xl`). `ScreenerResultSummary` gains `variant` (`card` | `embedded`). Form/header copy updated for single results column.
+**Edited:** `screener-history-panel.tsx`, `screener-result-summary.tsx`, `resume-screener.tsx`, `resume-input-card.tsx`, `resume-screener-header.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Screener onboard + polish (form + history)
+**Prompt:** /impeccable onboard and polish: form and history
+**Output:** `load-context.mjs` had no PRODUCT/DESIGN.md; followed product register + onboard/polish refs. **Form:** `CardDescription` value prop, `Field`/`FieldDescription` for job + resume, fixed อัป spelling, textarea `aria-label`, analyze `aria-busy` + `aria-describedby` when blocked on job, contextual hints (post-success flow, mobile vs desktop history placement). **History:** skeleton loading + `aria-live`/`sr-only` instead of text-only empty loading; empty state two-tier copy (what appears, how to start) without em dash; list row `focus-visible` ring + `ease-out` transition; button copy โหลดเพิ่มเติม. Header description tightened to JD + history.
+**Edited:** `resume-input-card.tsx`, `screener-history-panel.tsx`, `resume-screener-header.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Screener history: shadcn Empty state
+**Prompt:** use shadcn empty component for empty state
+**Output:** Replaced custom centered divs in `ScreenerHistoryPanel` with `Empty`, `EmptyHeader`, `EmptyMedia` (History icon), `EmptyTitle`, and `EmptyDescription` for no-history; loading uses `Empty` + `EmptyTitle` with muted text. `border-0` + `min-h-[240px]` so layout stays stable inside the card without double dashed borders.
+**Edited:** `src/features/screener/components/screener-history-panel.tsx`, `cowork-log.md`
+
 ### [2026-05-10] - Kanban cross-column drag: max update depth fix
 **Prompt:** check error with nextjs mcp and fix — dragging tracker card from board 1 to board 2 (above)
 **Output:** Next.js devtools `get_errors` showed `Maximum update depth exceeded` with stack at `KanbanColumnContent` / `SortableContext`. Root cause: same-column `onDragOver` used `findIndex(over.id)`; when collision reports the column droppable id, index is `-1` and `arrayMove(..., -1)` maps to “near end”, causing repeated controlled reorder → infinite React updates. Fixed by treating `isColumn(over.id)` as append (`length`), skipping when `overIndex < 0`, guarding `activeIndex === -1`, deduping with `kanbanColumnsOrderEqual` before `setColumns`, and mirroring in `handleDragEnd`. Stabilized `getItemValue` with `useCallback` in applicant kanban view.
@@ -384,3 +399,18 @@
 **Prompt:** Implement plan — screening report as large auto-opening dialog, summary bar, centered input; Cloudflare R2 PDF storage, signed download URLs, tracker detail resume section (collapsible), multipart add-to-tracker with PDF.
 **Output:** `screener-dialog-store` adds `reportDialogOpen`. `ScreenerReportPanel` → Dialog max-w-3xl; `ScreenerResultSummary` under centered `ResumeInputCard`. `add-to-tracker` uses `payload` JSON + optional `file`; uploads to R2 after applicant create when configured. `GET/POST/DELETE` `applicants/:id/resume-url` + `resume`. `TrackerApplicant` + list API include `cvText`/`cvFileKey`/`cvFileName`. `ApplicantDetailResumeSection` + `collapsible` UI. Env: `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
 **Edited:** `screener-dialog-store.ts`, `screener-report-panel.tsx`, `screener-result-summary.tsx`, `resume-screener.tsx`, `src/lib/r2.ts`, `screener-routes.ts`, `applicant-routes.ts`, `applicant-tracker-model.ts`, `applicant-detail-dialog.tsx`, `applicant-detail-resume-section.tsx`, `collapsible.tsx`, `candidates/page.tsx`, `package.json`/lockfile, `cowork-log.md`
+
+### [2026-05-10] - Screener: two columns + session AI history
+**Prompt:** Add AI screen history on right side, move AI form to left side.
+**Output:** `lg:grid-cols-2` layout — left: `ResumeInputCard` + `ScreenerResultSummary` (`max-w-2xl`); right: `ScreenerHistoryPanel` (sticky on large screens, scroll list, select to restore report/job, ล้างทั้งหมด). Each successful analyze prepends a `ScreenerHistoryEntry` (in-memory session). `activeHistoryId` tracks selection; form ล้าง / job change / PDF pick clears active highlight when current report cleared.
+**Edited:** `screener-history-panel.tsx`, `resume-screener.tsx`, `screener-result-summary.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Screener history: Prisma persistence + cursor pagination
+**Prompt:** Make AI screen history persistent with Prisma DB; add pagination.
+**Output:** New `ScreenerHistory` model (user FK, job snapshot, detected name/email, `report` JSON, index userId+createdAt). Migration `20260510120000_screener_history`. `POST /screener/evaluate` persists row after success (`historyId` optional if save fails). `GET /screener/history?limit&cursor` (cursor=id, take+1), `DELETE /screener/history` wipe for user. Client: `useInfiniteQuery` + โหลดเพิ่ม; ล้างทั้งหมด calls DELETE + invalidates.
+**Edited:** `schema.prisma`, `prisma/migrations/20260510120000_screener_history/migration.sql`, `screener-routes.ts`, `resume-screener.tsx`, `screener-history-panel.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Screener prompt: Thai → English for cost saving
+**Prompt:** Change screener-prompts.ts instructions to English but keep output in Thai.
+**Output:** Rewrote system prompt and jdPrompt template from Thai to English. Rule #1 still mandates "All output text must be in Thai". Saves token cost since English tokenizes more efficiently than Thai.
+**Edited:** `screener-prompts.ts`, `cowork-log.md`
