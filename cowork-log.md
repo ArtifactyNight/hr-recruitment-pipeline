@@ -1,3 +1,8 @@
+### [2026-05-10] - ลบผลวิเคราะห์/ประวัติ screener + ScreenerHistory
+**Prompt:** ลบผลการวิเคราะห์และประวัติออก พร้อม prisma model
+**Output:** ลบ `ScreenerHistory` จาก schema + migration `20260510180000_drop_screener_history`; ตัด `GET/DELETE /screener/history` และการ persist หลัง evaluate; UI เหลือฟอร์ม (`max-w-2xl`) + dialog รายงานหลังวิเคราะห์; ลบ `screener-history-panel.tsx`, `screener-result-summary.tsx`; อัปเดตคำอธิบาย header
+**Edited:** `schema.prisma`, `prisma/migrations/20260510180000_drop_screener_history/migration.sql`, `screener-routes.ts`, `resume-screener.tsx`, `resume-screener-header.tsx`, deleted `screener-history-panel.tsx`, `screener-result-summary.tsx`, `cowork-log.md`
+
 ### [2026-05-10] - Screener: summary + history one panel
 **Prompt:** combine screener result summary and history to one place
 **Output:** `ScreenerHistoryPanel` owns `currentResult` and renders `ScreenerResultSummary` `embedded` under "ผลลัพธ์ล่าสุด", then "บันทึกก่อนหน้า" + list/empty/skeleton. Title "ผลการวิเคราะห์และประวัติ". Left column only `ResumeInputCard` (`max-w-2xl`). `ScreenerResultSummary` gains `variant` (`card` | `embedded`). Form/header copy updated for single results column.

@@ -6,26 +6,14 @@ import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import { formatReportText } from "@/features/screener/lib/resume-screener-utils";
 import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
 import { api } from "@/lib/api";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCopyToClipboard } from "usehooks-ts";
 
 import { AddToTrackerDialog } from "./add-to-tracker-dialog";
 import { ResumeInputCard } from "./resume-input-card";
 import { ResumeScreenerHeader } from "./resume-screener-header";
-import {
-  ScreenerHistoryPanel,
-  type ScreenerHistoryEntry,
-} from "./screener-history-panel";
 import { ScreenerReportPanel } from "./screener-report-panel";
-
-const HISTORY_PAGE_SIZE = 20;
-const SCREENER_HISTORY_QUERY_KEY = ["screener-history"] as const;
 
 function isEvaluateSuccess(data: unknown): data is {
   report: FitReport;
@@ -33,7 +21,6 @@ function isEvaluateSuccess(data: unknown): data is {
   detectedEmail?: string;
   matchedJobId: string;
   matchedJobTitle?: string;
-  historyId?: string;
 } {
   if (typeof data !== "object" || data === null) {
     return false;
@@ -59,7 +46,6 @@ export function ResumeScreener() {
   const [detectedEmail, setDetectedEmail] = useState("");
   const [trackerDraftName, setTrackerDraftName] = useState("");
   const [trackerDraftEmail, setTrackerDraftEmail] = useState("");
-  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
 
   const trackerDialogOpen = useScreenerDialogStore((s) => s.trackerDialogOpen);
   const setTrackerDialogOpen = useScreenerDialogStore(
@@ -82,31 +68,6 @@ export function ResumeScreener() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const historyQuery = useInfiniteQuery({
-    queryKey: SCREENER_HISTORY_QUERY_KEY,
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.api.screener.history.get({
-        query: {
-          limit: HISTORY_PAGE_SIZE,
-          cursor: pageParam,
-        },
-        fetch: { credentials: "include" },
-      });
-      if (error) throw error.value;
-      if (!data || !("items" in data)) {
-        throw new Error("ประวัติไม่ถูกต้อง");
-      }
-      return data;
-    },
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  });
-
-  const historyEntries = useMemo(() => {
-    const flat = historyQuery.data?.pages.flatMap((page) => page.items) ?? [];
-    return flat.filter((e) => e != null) as Array<ScreenerHistoryEntry>;
-  }, [historyQuery.data?.pages]);
-
   const evaluateMutation = useMutation({
     mutationFn: async (input: {
       cvText?: string;
@@ -126,32 +87,6 @@ export function ResumeScreener() {
     },
     onError: () => {
       toast.error("วิเคราะห์ไม่สำเร็จ");
-    },
-    onSuccess: (data) => {
-      if (isEvaluateSuccess(data)) {
-        void queryClient.invalidateQueries({
-          queryKey: SCREENER_HISTORY_QUERY_KEY,
-        });
-      }
-    },
-  });
-
-  const clearHistoryMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.api.screener.history.delete(undefined, {
-        fetch: { credentials: "include" },
-      });
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: SCREENER_HISTORY_QUERY_KEY,
-      });
-      toast.success("ลบประวัติทั้งหมดแล้ว");
-    },
-    onError: () => {
-      toast.error("ลบประวัติไม่สำเร็จ");
     },
   });
 
@@ -237,9 +172,6 @@ export function ResumeScreener() {
       setTrackerJobId(data.matchedJobId ?? null);
       setDetectedName(data.detectedName ?? "");
       setDetectedEmail(data.detectedEmail ?? "");
-      if (data.historyId) {
-        setActiveHistoryId(data.historyId);
-      }
       setReportDialogOpen(true);
       toast.success("วิเคราะห์เสร็จแล้ว");
     } catch {
@@ -262,31 +194,7 @@ export function ResumeScreener() {
     setDetectedEmail("");
     setJobId(null);
     setReportDialogOpen(false);
-    setActiveHistoryId(null);
   }, [setReportDialogOpen]);
-
-  const onSelectHistoryEntry = useCallback(
-    (entry: ScreenerHistoryEntry) => {
-      setActiveHistoryId(entry.id);
-      setJobId(entry.jobDescriptionId);
-      setReport(entry.report);
-      setTrackerJobId(entry.trackerJobId);
-      setDetectedName(entry.detectedName);
-      setDetectedEmail(entry.detectedEmail);
-      setReportDialogOpen(false);
-    },
-    [setReportDialogOpen],
-  );
-
-  const onClearHistory = useCallback(() => {
-    clearHistoryMutation.mutate();
-    setActiveHistoryId(null);
-    setReport(null);
-    setTrackerJobId(null);
-    setDetectedName("");
-    setDetectedEmail("");
-    setReportDialogOpen(false);
-  }, [clearHistoryMutation, setReportDialogOpen]);
 
   const onCopyReport = useCallback(async () => {
     if (!report) return;
@@ -360,7 +268,6 @@ export function ResumeScreener() {
       setDetectedName("");
       setDetectedEmail("");
       setReportDialogOpen(false);
-      setActiveHistoryId(null);
       toast.message(`ใช้ไฟล์ ${file.name} — กดวิเคราะห์เพื่อส่ง PDF เข้า AI`);
     },
     [setReportDialogOpen],
@@ -378,7 +285,6 @@ export function ResumeScreener() {
       setDetectedName("");
       setDetectedEmail("");
       setReportDialogOpen(false);
-      setActiveHistoryId(null);
     },
     [setReportDialogOpen],
   );
@@ -398,50 +304,23 @@ export function ResumeScreener() {
         isSaving={addMutation.isPending}
         onSubmit={onSubmitTracker}
       />
-      <div className="grid w-full gap-6 lg:grid-cols-2 lg:items-start">
-        <div className="mx-auto w-full min-w-0  lg:mx-0">
-          <ResumeInputCard
-            jobsQueryLoading={jobsQuery.isLoading}
-            jobsQueryError={jobsQuery.isError}
-            jobs={jobs}
-            jobSelectValue={jobSelectValue}
-            onJobChange={onJobChange}
-            resumeText={resumeText}
-            onResumeTextChange={setResumeText}
-            selectedFile={selectedFile}
-            onPdfSelected={onPdfSelected}
-            onRemoveFile={onRemoveFile}
-            analyzePending={analyzePending}
-            selectedJobId={selectedJobId}
-            onAnalyze={onAnalyze}
-            onClear={onClear}
-          />
-        </div>
-        <div className="min-w-0">
-          <ScreenerHistoryPanel
-            currentResult={
-              report
-                ? {
-                    report,
-                    detectedName,
-                    detectedEmail,
-                    trackerJobId,
-                    onOpenReport: () => setReportDialogOpen(true),
-                    onRequestOpenTracker: openTrackerDraft,
-                  }
-                : null
-            }
-            entries={historyEntries}
-            activeId={activeHistoryId}
-            onSelect={onSelectHistoryEntry}
-            onClearAll={onClearHistory}
-            historyLoading={historyQuery.isLoading}
-            hasNextPage={historyQuery.hasNextPage}
-            isFetchingNextPage={historyQuery.isFetchingNextPage}
-            onLoadMore={() => void historyQuery.fetchNextPage()}
-            clearAllPending={clearHistoryMutation.isPending}
-          />
-        </div>
+      <div className="mx-auto w-full min-w-0 max-w-2xl lg:mx-0">
+        <ResumeInputCard
+          jobsQueryLoading={jobsQuery.isLoading}
+          jobsQueryError={jobsQuery.isError}
+          jobs={jobs}
+          jobSelectValue={jobSelectValue}
+          onJobChange={onJobChange}
+          resumeText={resumeText}
+          onResumeTextChange={setResumeText}
+          selectedFile={selectedFile}
+          onPdfSelected={onPdfSelected}
+          onRemoveFile={onRemoveFile}
+          analyzePending={analyzePending}
+          selectedJobId={selectedJobId}
+          onAnalyze={onAnalyze}
+          onClear={onClear}
+        />
       </div>
       {report ? (
         <ScreenerReportPanel

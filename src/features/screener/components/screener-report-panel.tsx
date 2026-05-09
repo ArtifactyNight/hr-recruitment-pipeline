@@ -44,7 +44,10 @@ export function ScreenerReportPanel({
 }: ScreenerReportPanelProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(90vh,880px)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent
+        className="flex max-h-[min(90vh,880px)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
+        showCloseButton={false}
+      >
         <DialogHeader className="sr-only">
           <DialogTitle>รายงานการคัดกรอง</DialogTitle>
         </DialogHeader>

@@ -9,7 +9,6 @@ import {
   SCREENER_SYSTEM_PROMPT,
 } from "@/features/screener/lib/screener-prompts";
 import { Prisma } from "@/generated/prisma/client";
-import { ensureUserFromClerkId } from "@/lib/clerk-db-user";
 import prisma from "@/lib/prisma";
 import {
   isR2Configured,
@@ -87,36 +86,6 @@ function splitEvaluateModelOutput(raw: unknown): {
   };
 }
 
-async function persistScreenerHistory(
-  clerkUserId: string,
-  job: { id: string; title: string },
-  report: FitReport,
-  detectedName: string | undefined,
-  detectedEmail: string | undefined,
-): Promise<string | null> {
-  try {
-    const dbUser = await ensureUserFromClerkId(clerkUserId);
-    const created = await prisma.screenerHistory.create({
-      data: {
-        userId: dbUser.id,
-        jobDescriptionId: job.id,
-        jobTitle: job.title,
-        detectedName: detectedName?.trim() ?? "",
-        detectedEmail: detectedEmail?.trim() ?? "",
-        report: JSON.parse(JSON.stringify(report)) as Prisma.InputJsonValue,
-      },
-      select: { id: true },
-    });
-    return created.id;
-  } catch {
-    return null;
-  }
-}
-
-function parseHistoryReport(raw: Prisma.JsonValue): FitReport {
-  return fitReportSchema.parse(raw);
-}
-
 export const screenerRoutes = new Elysia({ prefix: "/screener" })
   .use(screenerAuth)
   .get(
@@ -149,98 +118,6 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       };
     },
     { detail: { tags: ["screener"], summary: "รายละเอียด JD" } },
-  )
-  .get(
-    "/history",
-    async ({ query, set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ" };
-      }
-      const rawLimit = query.limit;
-      const limitNum =
-        typeof rawLimit === "number"
-          ? rawLimit
-          : typeof rawLimit === "string"
-            ? Number.parseInt(rawLimit, 10)
-            : 20;
-      const limit = Math.min(
-        50,
-        Math.max(1, Number.isFinite(limitNum) ? limitNum : 20),
-      );
-      const cursor =
-        typeof query.cursor === "string"
-          ? query.cursor.trim() || undefined
-          : undefined;
-
-      try {
-        const dbUser = await ensureUserFromClerkId(userId);
-        const rows = await prisma.screenerHistory.findMany({
-          where: { userId: dbUser.id },
-          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-          take: limit + 1,
-          skip: cursor ? 1 : 0,
-          cursor: cursor ? { id: cursor } : undefined,
-          select: {
-            id: true,
-            createdAt: true,
-            jobDescriptionId: true,
-            jobTitle: true,
-            detectedName: true,
-            detectedEmail: true,
-            report: true,
-          },
-        });
-        const hasMore = rows.length > limit;
-        const slice = hasMore ? rows.slice(0, limit) : rows;
-        const items = slice.map((row) => ({
-          id: row.id,
-          at: row.createdAt.toISOString(),
-          jobDescriptionId: row.jobDescriptionId,
-          jobTitle: row.jobTitle,
-          detectedName: row.detectedName,
-          detectedEmail: row.detectedEmail,
-          trackerJobId: row.jobDescriptionId,
-          report: parseHistoryReport(row.report),
-        }));
-        const nextCursor = hasMore
-          ? (slice[slice.length - 1]?.id ?? null)
-          : null;
-        return { items, nextCursor };
-      } catch {
-        set.status = 500;
-        return { error: "โหลดประวัติไม่สำเร็จ" };
-      }
-    },
-    {
-      query: t.Object({
-        limit: t.Optional(t.Union([t.String(), t.Number()])),
-        cursor: t.Optional(t.String()),
-      }),
-      detail: { tags: ["screener"], summary: "ประวัติการวิเคราะห์ (cursor)" },
-    },
-  )
-  .delete(
-    "/history",
-    async ({ set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ" };
-      }
-      try {
-        const dbUser = await ensureUserFromClerkId(userId);
-        await prisma.screenerHistory.deleteMany({
-          where: { userId: dbUser.id },
-        });
-        return { ok: true as const };
-      } catch {
-        set.status = 500;
-        return { error: "ลบประวัติไม่สำเร็จ" };
-      }
-    },
-    { detail: { tags: ["screener"], summary: "ลบประวัติการวิเคราะห์ทั้งหมด" } },
   )
   .post(
     "/evaluate",
@@ -310,13 +187,6 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
 
           const { report, detectedName, detectedEmail } =
             splitEvaluateModelOutput(output);
-          const historyId = await persistScreenerHistory(
-            userId,
-            job,
-            report,
-            detectedName,
-            detectedEmail,
-          );
 
           return {
             report,
@@ -324,7 +194,6 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
             detectedEmail,
             matchedJobId: job.id,
             matchedJobTitle: job.title,
-            ...(historyId ? { historyId } : {}),
           };
         }
 
@@ -349,20 +218,12 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
 
         const { report, detectedName, detectedEmail } =
           splitEvaluateModelOutput(output);
-        const historyId = await persistScreenerHistory(
-          userId,
-          job,
-          report,
-          detectedName,
-          detectedEmail,
-        );
         return {
           report,
           detectedName,
           detectedEmail,
           matchedJobId: job.id,
           matchedJobTitle: job.title,
-          ...(historyId ? { historyId } : {}),
         };
       } catch (error) {
         const message =

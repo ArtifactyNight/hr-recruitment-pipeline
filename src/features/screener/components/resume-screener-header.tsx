@@ -14,7 +14,7 @@ export function ResumeScreenerHeader({
     <>
       <HeaderSection
         title="AI Resume Screener"
-        description="กรองและสรุปเรซูเม่ตาม JD ที่เลือก ผลลัพธ์ล่าสุดและประวัติอยู่คอลัมเดียวกัน"
+        description="กรองและสรุปเรซูเม่ตาม JD ที่เลือก — เปิดดูรายงานหลังวิเคราะห์เสร็จ"
       />
       <JobDescriptionDialog selectedJobId={selectedJobId} />
     </>

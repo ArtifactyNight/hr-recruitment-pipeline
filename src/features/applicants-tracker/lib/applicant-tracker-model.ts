@@ -65,13 +65,13 @@ export const stageLabel: Record<ApplicantStage, string> = {
 
 /** หัวคอลัมน์บอร์ด — สั้นและอ่านง่าย */
 export const stageBoardTitle: Record<ApplicantStage, string> = {
-  APPLIED: "สมัครแล้ว",
-  SCREENING: "AI คัดกรอง",
-  PRE_SCREEN_CALL: "Pre-Screen",
-  FIRST_INTERVIEW: "สัมภาษณ์รอบ 1",
-  OFFER: "เสนอจ้าง",
-  HIRED: "รับแล้ว",
-  REJECTED: "ปฏิเสธ",
+  APPLIED: "Applied",
+  SCREENING: "Screening",
+  PRE_SCREEN_CALL: "Pre-Screen Call",
+  FIRST_INTERVIEW: "First Interview",
+  OFFER: "Offer",
+  HIRED: "Hired",
+  REJECTED: "Rejected",
 };
 
 export const stageDotClass: Record<ApplicantStage, string> = {
