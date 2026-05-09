@@ -36,6 +36,9 @@ export type TrackerApplicant = {
   experienceFit: number | null;
   cultureFit: number | null;
   notes: string | null;
+  cvText: string | null;
+  cvFileKey: string | null;
+  cvFileName: string | null;
   tags: Array<string>;
   interview: TrackerApplicantInterview | null;
 };

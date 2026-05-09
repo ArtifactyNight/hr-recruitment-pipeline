@@ -14,6 +14,7 @@ import { AddToTrackerDialog } from "./add-to-tracker-dialog";
 import { ResumeInputCard } from "./resume-input-card";
 import { ResumeScreenerHeader } from "./resume-screener-header";
 import { ScreenerReportPanel } from "./screener-report-panel";
+import { ScreenerResultSummary } from "./screener-result-summary";
 
 export function ResumeScreener() {
   const [, copyToClipboard] = useCopyToClipboard();
@@ -31,6 +32,10 @@ export function ResumeScreener() {
   const trackerDialogOpen = useScreenerDialogStore((s) => s.trackerDialogOpen);
   const setTrackerDialogOpen = useScreenerDialogStore(
     (s) => s.setTrackerDialogOpen,
+  );
+  const reportDialogOpen = useScreenerDialogStore((s) => s.reportDialogOpen);
+  const setReportDialogOpen = useScreenerDialogStore(
+    (s) => s.setReportDialogOpen,
   );
 
   const jobsQuery = useQuery({
@@ -74,9 +79,20 @@ export function ResumeScreener() {
       email: string;
       resumeText?: string;
       report: FitReport;
+      file?: File | null;
     }) => {
+      const payload = JSON.stringify({
+        jobDescriptionId: input.jobDescriptionId,
+        name: input.name,
+        email: input.email,
+        resumeText: input.resumeText,
+        report: input.report,
+      });
       const { data, error } = await api.api.screener["add-to-tracker"].post(
-        input,
+        {
+          payload,
+          file: input.file ?? undefined,
+        },
         { fetch: { credentials: "include" } },
       );
       if (error) throw error.value;
@@ -134,11 +150,18 @@ export function ResumeScreener() {
       setTrackerJobId(data.matchedJobId ?? null);
       setDetectedName(data.detectedName ?? "");
       setDetectedEmail(data.detectedEmail ?? "");
+      setReportDialogOpen(true);
       toast.success("วิเคราะห์เสร็จแล้ว");
     } catch {
       /* onError toast */
     }
-  }, [evaluateMutation, resumeText, selectedFile, selectedJobId]);
+  }, [
+    evaluateMutation,
+    resumeText,
+    selectedFile,
+    selectedJobId,
+    setReportDialogOpen,
+  ]);
 
   const onClear = useCallback(() => {
     setResumeText("");
@@ -148,7 +171,8 @@ export function ResumeScreener() {
     setDetectedName("");
     setDetectedEmail("");
     setJobId(null);
-  }, []);
+    setReportDialogOpen(false);
+  }, [setReportDialogOpen]);
 
   const onCopyReport = useCallback(async () => {
     if (!report) return;
@@ -186,6 +210,7 @@ export function ResumeScreener() {
         email: emailT,
         resumeText: resumeText.trim() || undefined,
         report,
+        file: selectedFile,
       });
       toast.success("เพิ่มผู้สมัครใน Tracker แล้ว (SCREENING)");
       setTrackerDialogOpen(false);
@@ -200,38 +225,47 @@ export function ResumeScreener() {
     trackerDraftName,
     trackerJobId,
     setTrackerDialogOpen,
+    selectedFile,
   ]);
 
-  const onPdfSelected = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (
-      file.type !== "application/pdf" &&
-      !file.name.toLowerCase().endsWith(".pdf")
-    ) {
-      toast.error("กรุณาเลือกไฟล์ PDF");
-      return;
-    }
-    setResumeText("");
-    setSelectedFile(file);
-    setReport(null);
-    setDetectedName("");
-    setDetectedEmail("");
-    toast.message(`ใช้ไฟล์ ${file.name} — กดวิเคราะห์เพื่อส่ง PDF เข้า AI`);
-  }, []);
+  const onPdfSelected = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+      if (
+        file.type !== "application/pdf" &&
+        !file.name.toLowerCase().endsWith(".pdf")
+      ) {
+        toast.error("กรุณาเลือกไฟล์ PDF");
+        return;
+      }
+      setResumeText("");
+      setSelectedFile(file);
+      setReport(null);
+      setDetectedName("");
+      setDetectedEmail("");
+      setReportDialogOpen(false);
+      toast.message(`ใช้ไฟล์ ${file.name} — กดวิเคราะห์เพื่อส่ง PDF เข้า AI`);
+    },
+    [setReportDialogOpen],
+  );
 
   const onRemoveFile = useCallback(() => {
     setSelectedFile(null);
   }, []);
 
-  const onJobChange = useCallback((value: string) => {
-    setJobId(value);
-    setReport(null);
-    setTrackerJobId(null);
-    setDetectedName("");
-    setDetectedEmail("");
-  }, []);
+  const onJobChange = useCallback(
+    (value: string) => {
+      setJobId(value);
+      setReport(null);
+      setTrackerJobId(null);
+      setDetectedName("");
+      setDetectedEmail("");
+      setReportDialogOpen(false);
+    },
+    [setReportDialogOpen],
+  );
 
   const analyzePending = evaluateMutation.isPending;
 
@@ -248,7 +282,7 @@ export function ResumeScreener() {
         isSaving={addMutation.isPending}
         onSubmit={onSubmitTracker}
       />
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
         <ResumeInputCard
           jobsQueryLoading={jobsQuery.isLoading}
           jobsQueryError={jobsQuery.isError}
@@ -265,16 +299,29 @@ export function ResumeScreener() {
           onAnalyze={onAnalyze}
           onClear={onClear}
         />
+        {report ? (
+          <ScreenerResultSummary
+            report={report}
+            detectedName={detectedName}
+            detectedEmail={detectedEmail}
+            trackerJobId={trackerJobId}
+            onOpenReport={() => setReportDialogOpen(true)}
+            onRequestOpenTracker={openTrackerDraft}
+          />
+        ) : null}
+      </div>
+      {report ? (
         <ScreenerReportPanel
           report={report}
+          open={reportDialogOpen}
+          onOpenChange={setReportDialogOpen}
           detectedName={detectedName}
           detectedEmail={detectedEmail}
-          analyzePending={analyzePending}
           trackerJobId={trackerJobId}
           onCopyReport={onCopyReport}
           onRequestOpenTracker={openTrackerDraft}
         />
-      </div>
+      ) : null}
     </div>
   );
 }

@@ -224,6 +224,9 @@ export default function CandidatesPage() {
         experienceFit: null,
         cultureFit: null,
         notes: null,
+        cvText: null,
+        cvFileKey: null,
+        cvFileName: null,
         tags: [],
         interview: null,
       };
@@ -391,6 +394,11 @@ export default function CandidatesPage() {
           patchApplicantMut.variables.notes !== undefined
         }
         scheduleInterviewPending={scheduleInterviewMut.isPending}
+        applicantsQueryKey={applicantsQueryKey}
+        onCvPatch={(patch) => {
+          if (!detail) return;
+          setDetail({ ...detail, ...patch });
+        }}
         onScheduleInterview={async (input) => {
           await scheduleInterviewMut.mutateAsync(input);
         }}

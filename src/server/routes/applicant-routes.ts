@@ -6,8 +6,16 @@ import {
 } from "@/generated/prisma/client";
 import { ensureUserFromClerkId } from "@/lib/clerk-db-user";
 import prisma from "@/lib/prisma";
+import {
+  deleteResumeFromR2,
+  getResumeSignedDownloadUrl,
+  isR2Configured,
+  putResumePdfToR2,
+  resumeObjectKeyForApplicant,
+} from "@/lib/r2";
 import { auth } from "@clerk/nextjs/server";
 import { Elysia, t } from "elysia";
+import { randomUUID } from "node:crypto";
 
 const applicantAuth = new Elysia({ name: "applicant-auth" })
   .derive(async () => {
@@ -152,6 +160,16 @@ function applicantListFields(
   };
 }
 
+function fileHasBytes(file: unknown): file is File {
+  return (
+    typeof file === "object" &&
+    file !== null &&
+    "size" in file &&
+    typeof (file as { size: unknown }).size === "number" &&
+    (file as File).size > 0
+  );
+}
+
 export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   .use(applicantAuth)
   .get(
@@ -179,6 +197,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           email: true,
           phone: true,
           notes: true,
+          cvText: true,
+          cvFileKey: true,
+          cvFileName: true,
           appliedAt: true,
           source: true,
           stage: true,
@@ -205,6 +226,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           email: row.email,
           phone: row.phone,
           notes: row.notes,
+          cvText: row.cvText,
+          cvFileKey: row.cvFileKey,
+          cvFileName: row.cvFileName,
           appliedAt: row.appliedAt.toISOString(),
           source: row.source,
           stage: row.stage,
@@ -278,6 +302,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           email: true,
           phone: true,
           notes: true,
+          cvText: true,
+          cvFileKey: true,
+          cvFileName: true,
           appliedAt: true,
           source: true,
           stage: true,
@@ -302,6 +329,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           email: created.email,
           phone: created.phone,
           notes: created.notes,
+          cvText: created.cvText,
+          cvFileKey: created.cvFileKey,
+          cvFileName: created.cvFileName,
           appliedAt: created.appliedAt.toISOString(),
           source: created.source,
           stage: created.stage,
@@ -324,6 +354,128 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         stage: t.Optional(stageUnion),
       }),
       detail: { tags: ["applicants"], summary: "เพิ่มผู้สมัคร" },
+    },
+  )
+  .get(
+    "/:id/resume-url",
+    async ({ params, set }) => {
+      if (!isR2Configured()) {
+        set.status = 503;
+        return { error: "ยังไม่ได้ตั้งค่า Cloudflare R2" };
+      }
+      const applicant = await prisma.applicant.findFirst({
+        where: { id: params.id },
+        select: { cvFileKey: true, cvFileName: true },
+      });
+      if (!applicant?.cvFileKey) {
+        set.status = 404;
+        return { error: "ไม่มีไฟล์ resume" };
+      }
+      const url = await getResumeSignedDownloadUrl({
+        objectKey: applicant.cvFileKey,
+        filenameHint: applicant.cvFileName ?? "resume.pdf",
+      });
+      return { url };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      detail: {
+        tags: ["applicants"],
+        summary: "ลิงก์ดาวน์โหลด resume (signed URL)",
+      },
+    },
+  )
+  .post(
+    "/:id/resume",
+    async ({ params, body, set }) => {
+      if (!isR2Configured()) {
+        set.status = 503;
+        return { error: "ยังไม่ได้ตั้งค่า Cloudflare R2" };
+      }
+      const file = body.file;
+      if (!fileHasBytes(file)) {
+        set.status = 400;
+        return { error: "ต้องอัปโหลดไฟล์" };
+      }
+      const okPdf =
+        file.type === "application/pdf" ||
+        (file.name ?? "").toLowerCase().endsWith(".pdf");
+      if (!okPdf) {
+        set.status = 400;
+        return { error: "รองรับเฉพาะ PDF" };
+      }
+      const existing = await prisma.applicant.findFirst({
+        where: { id: params.id },
+        select: { id: true, cvFileKey: true },
+      });
+      if (!existing) {
+        set.status = 404;
+        return { error: "ไม่พบผู้สมัคร" };
+      }
+      const objectKey = resumeObjectKeyForApplicant(existing.id, randomUUID());
+      const bytes = await file.arrayBuffer();
+      try {
+        await putResumePdfToR2({
+          objectKey,
+          body: new Uint8Array(bytes),
+          contentType: file.type || "application/pdf",
+        });
+      } catch {
+        set.status = 502;
+        return { error: "อัปโหลดไฟล์ไม่สำเร็จ" };
+      }
+      if (existing.cvFileKey) {
+        try {
+          await deleteResumeFromR2(existing.cvFileKey);
+        } catch {
+          /* ignore */
+        }
+      }
+      const displayName = file.name?.trim() || "resume.pdf";
+      await prisma.applicant.update({
+        where: { id: existing.id },
+        data: { cvFileKey: objectKey, cvFileName: displayName },
+      });
+      return {
+        cvFileKey: objectKey,
+        cvFileName: displayName,
+      };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      body: t.Object({
+        file: t.File({ maxSize: 8 * 1024 * 1024 }),
+      }),
+      detail: { tags: ["applicants"], summary: "อัปโหลด resume PDF ไป R2" },
+    },
+  )
+  .delete(
+    "/:id/resume",
+    async ({ params, set }) => {
+      const existing = await prisma.applicant.findFirst({
+        where: { id: params.id },
+        select: { id: true, cvFileKey: true },
+      });
+      if (!existing) {
+        set.status = 404;
+        return { error: "ไม่พบผู้สมัคร" };
+      }
+      if (existing.cvFileKey && isR2Configured()) {
+        try {
+          await deleteResumeFromR2(existing.cvFileKey);
+        } catch {
+          /* ignore */
+        }
+      }
+      await prisma.applicant.update({
+        where: { id: existing.id },
+        data: { cvFileKey: null, cvFileName: null },
+      });
+      return { ok: true as const };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      detail: { tags: ["applicants"], summary: "ลบไฟล์ resume จาก R2" },
     },
   )
   .patch(
@@ -353,6 +505,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             email: true,
             phone: true,
             notes: true,
+            cvText: true,
+            cvFileKey: true,
+            cvFileName: true,
             appliedAt: true,
             source: true,
             stage: true,
@@ -377,6 +532,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             email: updated.email,
             phone: updated.phone,
             notes: updated.notes,
+            cvText: updated.cvText,
+            cvFileKey: updated.cvFileKey,
+            cvFileName: updated.cvFileName,
             appliedAt: updated.appliedAt.toISOString(),
             source: updated.source,
             stage: updated.stage,

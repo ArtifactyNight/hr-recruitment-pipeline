@@ -10,10 +10,17 @@ import {
 } from "@/features/screener/lib/screener-prompts";
 import { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
+import {
+  isR2Configured,
+  putResumePdfToR2,
+  resumeObjectKeyForApplicant,
+} from "@/lib/r2";
 import { google } from "@ai-sdk/google";
 import { auth } from "@clerk/nextjs/server";
 import { generateText, Output, zodSchema } from "ai";
 import { createFallback } from "ai-fallback";
+import { randomUUID } from "node:crypto";
+
 import { Elysia, t } from "elysia";
 
 const model = createFallback({
@@ -233,10 +240,27 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
   .post(
     "/add-to-tracker",
     async ({ body, set }) => {
-      const parsed = addToTrackerBodySchema.safeParse(body);
+      let raw: unknown;
+      try {
+        raw = JSON.parse(body.payload) as unknown;
+      } catch {
+        set.status = 400;
+        return { error: "payload ไม่ใช่ JSON ที่อ่านได้" };
+      }
+      const parsed = addToTrackerBodySchema.safeParse(raw);
       if (!parsed.success) {
         set.status = 400;
         return { error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() };
+      }
+
+      const file = body.file;
+      const hasFile = fileHasBytes(file);
+      if (hasFile && !isR2Configured()) {
+        set.status = 503;
+        return {
+          error:
+            "ยังไม่ได้ตั้งค่า Cloudflare R2 (R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)",
+        };
       }
 
       const job = await prisma.jobDescription.findFirst({
@@ -278,6 +302,27 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
           },
           select: { id: true },
         });
+
+        if (hasFile) {
+          const bytes = await file!.arrayBuffer();
+          const objectKey = resumeObjectKeyForApplicant(
+            applicant.id,
+            randomUUID(),
+          );
+          await putResumePdfToR2({
+            objectKey,
+            body: new Uint8Array(bytes),
+            contentType: file.type || "application/pdf",
+          });
+          await prisma.applicant.update({
+            where: { id: applicant.id },
+            data: {
+              cvFileKey: objectKey,
+              cvFileName: file.name?.trim() || "resume.pdf",
+            },
+          });
+        }
+
         return { applicantId: applicant.id };
       } catch (error) {
         const message =
@@ -288,12 +333,12 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
     },
     {
       body: t.Object({
-        jobDescriptionId: t.String(),
-        name: t.String(),
-        email: t.String(),
-        resumeText: t.Optional(t.String()),
-        report: t.Any(),
+        payload: t.String({ minLength: 2 }),
+        file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
       }),
-      detail: { tags: ["screener"], summary: "เพิ่มผู้สมัครและผล screener" },
+      detail: {
+        tags: ["screener"],
+        summary: "เพิ่มผู้สมัครและผล screener — รองรับแนบ PDF (multipart)",
+      },
     },
   );

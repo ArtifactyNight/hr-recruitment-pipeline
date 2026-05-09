@@ -11,6 +11,7 @@ import {
 import { ApplicantDetailAiScores } from "@/features/applicants-tracker/components/applicant-detail-ai-scores";
 import { ApplicantDetailInterviewSection } from "@/features/applicants-tracker/components/applicant-detail-interview-section";
 import { ApplicantDetailNotesSection } from "@/features/applicants-tracker/components/applicant-detail-notes-section";
+import { ApplicantDetailResumeSection } from "@/features/applicants-tracker/components/applicant-detail-resume-section";
 import {
   ApplicantScheduleInterviewDialog,
   defaultScheduleInterviewFormState,
@@ -36,7 +37,6 @@ import {
   Trash2Icon,
   UserIcon,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { sourceLabel } from "../lib/tracker-display-helpers";
 
@@ -46,10 +46,16 @@ type ApplicantDetailDialogProps = {
   patchPending: boolean;
   notesSaving: boolean;
   scheduleInterviewPending: boolean;
+  applicantsQueryKey: readonly unknown[];
   onScheduleInterview: (input: ScheduleInterviewSubmitInput) => Promise<void>;
   onStageSelect: (stage: ApplicantStage) => void;
   onSaveNotes: (text: string) => void;
   onRequestDelete: () => void;
+  onCvPatch: (patch: {
+    cvText: string | null;
+    cvFileKey: string | null;
+    cvFileName: string | null;
+  }) => void;
 };
 
 export function ApplicantDetailDialog({
@@ -58,12 +64,13 @@ export function ApplicantDetailDialog({
   patchPending,
   notesSaving,
   scheduleInterviewPending,
+  applicantsQueryKey,
   onScheduleInterview,
   onStageSelect,
   onSaveNotes,
   onRequestDelete,
+  onCvPatch,
 }: ApplicantDetailDialogProps) {
-  const router = useRouter();
   const detailStage = applicant?.stage;
 
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -75,10 +82,6 @@ export function ApplicantDetailDialog({
     setScheduleForm(defaultScheduleInterviewFormState());
     setScheduleOpen(true);
   }, []);
-
-  const redirectToInterviews = useCallback(() => {
-    router.push("/interviews");
-  }, [router]);
 
   return (
     <>
@@ -157,6 +160,11 @@ export function ApplicantDetailDialog({
                 </div>
               </div>
               <ApplicantDetailAiScores row={applicant} />
+              <ApplicantDetailResumeSection
+                applicant={applicant}
+                applicantsQueryKey={applicantsQueryKey}
+                onCvPatch={onCvPatch}
+              />
               <ApplicantDetailInterviewSection applicant={applicant} />
               <ApplicantDetailNotesSection
                 key={applicant.id}
