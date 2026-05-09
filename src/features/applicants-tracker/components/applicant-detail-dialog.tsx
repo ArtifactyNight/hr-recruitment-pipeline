@@ -99,7 +99,7 @@ export function ApplicantDetailDialog({
           }
         }}
       >
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl" showCloseButton={false}>
           {applicant ? (
             <>
               <DialogHeader className="flex flex-row items-start gap-3">
@@ -140,7 +140,7 @@ export function ApplicantDetailDialog({
                 />
               </div>
               <div>
-                <p className="mb-2 text-sm font-medium">สเตจใน Pipeline</p>
+                <p className="mb-2 text-sm font-medium">Pipeline Stages</p>
                 <div className="flex flex-wrap gap-1">
                   {STAGE_ORDER.map((s) => (
                     <Button
