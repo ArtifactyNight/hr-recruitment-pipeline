@@ -38,17 +38,17 @@
     "google-auth-library": "^10.6.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^1.14.0",
-    "next": "16.2.5",
+    "next": "16.2.6",
     "next-themes": "^0.4.6",
     "pg": "^8.20.0",
     "prisma": "^7.8.0",
     "radix-ui": "^1.4.3",
-    "react": "19.2.4",
+    "react": "19.2.6",
     "react-aria-components": "^1.17.0",
     "react-day-picker": "^10.0.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
-    "react-dom": "19.2.4",
+    "react-dom": "19.2.6",
     "react-hook-form": "^7.75.0",
     "react-resizable-panels": "^4.11.0",
     "recharts": "3.8.0",
@@ -64,10 +64,10 @@
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-query-devtools": "^5.100.9",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
     "eslint": "^9",
-    "eslint-config-next": "16.2.5",
+    "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
@@ -78,5 +78,9 @@
   "trustedDependencies": [
     "sharp",
     "unrs-resolver"
-  ]
+  ],
+  "overrides": {
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3"
+  }
 }

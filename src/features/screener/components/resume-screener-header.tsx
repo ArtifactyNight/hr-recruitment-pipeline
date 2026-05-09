@@ -20,8 +20,7 @@ export function ResumeScreenerHeader({
             AI Resume Screener
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            วางข้อความ CV หรืออัปโหลด PDF (ส่งไฟล์ตรงเข้า Gemini) —
-            รายงานภายในไม่กี่วินาที
+            ระบบสรุป Resume ด้วย AI
           </p>
         </div>
         <JobDescriptionOpenButton disabled={!selectedJobId} />

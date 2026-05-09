@@ -8,9 +8,9 @@ import {
   AlertTriangleIcon,
   CheckIcon,
   CopyIcon,
+  FileSearchIcon,
   Loader2Icon,
   MailQuestion,
-  SparklesIcon,
 } from "lucide-react";
 
 import { FitRow } from "./fit-row";
@@ -57,13 +57,11 @@ export function ScreenerReportPanel({
           </div>
         ) : !report ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <SparklesIcon className="size-10 text-muted-foreground" />
+            <FileSearchIcon className="size-10 text-muted-foreground" />
             <div>
               <p className="font-medium">ยังไม่มีรายงาน</p>
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                วาง resume ด้านซ้ายแล้วกด &quot;วิเคราะห์ด้วย AI&quot;
-                คุณจะได้คะแนน จุดแข็ง ข้อกังวล คำถาม pre-screen
-                และสรุปสำหรับคณะกรรมการ
+                กรุณาวาง Resume ด้านซ้ายแล้วกด &quot;วิเคราะห์ด้วย AI&quot;
               </p>
             </div>
           </div>
