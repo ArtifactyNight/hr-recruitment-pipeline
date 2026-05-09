@@ -3,12 +3,12 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
-import { Noto_Sans_Thai, Noto_Serif_Thai } from "next/font/google";
+import { Geist_Mono, Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 
-const mono = Noto_Serif_Thai({
+const mono = Geist_Mono({
   variable: "--font-mono",
-  subsets: ["latin", "thai"],
+  subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 

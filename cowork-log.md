@@ -429,3 +429,8 @@
 **Prompt:** brainstorm idea; pain point: HR need to get resume data and person from Gmail automatically and make it easy to use
 **Output:** Proposed Gmail resume intake concepts: watched inbox/label, automatic resume parsing, duplicate detection, review queue, job matching, applicant creation, candidate communication, and a pragmatic MVP path.
 **Edited:** `cowork-log.md`
+
+### [2026-05-10 04:18] - Add applicant dialog: React Hook Form
+**Prompt:** `/shadcn use react-hook-form`
+**Output:** Wired the add applicant dialog to `react-hook-form` with a Zod resolver, shadcn `FieldError` validation states, submit-based manual/AI-confirm saves, and grouped radix `SelectItem` composition while keeping Zustand synced as the tracker source of truth.
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`

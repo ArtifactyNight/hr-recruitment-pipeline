@@ -62,8 +62,8 @@ function ApplicantKanbanStageColumn({
 }: ApplicantKanbanStageColumnProps) {
   return (
     <KanbanColumn value={stageId} className="min-w-0">
-      <Card className="flex h-full min-h-[200px] flex-col" size="sm">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border pb-3">
+      <Card className="flex h-full min-h-[200px] flex-col bg-muted" size="sm">
+        <CardHeader>
           <div className="flex min-w-0 items-center justify-between w-full gap-2.5">
             <div className="flex items-center gap-2.5">
               <span
@@ -73,11 +73,16 @@ function ApplicantKanbanStageColumn({
                 )}
                 aria-hidden
               />
-              <span className="truncate text-sm font-semibold">
+              <span className="truncate text-sm font-semibold font-mono uppercase">
                 {stageBoardTitle[stageId]}
               </span>
             </div>
-            <Badge variant="outline">{items.length}</Badge>
+            <Badge
+              variant="outline"
+              className="bg-foreground text-background rounded-sm font-bold font-mono"
+            >
+              {items.length}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="flex min-h-0 flex-1 flex-col pt-0">

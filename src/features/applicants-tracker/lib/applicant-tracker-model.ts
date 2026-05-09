@@ -63,7 +63,6 @@ export const stageLabel: Record<ApplicantStage, string> = {
   REJECTED: "Rejected",
 };
 
-/** หัวคอลัมน์บอร์ด — สั้นและอ่านง่าย */
 export const stageBoardTitle: Record<ApplicantStage, string> = {
   APPLIED: "Applied",
   SCREENING: "Screening",
