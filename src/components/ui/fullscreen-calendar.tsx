@@ -470,7 +470,7 @@ export function FullScreenCalendar({
           calendarLoading && "opacity-70",
         )}
       >
-        <div className="flex flex-col space-y-4 border-b p-4 md:flex-row md:items-center md:justify-between md:space-y-0 lg:flex-none">
+        <div className="flex flex-col gap-y-4 border-b p-4 md:flex-row md:items-center md:justify-between md:gap-y-0 lg:flex-none">
           <div className="flex flex-auto">
             <div className="flex items-center gap-4">
               <div className="hidden w-20 flex-col items-center justify-center rounded-lg border bg-muted p-0.5 md:flex">

@@ -253,10 +253,12 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     "/",
     async ({ body, set }) => {
       const { userId } = await auth();
-      const dbUser = await ensureUserFromClerkId(userId!);
-      const job = await prisma.jobDescription.findFirst({
-        where: { id: body.jobDescriptionId, isActive: true },
-      });
+      const [dbUser, job] = await Promise.all([
+        ensureUserFromClerkId(userId!),
+        prisma.jobDescription.findFirst({
+          where: { id: body.jobDescriptionId, isActive: true },
+        }),
+      ]);
       if (!job) {
         set.status = 404;
         return { error: "ไม่พบตำแหน่งนี้" };

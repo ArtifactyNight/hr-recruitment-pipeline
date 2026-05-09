@@ -6,7 +6,7 @@ import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import { formatReportText } from "@/features/screener/lib/resume-screener-utils";
 import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
 import { api } from "@/lib/api";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AddToTrackerDialog } from "./add-to-tracker-dialog";
@@ -15,6 +15,7 @@ import { ResumeScreenerHeader } from "./resume-screener-header";
 import { ScreenerReportPanel } from "./screener-report-panel";
 
 export function ResumeScreener() {
+  const queryClient = useQueryClient();
   const [jobId, setJobId] = useState<string | null>(null);
   const [resumeText, setResumeText] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -78,6 +79,9 @@ export function ResumeScreener() {
       );
       if (error) throw error.value;
       return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["applicants"] });
     },
     onError: () => {
       toast.error("เพิ่มเข้า Tracker ไม่สำเร็จ");

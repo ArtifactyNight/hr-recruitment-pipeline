@@ -95,7 +95,7 @@ export function ApplicantDetailDialog({
         <DialogContent className="sm:max-w-2xl">
           {applicant ? (
             <>
-              <DialogHeader className="flex flex-row items-start gap-3 space-y-0">
+              <DialogHeader className="flex flex-row items-start gap-3">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FACC15] text-sm font-semibold text-black">
                   {initialsFromName(applicant.name)}
                 </span>

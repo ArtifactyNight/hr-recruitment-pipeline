@@ -128,9 +128,7 @@ export function ApplicantKanbanBoardView({
       patchTimerRef.current = setTimeout(() => {
         void (async () => {
           try {
-            for (const p of patches) {
-              await patchStage({ id: p.id, stage: p.stage });
-            }
+            await Promise.all(patches.map((p) => patchStage({ id: p.id, stage: p.stage })));
             setOverride(null);
             onPatchesComplete();
           } catch {

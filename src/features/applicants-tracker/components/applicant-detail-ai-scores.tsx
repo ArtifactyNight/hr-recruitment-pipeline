@@ -25,7 +25,7 @@ export function ApplicantDetailAiScores({ row }: ApplicantDetailAiScoresProps) {
   const dash = pct * c;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-4">
+    <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
       <div className="flex flex-wrap items-center gap-6">
         <div
           className="relative flex size-28 shrink-0 items-center justify-center"
