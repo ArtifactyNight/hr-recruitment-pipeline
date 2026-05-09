@@ -1,13 +1,17 @@
+import { Container } from "@/components/layout/container";
+import { HeaderSection } from "@/components/layout/header-section";
 import { InterviewsCalendar } from "@/features/interviews/components/interviews-calendar";
 
 export default function InterviewsPage() {
   return (
-    <div className="px-4 py-6 md:px-6">
-      <h1 className="text-xl font-semibold text-foreground">นัดหมายสัมภาษณ์</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        จัดการนัดสัมภาษณ์และซิงก์ปฏิทิน
-      </p>
-      <InterviewsCalendar />
-    </div>
+    <Container>
+      <HeaderSection
+        title="นัดหมายสัมภาษณ์"
+        description="จัดการนัดสัมภาษณ์และซิงก์ปฏิทิน"
+      />
+      <div className="mt-6">
+        <InterviewsCalendar />
+      </div>
+    </Container>
   );
 }

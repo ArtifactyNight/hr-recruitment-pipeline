@@ -364,3 +364,8 @@
 **Prompt:** `make screener-prompts.ts more strict and better`
 **Output:** Rewrote `jdPrompt` + extracted `SCREENER_SYSTEM_PROMPT` with: explicit scoring rubric (0–10 per range), fitStatus→overallScore mapping rules, per-dimension evaluation criteria (skillFit/experienceFit/cultureFit), evidence-based enforcement (no guessing), field-level constraints (min counts, cite CV), integer-only scores, verbatim name/email extraction. Removed duplicated inline system prompt from `screener-routes.ts` in favor of single export.
 **Edited:** `src/features/screener/lib/screener-prompts.ts`, `src/server/routes/screener-routes.ts`, `cowork-log.md`
+
+### [2026-05-10] - Dashboard layout: Container + HeaderSection
+**Prompt:** create `container.tsx`, `header-section.tsx` and apply to all pages (from jobs header snippet)
+**Output:** Added `src/components/layout/container.tsx` (`px-4 py-6 md:px-6` + merge className) and `header-section.tsx` (title, optional description, optional actions). Wired jobs, interviews, settings, screener, candidates pages; refactored `ApplicantTrackerHeader` + `ResumeScreenerHeader` to compose `HeaderSection`. Tracker «เพิ่มผู้สมัคร» now calls `onAddClick` (opens add dialog) instead of unused prop + Link to `/screener`. Dashboard home unchanged (different chrome).
+**Edited:** `container.tsx`, `header-section.tsx`, `jobs/page.tsx`, `interviews/page.tsx`, `settings/page.tsx`, `screener/page.tsx`, `candidates/page.tsx`, `applicant-tracker-header.tsx`, `resume-screener-header.tsx`, `cowork-log.md`
