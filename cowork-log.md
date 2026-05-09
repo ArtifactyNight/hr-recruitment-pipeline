@@ -235,7 +235,22 @@
 **Output:** เพิ่ม `fetchPrimaryCalendarEvent` + `snapshotFromGoogleCalendarEvent` แมป reminders / organizer.email / เบอร์ dial-in (`conferenceData` phone entryPoints) / นับ RSVP จาก attendees / description จาก `events.get`. `GET /interviews/:id` คืน `calendarSnapshot` เมื่อมี `googleEventId` + เชื่อม Google; include `organizer.email` ใน list+detail; `InterviewEventSheetContent` ใช้ `useQuery` คีย์เดียวกับฟอร์มแก้ไข แสดงข้อความจริง และ merge โน้ต DB+Google แทน placeholder; เติม `Event`/`interviewToCalendarEvent` (`organizerEmail`, `googleEventId`, `description`, รวมอีเมลผู้สมัครเป็น guest)
 **Edited:** `google-calendar-service.ts`, `interview-routes.ts`, `src/types/interview-calendar-snapshot.ts`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `mock-data/events.ts`, `cowork-log.md`
 
+### 2026-05-09 - ปฏิทินแสดงนัดที่ยกเลิก
+**Prompt:** ตอนยกเลิกนัดให้เก็บ data อยู่แต่ขึ้นสถานะใน event-card ว่ายกเลิก  
+**Output:** เอา filter `status !== CANCELLED` ออกจาก `GET /interviews` เพื่อดึงแถวที่ยกเลิกมาแสดง; เพิ่ม `interviewStatus` + `CalendarInterviewStatus` ใน `CalendarEvent`; `interviewToCalendarEvent` ส่ง `status` และ prefix ชื่อ `(ยกเลิก)`; `EventCard` — border เส้นประ muted, จุดสีเทา, title line-through, Badge/label ยกเลิก, ซ่อนลิงก์ Meet เมื่อยกเลิก; `InterviewEventSheetContent` — banner อธิบาย + `canUseToolbar` false เมื่อ cancelled; toolbar ไม่ register จนกว่า row โหลดและไม่ใช่ CANCELLED  
+**Edited:** `interview-routes.ts`, `calendar-event.ts`, `event-card.tsx`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
 ### 2026-05-09 - ลบ mock ปฏิทิน
 **Prompt:** remove calendar mock data
 **Output:** ลบ `src/mock-data/events.ts`; ประเภทเหตุการณ์อยู่ที่ `types/calendar-event.ts` (`CalendarEvent`). Zustand ใช้ `calendarEvents: []` + `setCalendarEvents` แทน `customEvents|null` และ demo-week template; เพิ่ม event จาก Create dialog เขียนลง store ด้วย `crypto.randomUUID()`. `/interviews` sync จาก API และ unmount เคลียร์เป็น `[]`. Header โชว์ "วันนี้" จาก store อย่างเดียว
 **Edited:** `calendar-store.ts`, `calendar-view.tsx`, `calendar-day-column.tsx`, `calendar-header.tsx`, `event-card.tsx`, `event-sheet.tsx`, `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`; ลบ `mock-data/events.ts`
+
+### [2026-05-09] - Interview status: ReUI Badge แทน prefix ในชื่อ
+**Prompt:** status prefix use reui badge  
+**Output:** ลบ prefix ข้อความ `[ยกเลิก]`/`[เลื่อน]` ออกจาก `title` ใน `interviewToCalendarEvent`; เพิ่ม `CalendarInterviewStatusBadge` (`@/components/reui/badge`, `destructive-light`/`warning-light`, pill) ใน `event-card` และหัว `event-sheet` (interview + default mode)  
+**Edited:** `calendar-interview-status-badge.tsx`, `event-card.tsx`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### [2026-05-09] - สร้างนัด: Alert เมื่อนัดทับในระบบ
+**Prompt:** ถ้าขึ้นว่ามีนัดทับในระบบ แจ้งด้วย shadcn `alert.tsx` ใน `create-event-dialog.tsx`
+**Output:** โหมดสัมภาษณ์แสดง `Alert` destructive + `AlertTriangle` เมื่อข้อความ error จาก API มี `"นัดที่ทับ"` (ตรงกับ `DB_CONFLICT` ใน `interview-routes`); ส่ง `interviewDbOverlapMessage` จาก `createMut`; ไม่ toast ซ้ำสำหรับเคสนี้; ปิด dialog / เปลี่ยนวันเวลาผู้สมัคร → `reset()` mutation
+**Edited:** `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`

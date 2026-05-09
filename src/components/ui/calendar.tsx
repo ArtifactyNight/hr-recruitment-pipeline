@@ -10,6 +10,7 @@ import {
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { th } from "date-fns/locale";
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -41,7 +42,7 @@ function Calendar({
         className,
       )}
       captionLayout={captionLayout}
-      locale={locale}
+      locale={th}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString(locale?.code, { month: "short" }),

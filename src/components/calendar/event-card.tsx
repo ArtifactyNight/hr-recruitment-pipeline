@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarInterviewStatusBadge } from "@/components/calendar/calendar-interview-status-badge";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import type { CalendarEvent } from "@/types/calendar-event";
 import { ExternalLink } from "lucide-react";
@@ -28,9 +29,12 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
         onClick={onClick}
       >
         <div className="size-1.5 rounded-full bg-cyan-500 shrink-0" />
-        <h4 className="text-[10px] font-semibold text-foreground truncate flex-1">
-          {event.title}
-        </h4>
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <CalendarInterviewStatusBadge status={event.interviewStatus} />
+          <h4 className="text-[10px] font-semibold text-foreground truncate">
+            {event.title}
+          </h4>
+        </div>
         <span className="text-[9px] text-muted-foreground shrink-0">
           {event.startTime}
         </span>
@@ -48,9 +52,12 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
         <div className="flex flex-col gap-1 h-full">
           <div className="flex items-center gap-1.5">
             <div className="size-1.5 rounded-full bg-cyan-500 shrink-0" />
-            <h4 className="text-[10px] font-semibold text-foreground truncate flex-1">
-              {event.title}
-            </h4>
+            <div className="flex min-w-0 flex-1 items-center gap-1">
+              <CalendarInterviewStatusBadge status={event.interviewStatus} />
+              <h4 className="text-[10px] font-semibold text-foreground truncate">
+                {event.title}
+              </h4>
+            </div>
           </div>
           <p className="text-[9px] text-muted-foreground uppercase tracking-wide">
             {timeStr}
@@ -68,13 +75,16 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
     >
       <div className="flex flex-col gap-1 h-full">
         <div className="flex-1 min-h-0">
-          <h4
-            className={`text-xs font-semibold text-foreground mb-1 ${
-              duration <= 60 ? "truncate whitespace-nowrap" : "line-clamp-2"
-            }`}
-          >
-            {event.title}
-          </h4>
+          <div className="mb-1 flex min-w-0 items-start gap-1">
+            <CalendarInterviewStatusBadge status={event.interviewStatus} />
+            <h4
+              className={`min-w-0 flex-1 text-xs font-semibold text-foreground ${
+                duration <= 60 ? "truncate whitespace-nowrap" : "line-clamp-2"
+              }`}
+            >
+              {event.title}
+            </h4>
+          </div>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">
             {timeStr}
           </p>

@@ -23,6 +23,7 @@
         "@tanstack/react-table": "^8.21.3",
         "@types/pg": "^8.20.0",
         "ai": "^6.0.176",
+        "ai-fallback": "^2.0.1",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
@@ -872,6 +873,8 @@
     "agent-base": ["agent-base@7.1.4", "https://registry.better-npm.dev/agent-base/-/agent-base-7.1.4.tgz", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 
     "ai": ["ai@6.0.176", "https://registry.better-npm.dev/ai/-/ai-6.0.176.tgz", { "dependencies": { "@ai-sdk/gateway": "3.0.111", "@ai-sdk/provider": "3.0.10", "@ai-sdk/provider-utils": "4.0.27", "@opentelemetry/api": "1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-dhxDef3VCIxaFr6tKyG0BrkkCelmnporlen8nHajIwCk7S4PvIaSVI/iyJenhFOZ9KBoKjCAoUs6TzZ3yrSjxw=="],
+
+    "ai-fallback": ["ai-fallback@2.0.1", "https://registry.better-npm.dev/ai-fallback/-/ai-fallback-2.0.1.tgz", { "peerDependencies": { "@ai-sdk/provider": ">=3.0.0", "@ai-sdk/provider-utils": ">=4.0.0" } }, "sha512-uF/7dstZFT5Lu5DuHjJI6edCnbg8s8sxqxlsLbfcv9YvWnrYIh8aPAW7j9ij/L334Ad4v1rNjSJiL7gOB/iRfA=="],
 
     "ajv": ["ajv@6.15.0", "https://registry.better-npm.dev/ajv/-/ajv-6.15.0.tgz", { "dependencies": { "fast-deep-equal": "^3.1.1", "fast-json-stable-stringify": "^2.0.0", "json-schema-traverse": "^0.4.1", "uri-js": "^4.2.2" } }, "sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw=="],
 

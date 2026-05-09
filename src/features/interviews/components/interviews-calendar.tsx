@@ -8,6 +8,7 @@ import {
   type CreateInterviewSubmitPayload,
 } from "@/components/calendar/create-event-dialog";
 import type { InterviewEventSheetToolbarHandlers } from "@/components/calendar/event-sheet";
+import { Badge } from "@/components/reui/badge";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -17,7 +18,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -79,6 +79,11 @@ function errFromApi(raw: unknown): string {
   return "เกิดข้อผิดพลาด";
 }
 
+/** POST / PATCH interview — ข้อความ DB conflict จาก `interview-routes` */
+function isInterviewDbOverlapErrorMessage(message: string): boolean {
+  return message.includes("นัดที่ทับ");
+}
+
 function isoForDatetimeLocal(date: Date): string {
   return format(date, "yyyy-MM-dd'T'HH:mm");
 }
@@ -108,7 +113,8 @@ function interviewToCalendarEvent(row: InterviewWithRelations): CalendarEvent {
   return {
     id: row.id,
     interviewId: row.id,
-    title: `${row.status === "RESCHEDULED" ? "(เลื่อน) " : ""}${row.applicant.name}`,
+    interviewStatus: row.status,
+    title: row.applicant.name,
     startTime: format(startD, "HH:mm"),
     endTime: format(endD, "HH:mm"),
     date: format(startD, "yyyy-MM-dd"),
@@ -310,6 +316,11 @@ function InterviewEventSheetBody(props: {
       return () => registerToolbar(null);
     }
 
+    if (row == null || row.status === "CANCELLED") {
+      registerToolbar(null);
+      return () => registerToolbar(null);
+    }
+
     const handlers: InterviewEventSheetToolbarHandlers = {
       onEdit: () => {
         if (detailQuery.isLoading) {
@@ -378,8 +389,7 @@ function InterviewEventSheetBody(props: {
           <AlertDialogHeader>
             <AlertDialogTitle>ยกเลิกนัดนี้?</AlertDialogTitle>
             <AlertDialogDescription>
-              จะลบ event จาก Google Calendar และเปลี่ยน stage ผู้สมัครเป็น
-              Pre-screen Call
+              คุณยืนยันที่จะยกเลิกนัดนี้?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:gap-2">
@@ -401,7 +411,7 @@ function InterviewEventSheetBody(props: {
   );
 }
 
-export function InterviewsCalendarClient() {
+export function InterviewsCalendar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const applicantIdQs = searchParams.get("applicantId");
@@ -527,11 +537,20 @@ export function InterviewsCalendarClient() {
       router.replace("/interviews");
     },
     onError: (raw: unknown) => {
-      toast.error(errFromApi(raw));
+      const msg = errFromApi(raw);
+      if (!isInterviewDbOverlapErrorMessage(msg)) {
+        toast.error(msg);
+      }
     },
   });
 
   const linked = googleStatusQuery.data?.linked === true;
+
+  const createErrMsg = createMut.isError ? errFromApi(createMut.error) : null;
+  const interviewDbOverlapMessage =
+    createErrMsg !== null && isInterviewDbOverlapErrorMessage(createErrMsg)
+      ? createErrMsg
+      : null;
 
   const interviewsBeforePrimary = linked ? (
     <Button variant="secondary">
@@ -632,6 +651,7 @@ export function InterviewsCalendarClient() {
         onOpenChange={(next) => {
           setCreateOpen(next);
           if (!next) {
+            createMut.reset();
             setInterviewSeedAt(null);
             if (applicantIdQs) router.replace("/interviews");
           }
@@ -642,6 +662,8 @@ export function InterviewsCalendarClient() {
         interviewSeedAt={interviewSeedAt}
         onCreateInterview={(p) => createMut.mutate(p)}
         createInterviewPending={createMut.isPending}
+        interviewDbOverlapMessage={interviewDbOverlapMessage}
+        onInterviewCreateFieldsChange={() => createMut.reset()}
       />
     </div>
   );

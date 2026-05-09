@@ -1,5 +1,6 @@
 "use client";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -30,7 +31,7 @@ import { useCalendarStore } from "@/store/calendar-store";
 import type { CalendarEvent } from "@/types/calendar-event";
 import { addMinutes, format } from "date-fns";
 import { th } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { AlertTriangle, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { useState } from "react";
 
 export type CreateInterviewSubmitPayload = {
@@ -59,6 +60,10 @@ interface CreateEventDialogProps {
   interviewSeedAt?: Date | null;
   onCreateInterview?: (payload: CreateInterviewSubmitPayload) => void;
   createInterviewPending?: boolean;
+  /** ข้อความจาก API เมื่อมีนัดทับในระบบ (แสดง Alert ใน dialog) */
+  interviewDbOverlapMessage?: string | null;
+  /** เรียกเมื่อผู้ใช้แก้ช่องวันเวลา/ผู้สมัคร — เคลียร์ error จาก mutation ก่อนส่งใหม่ */
+  onInterviewCreateFieldsChange?: () => void;
 }
 
 function durationMinutesFromSlot(
@@ -117,6 +122,8 @@ type InterviewCreateFormBodyProps = {
   onCreateInterview?: (payload: CreateInterviewSubmitPayload) => void;
   goToDate: (date: Date) => void;
   onRequestClose: () => void;
+  interviewDbOverlapMessage?: string | null;
+  onInterviewCreateFieldsChange?: () => void;
 };
 
 function InterviewCreateFormBody({
@@ -128,6 +135,8 @@ function InterviewCreateFormBody({
   onCreateInterview,
   goToDate,
   onRequestClose,
+  interviewDbOverlapMessage = null,
+  onInterviewCreateFieldsChange,
 }: InterviewCreateFormBodyProps) {
   const seed = seedAt ?? new Date();
   const [date, setDate] = useState(() => new Date(seed));
@@ -180,7 +189,10 @@ function InterviewCreateFormBody({
             className="w-full max-w-none"
             disabled={createInterviewPending}
             value={applicantId}
-            onChange={(e) => setApplicantId(e.target.value)}
+            onChange={(e) => {
+              onInterviewCreateFieldsChange?.();
+              setApplicantId(e.target.value);
+            }}
             required
           >
             <NativeSelectOption value="">— เลือกผู้สมัคร —</NativeSelectOption>
@@ -217,6 +229,7 @@ function InterviewCreateFormBody({
                 selected={date}
                 onSelect={(selectedDate) => {
                   if (selectedDate) {
+                    onInterviewCreateFieldsChange?.();
                     setDate(selectedDate);
                   }
                   setDatePickerOpen(false);
@@ -235,7 +248,10 @@ function InterviewCreateFormBody({
                 id="int-startTime"
                 type="time"
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={(e) => {
+                  onInterviewCreateFieldsChange?.();
+                  setStartTime(e.target.value);
+                }}
                 className="pl-9"
                 required
               />
@@ -250,7 +266,10 @@ function InterviewCreateFormBody({
                 id="int-endTime"
                 type="time"
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={(e) => {
+                  onInterviewCreateFieldsChange?.();
+                  setEndTime(e.target.value);
+                }}
                 className="pl-9"
                 required
               />
@@ -260,6 +279,14 @@ function InterviewCreateFormBody({
 
         {slotError ? (
           <p className="text-sm text-destructive">{slotError}</p>
+        ) : null}
+
+        {interviewDbOverlapMessage ? (
+          <Alert variant="destructive">
+            <AlertTriangle />
+            <AlertTitle>มีนัดทับในระบบ</AlertTitle>
+            <AlertDescription>{interviewDbOverlapMessage}</AlertDescription>
+          </Alert>
         ) : null}
 
         <InterviewerEmailsField
@@ -317,6 +344,8 @@ export function CreateEventDialog({
   interviewSeedAt = null,
   onCreateInterview,
   createInterviewPending = false,
+  interviewDbOverlapMessage = null,
+  onInterviewCreateFieldsChange,
 }: CreateEventDialogProps) {
   const { addEvent, goToDate } = useCalendarStore();
   const [title, setTitle] = useState("");
@@ -406,6 +435,8 @@ export function CreateEventDialog({
               onCreateInterview={onCreateInterview}
               goToDate={goToDate}
               onRequestClose={() => handleDialogOpenChange(false)}
+              interviewDbOverlapMessage={interviewDbOverlapMessage}
+              onInterviewCreateFieldsChange={onInterviewCreateFieldsChange}
             />
           ) : null
         ) : (

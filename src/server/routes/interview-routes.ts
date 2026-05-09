@@ -99,7 +99,6 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         where: {
           organizerUserId: dbUser.id,
           scheduledAt: { gte: from, lte: to },
-          status: { not: "CANCELLED" },
         },
         include: {
           applicant: {

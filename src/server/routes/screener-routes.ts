@@ -10,11 +10,18 @@ import prisma from "@/lib/prisma";
 import { google } from "@ai-sdk/google";
 import { auth } from "@clerk/nextjs/server";
 import { generateText, Output, zodSchema } from "ai";
+import { createFallback } from "ai-fallback";
 import { Elysia, t } from "elysia";
 
-import { screeningGenerateText } from "../screener-ai";
-
-const screeningModel = google("gemini-2.5-flash-lite");
+const model = createFallback({
+  models: [
+    google("gemini-2.0-flash-lite"),
+    google("gemini-2.0-flash"),
+    google("gemini-2.5-flash-lite"),
+    google("gemini-2.5-flash"),
+    google("gemini-2.5-pro-latest"),
+  ],
+});
 
 const screenerAuth = new Elysia({ name: "screener-auth" })
   .derive(async () => {
@@ -141,29 +148,27 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
         if (hasFile) {
           const bytes = await file!.arrayBuffer();
           const buffer = Buffer.from(bytes);
-          const { output } = await screeningGenerateText(() =>
-            generateText({
-              model: screeningModel,
-              system: systemScreener,
-              output: Output.object({
-                schema: zodSchema(screeningEvaluateSchema),
-              }),
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "file",
-                      data: buffer,
-                      mediaType: file.type || "application/pdf",
-                      filename: file.name || "resume.pdf",
-                    },
-                    { type: "text", text: prompt },
-                  ],
-                },
-              ],
+          const { output } = await generateText({
+            model,
+            system: systemScreener,
+            output: Output.object({
+              schema: zodSchema(screeningEvaluateSchema),
             }),
-          );
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "file",
+                    data: buffer,
+                    mediaType: file.type || "application/pdf",
+                    filename: file.name || "resume.pdf",
+                  },
+                  { type: "text", text: prompt },
+                ],
+              },
+            ],
+          });
 
           if (!output) {
             set.status = 502;
@@ -181,21 +186,19 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
           };
         }
 
-        const { output } = await screeningGenerateText(() =>
-          generateText({
-            model: screeningModel,
-            system: systemScreener,
-            output: Output.object({
-              schema: zodSchema(screeningEvaluateSchema),
-            }),
-            messages: [
-              {
-                role: "user",
-                content: `${prompt}\n\nCANDIDATE CV:\n${cvText}`,
-              },
-            ],
+        const { output } = await generateText({
+          model,
+          system: systemScreener,
+          output: Output.object({
+            schema: zodSchema(screeningEvaluateSchema),
           }),
-        );
+          messages: [
+            {
+              role: "user",
+              content: `${prompt}\n\nCANDIDATE CV:\n${cvText}`,
+            },
+          ],
+        });
 
         if (!output) {
           set.status = 502;

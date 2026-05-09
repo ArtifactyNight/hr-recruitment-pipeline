@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarInterviewStatusBadge } from "@/components/calendar/calendar-interview-status-badge";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
@@ -172,6 +173,7 @@ function InterviewEventSheetContent({
   const dateLine = formatInterviewHeaderDate(event.date);
   const tz = event.timezone ?? "Asia/Bangkok";
   const meetingCode = getMeetingCode(event.meetingLink);
+  const cancelled = event.interviewStatus === "CANCELLED";
 
   const attendeeRows = event.participants;
   const attendeeCount = attendeeRows.length;
@@ -251,7 +253,7 @@ function InterviewEventSheetContent({
           ? " · กำลังโหลดจาก Google …"
           : "");
 
-  const canUseToolbar = Boolean(toolbar);
+  const canUseToolbar = Boolean(toolbar) && !cancelled;
 
   function openEdit(): void {
     toolbar?.onEdit();
@@ -264,53 +266,7 @@ function InterviewEventSheetContent({
   return (
     <div className="flex h-full max-h-dvh flex-col">
       <SheetHeader className="border-border border-b px-4 pt-4 pb-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 hover:bg-muted"
-              type="button"
-              disabled={!canUseToolbar}
-              aria-label="แก้ไขนัด"
-              onClick={openEdit}
-            >
-              <Pen className="size-4 text-muted-foreground" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 hover:bg-muted"
-              type="button"
-              disabled={!canUseToolbar}
-              aria-label="รายละเอียด"
-              onClick={openEdit}
-            >
-              <FileText className="size-4 text-muted-foreground" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 hover:bg-muted"
-              type="button"
-              disabled={!canUseToolbar}
-              aria-label="ตัวเลือกเพิ่มเติม"
-              onClick={openEdit}
-            >
-              <Layers className="size-4 text-muted-foreground" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 hover:bg-muted hover:text-destructive"
-              type="button"
-              disabled={!canUseToolbar}
-              aria-label="ยกเลิกนัด"
-              onClick={openDelete}
-            >
-              <Trash2 className="size-4 text-muted-foreground" />
-            </Button>
-          </div>
+        <div className="mb-3 flex items-center justify-end">
           <SheetClose asChild>
             <Button
               variant="ghost"
@@ -324,8 +280,12 @@ function InterviewEventSheetContent({
         </div>
 
         <div className="mb-4 flex flex-col gap-1">
-          <SheetTitle className="text-xl leading-normal font-semibold text-foreground">
-            {event.title}
+          <SheetTitle className="flex flex-wrap items-center gap-2 text-xl leading-normal font-semibold text-foreground">
+            <CalendarInterviewStatusBadge
+              status={event.interviewStatus}
+              size="sm"
+            />
+            <span className="min-w-0">{event.title}</span>
           </SheetTitle>
           <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-muted-foreground">
             <span>{dateLine}</span>
@@ -338,15 +298,26 @@ function InterviewEventSheetContent({
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          type="button"
-          disabled={!canUseToolbar}
-          onClick={openEdit}
-        >
-          <span>นัดหมายเวลาใหม่</span>
-          <ArrowUpRight className="size-4" />
-        </Button>
+        <div className="space-y-2 flex flex-col">
+          <Button
+            variant="outline"
+            type="button"
+            disabled={!canUseToolbar}
+            onClick={openEdit}
+          >
+            <span>นัดหมายเวลาใหม่</span>
+            <ArrowUpRight className="size-4" />
+          </Button>
+          <Button
+            variant="destructive"
+            type="button"
+            disabled={!canUseToolbar}
+            onClick={openDelete}
+          >
+            <Trash2 className="size-4" />
+            <span>ยกเลิกนัดหมาย</span>
+          </Button>
+        </div>
       </SheetHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -622,8 +593,12 @@ export function EventSheet({
             </div>
 
             <div className="flex flex-col gap-1 mb-4">
-              <SheetTitle className="text-xl font-semibold text-foreground leading-normal">
-                {event.title}
+              <SheetTitle className="flex flex-wrap items-center gap-2 text-xl leading-normal font-semibold text-foreground">
+                <CalendarInterviewStatusBadge
+                  status={event.interviewStatus}
+                  size="sm"
+                />
+                <span className="min-w-0">{event.title}</span>
               </SheetTitle>
               <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground">
                 <span>{dateStr}</span>
