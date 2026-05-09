@@ -1,3 +1,5 @@
+import { InterviewsCalendar } from "@/features/interviews/components/interviews-calendar";
+
 export default function InterviewsPage() {
   return (
     <div className="px-4 py-6 md:px-6">
@@ -5,6 +7,7 @@ export default function InterviewsPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         จัดการนัดสัมภาษณ์และซิงก์ปฏิทิน
       </p>
+      <InterviewsCalendar />
     </div>
   );
 }

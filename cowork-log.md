@@ -1,3 +1,13 @@
+### [2026-05-09] - FullScreen calendar date-fns Thai locale
+**Prompt:** add locale th to date-fns
+**Output:** `fullscreen-calendar.tsx` imports `th` from `date-fns/locale`; localized `format`/`parse` for month navigation and headers; `startOfWeek`/`endOfWeek` with `{ locale: th }`; weekday row derived from first week via `EEE` + `th` instead of hardcoded English.
+**Edited:** `src/components/ui/fullscreen-calendar.tsx`, `cowork-log.md`
+
+### [2026-05-09] - FullScreen calendar integration
+**Prompt:** Implement plan: add fullscreen month calendar under `src/components/ui`, `useMediaQuery` hook, wire `/interviews` via feature client component; do not replace Button/Separator; 2026 demo data.
+**Output:** `src/components/ui/fullscreen-calendar.tsx` (`FullScreenCalendar`, exported `CalendarData`/`Event`). `src/hooks/use-media-query.ts` with `useSyncExternalStore` + `matchMedia` (server snapshot `false`) so static prerender works — `@uidotdev/usehooks` `useMediaQuery` throws on SSR so it was not kept. `src/features/interviews/components/interviews-calendar.tsx` wraps demo events (Jan + May 2026 including May 9). `interviews/page.tsx` stays RSC and imports the client wrapper. No new Radix/shadow deps.
+**Edited:** `fullscreen-calendar.tsx`, `use-media-query.ts`, `interviews-calendar.tsx`, `interviews/page.tsx`, `package.json`/`bun.lock` (no extra deps), `cowork-log.md`
+
 ### [2026-05-09] - Remove calendar UI, keep interview API + empty page
 **Prompt:** Remove calendar UI, keep interview API + empty page (plan).
 **Output:** `/interviews` เป็น Server Component เปล่า (หัวข้อ + subtitle). ลบ `InterviewsCalendar`, `interviewer-emails-field`, `interviewer-email-utils`, ทั้ง `src/components/calendar/`, `calendar-store.ts`, `types/calendar-event.ts`, และโฟลเดอร์ลอย `src/calendar/`. `interview-routes`, `google-calendar-service`, `interview-calendar-snapshot` ไม่แตะ.
