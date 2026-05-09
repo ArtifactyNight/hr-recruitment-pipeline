@@ -128,7 +128,9 @@ export function ApplicantKanbanBoardView({
       patchTimerRef.current = setTimeout(() => {
         void (async () => {
           try {
-            await Promise.all(patches.map((p) => patchStage({ id: p.id, stage: p.stage })));
+            await Promise.all(
+              patches.map((p) => patchStage({ id: p.id, stage: p.stage })),
+            );
             setOverride(null);
             onPatchesComplete();
           } catch {
@@ -160,14 +162,14 @@ export function ApplicantKanbanBoardView({
           );
         })}
       </KanbanBoard>
-      <KanbanOverlay className="max-w-none rounded-md border-2 border-dashed bg-muted/10">
+      <KanbanOverlay>
         {({ value, variant }) => {
           const id = String(value);
           if (variant === "column") {
             const sid = id as ApplicantStage;
             const colItems = columns[sid] ?? [];
             return (
-              <div className="w-[min(100vw-2rem,280px)] shrink-0">
+              <div className="shrink-0">
                 <ApplicantKanbanStageColumn
                   stageId={sid}
                   items={colItems}
@@ -182,12 +184,13 @@ export function ApplicantKanbanBoardView({
             return <div className="min-h-24 min-w-[240px]" />;
           }
           return (
-            <div className="w-[min(100vw-2rem,280px)] shrink-0">
+            <div className="shrink-0 w-full">
               <TrackerCard
                 row={row}
                 onOpen={() => onOpenCard(row)}
                 isOverlay
                 asHandle={false}
+                className="shadow-xl! translate-y-[-4px]! transition-all!"
               />
             </div>
           );

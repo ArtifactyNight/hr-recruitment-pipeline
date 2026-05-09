@@ -3,10 +3,17 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
-import { Noto_Sans_Thai } from "next/font/google";
+import { Noto_Sans_Thai, Noto_Serif_Thai } from "next/font/google";
 import "./globals.css";
 
+const mono = Noto_Serif_Thai({
+  variable: "--font-mono",
+  subsets: ["latin", "thai"],
+  weight: ["400", "500", "600", "700"],
+});
+
 const font = Noto_Sans_Thai({
+  variable: "--font-sans",
   subsets: ["latin", "thai"],
   weight: ["400", "500", "600", "700"],
 });
@@ -22,7 +29,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${font.className} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${font.className} ${mono.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col">
         <ClerkProvider afterSignOutUrl="/sign-in">
           <QueryProvider>

@@ -3,7 +3,6 @@
 import { KanbanItem, KanbanItemHandle } from "@/components/reui/kanban";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   initialsFromName,
@@ -16,13 +15,14 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { ChevronRightIcon, ClockIcon, Star, TagIcon } from "lucide-react";
+import { ClockIcon, TagIcon } from "lucide-react";
 
 type TrackerCardProps = {
   row: TrackerApplicant;
   onOpen: () => void;
   asHandle?: boolean;
   isOverlay?: boolean;
+  className?: string;
 };
 
 export function TrackerCard({
@@ -30,6 +30,7 @@ export function TrackerCard({
   onOpen,
   asHandle = true,
   isOverlay = false,
+  className,
 }: TrackerCardProps) {
   const applied = format(new Date(row.appliedAt), "EEE, d MMM", {
     locale: th,
@@ -39,7 +40,13 @@ export function TrackerCard({
   const positionLine = row.positionTitle?.trim() || "ไม่มีตำแหน่ง";
 
   const cardContent = (
-    <Card size="sm" className="bg-card">
+    <Card
+      className={cn(
+        "cursor-pointer hover:shadow-[0px_0_10px_rgba(0,0,0,0.1)] transition-all hover:translate-y-[-4px] w-full",
+        className,
+      )}
+      onClick={onOpen}
+    >
       <CardContent className="space-y-3">
         <div className="flex gap-3">
           <Avatar size="lg" className="after:border-0">
@@ -61,29 +68,12 @@ export function TrackerCard({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "pointer-events-none h-6 shrink-0 rounded-md border-0 px-2 py-0 text-xs font-medium tabular-nums",
+                    "pointer-events-none h-6 shrink-0 rounded-md border-0 px-2 py-0 text-xs tabular-nums font-mono font-bold",
                     scoreBadgeClass(score),
                   )}
                 >
-                  <Star />
                   {score != null ? score.toFixed(1) : "—"}
                 </Badge>
-                {!isOverlay ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0"
-                    aria-label={`เปิดรายละเอียด: ${row.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpen();
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                  >
-                    <ChevronRightIcon />
-                  </Button>
-                ) : null}
               </div>
             </div>
           </div>
