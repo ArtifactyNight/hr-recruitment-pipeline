@@ -82,34 +82,36 @@ function ChartContainer({
 }
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
-  const colorConfig = React.useMemo(
-    () => Object.entries(config).filter(([, c]) => c.theme ?? c.color),
-    [config]
+  const colorConfig = Object.entries(config).filter(
+    ([, config]) => config.theme ?? config.color
   )
 
-  const styleRef = React.useRef<HTMLStyleElement>(null)
+  if (!colorConfig.length) {
+    return null
+  }
 
-  React.useEffect(() => {
-    const el = styleRef.current
-    if (!el || !colorConfig.length) return
-    el.textContent = Object.entries(THEMES)
-      .map(
-        ([theme, prefix]) =>
-          `\n${prefix} [data-chart=${id}] {\n${colorConfig
-            .map(([key, itemConfig]) => {
-              const color =
-                itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ??
-                itemConfig.color
-              return color ? `  --color-${key}: ${color};` : null
-            })
-            .join("\n")}\n}\n`
-      )
-      .join("\n")
-  }, [id, colorConfig])
-
-  if (!colorConfig.length) return null
-
-  return <style ref={styleRef} />
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html: Object.entries(THEMES)
+          .map(
+            ([theme, prefix]) => `
+${prefix} [data-chart=${id}] {
+${colorConfig
+  .map(([key, itemConfig]) => {
+    const color =
+      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ??
+      itemConfig.color
+    return color ? `  --color-${key}: ${color};` : null
+  })
+  .join("\n")}
+}
+`
+          )
+          .join("\n"),
+      }}
+    />
+  )
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip
