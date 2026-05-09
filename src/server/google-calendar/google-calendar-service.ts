@@ -1,6 +1,7 @@
 import { calendar, type calendar_v3 } from "@googleapis/calendar";
 import { OAuth2Client } from "google-auth-library";
 
+import type { GoogleCalendarListEvent } from "@/types/google-calendar-list-event";
 import type { InterviewCalendarUiSnapshot } from "@/types/interview-calendar-snapshot";
 
 function stripHtmlToText(html?: string | null): string | null {
@@ -202,6 +203,22 @@ export async function deleteCalendarEvent(opts: {
   });
 }
 
+/** Keeps event on calendar with status cancelled (guests get updates). */
+export async function cancelPrimaryCalendarEvent(opts: {
+  accessToken: string;
+  eventId: string;
+}) {
+  const cal = calendarAuthorizedClient(opts.accessToken);
+  await cal.events.patch({
+    calendarId: "primary",
+    eventId: opts.eventId,
+    sendUpdates: CALENDAR_SEND_UPDATES,
+    requestBody: {
+      status: "cancelled",
+    },
+  });
+}
+
 export async function fetchPrimaryCalendarEvent(opts: {
   accessToken: string;
   eventId: string;
@@ -244,4 +261,123 @@ export async function hasPrimaryCalendarBusyOverlap(opts: {
     }
   }
   return false;
+}
+
+function eventWindowIso(
+  ev: calendar_v3.Schema$Event,
+): { startIso: string; endIso: string } | null {
+  const s = ev.start;
+  const e = ev.end;
+  if (!s) return null;
+  if (s.dateTime) {
+    const end = e?.dateTime ?? s.dateTime;
+    return { startIso: s.dateTime, endIso: end };
+  }
+  if (s.date) {
+    const endDate = e?.date ?? s.date;
+    return {
+      startIso: `${s.date}T00:00:00.000Z`,
+      endIso: `${endDate}T00:00:00.000Z`,
+    };
+  }
+  return null;
+}
+
+function sidebarFieldsFromListEvent(ev: calendar_v3.Schema$Event): {
+  remindersLabel: string;
+  organizerEmail: string | null;
+  attendeeTotal: number;
+  attendeeAccepted: number;
+  notesPlain: string | null;
+} {
+  const rawAttendees = ev.attendees ?? [];
+  const attendees = rawAttendees.filter(
+    (a: calendar_v3.Schema$EventAttendee) => !Boolean(a.resource),
+  );
+  let attendeeAccepted = 0;
+  for (const a of attendees) {
+    if (a.responseStatus === "accepted") {
+      attendeeAccepted += 1;
+    }
+  }
+  const organizerEmailRaw = ev.organizer?.email ?? ev.creator?.email ?? null;
+  const organizerEmail =
+    organizerEmailRaw && organizerEmailRaw.includes("@")
+      ? organizerEmailRaw
+      : null;
+
+  return {
+    remindersLabel: formatReminderSummary(ev),
+    organizerEmail,
+    attendeeTotal: attendees.length,
+    attendeeAccepted,
+    notesPlain: stripHtmlToText(ev.description ?? undefined),
+  };
+}
+
+/** True when the event was created with (or linked to) Google Meet. */
+function eventHasGoogleMeet(ev: calendar_v3.Schema$Event): boolean {
+  const link = ev.hangoutLink?.trim().toLowerCase() ?? "";
+  if (link.includes("meet.google.com")) {
+    return true;
+  }
+  const solutionType = ev.conferenceData?.conferenceSolution?.key?.type;
+  if (solutionType === "hangoutsMeet") {
+    return true;
+  }
+  const entryPoints = ev.conferenceData?.entryPoints ?? [];
+  for (const ep of entryPoints) {
+    const uri = ep.uri?.toLowerCase() ?? "";
+    if (uri.includes("meet.google.com")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Primary calendar **Google Meet** events in range (includes cancelled with `status: "cancelled"`). */
+export async function listPrimaryCalendarEvents(opts: {
+  accessToken: string;
+  timeMin: Date;
+  timeMax: Date;
+}): Promise<Array<GoogleCalendarListEvent>> {
+  const cal = calendarAuthorizedClient(opts.accessToken);
+  const res = await cal.events.list({
+    calendarId: "primary",
+    timeMin: opts.timeMin.toISOString(),
+    timeMax: opts.timeMax.toISOString(),
+    singleEvents: true,
+    orderBy: "startTime",
+    maxResults: 2500,
+  });
+  const items = res.data.items ?? [];
+  const out: Array<GoogleCalendarListEvent> = [];
+  for (const ev of items) {
+    if (!ev.id) continue;
+    const win = eventWindowIso(ev);
+    if (!win) continue;
+    const raw = ev.status ?? "confirmed";
+    if (raw !== "confirmed" && raw !== "tentative" && raw !== "cancelled") {
+      continue;
+    }
+    if (!eventHasGoogleMeet(ev)) {
+      continue;
+    }
+    const sidebar = sidebarFieldsFromListEvent(ev);
+    out.push({
+      googleEventId: ev.id,
+      title: ev.summary?.trim() ? ev.summary.trim() : "(ไม่มีหัวข้อ)",
+      startIso: win.startIso,
+      endIso: win.endIso,
+      status: raw,
+      htmlLink: ev.htmlLink ?? null,
+      hangoutLink: ev.hangoutLink ?? null,
+      remindersLabel: sidebar.remindersLabel,
+      organizerEmail: sidebar.organizerEmail,
+      attendeeTotal: sidebar.attendeeTotal,
+      attendeeAccepted: sidebar.attendeeAccepted,
+      notesPlain: sidebar.notesPlain,
+    });
+  }
+  return out;
 }

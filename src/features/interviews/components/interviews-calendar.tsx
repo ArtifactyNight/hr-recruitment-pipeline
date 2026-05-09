@@ -4,150 +4,126 @@ import {
   type CalendarData,
   FullScreenCalendar,
 } from "@/components/ui/fullscreen-calendar";
+import { groupGoogleCalendarEventsToCalendarData } from "@/features/interviews/lib/google-calendar-feed";
+import { api } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { endOfMonth, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
+import { th } from "date-fns/locale";
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
-const dummyEvents: Array<CalendarData> = [
-  {
-    day: new Date("2026-01-02"),
-    events: [
-      {
-        id: 1,
-        name: "Q1 Planning Session",
-        time: "10:00 AM",
-        datetime: "2026-01-02T10:00",
-      },
-      {
-        id: 2,
-        name: "Team Sync",
-        time: "2:00 PM",
-        datetime: "2026-01-02T14:00",
-      },
-    ],
-  },
-  {
-    day: new Date("2026-01-07"),
-    events: [
-      {
-        id: 3,
-        name: "Product Launch Review",
-        time: "2:00 PM",
-        datetime: "2026-01-07T14:00",
-      },
-      {
-        id: 4,
-        name: "Marketing Sync",
-        time: "11:00 AM",
-        datetime: "2026-01-07T11:00",
-      },
-      {
-        id: 5,
-        name: "Vendor Meeting",
-        time: "4:30 PM",
-        datetime: "2026-01-07T16:30",
-      },
-    ],
-  },
-  {
-    day: new Date("2026-01-10"),
-    events: [
-      {
-        id: 6,
-        name: "Team Building Workshop",
-        time: "11:00 AM",
-        datetime: "2026-01-10T11:00",
-      },
-    ],
-  },
-  {
-    day: new Date("2026-01-13"),
-    events: [
-      {
-        id: 7,
-        name: "Budget Analysis Meeting",
-        time: "3:30 PM",
-        datetime: "2026-01-13T15:30",
-      },
-      {
-        id: 8,
-        name: "Sprint Planning",
-        time: "9:00 AM",
-        datetime: "2026-01-13T09:00",
-      },
-      {
-        id: 9,
-        name: "Design Review",
-        time: "1:00 PM",
-        datetime: "2026-01-13T13:00",
-      },
-    ],
-  },
-  {
-    day: new Date("2026-01-16"),
-    events: [
-      {
-        id: 10,
-        name: "Client Presentation",
-        time: "10:00 AM",
-        datetime: "2026-01-16T10:00",
-      },
-      {
-        id: 11,
-        name: "Team Lunch",
-        time: "12:30 PM",
-        datetime: "2026-01-16T12:30",
-      },
-      {
-        id: 12,
-        name: "Project Status Update",
-        time: "2:00 PM",
-        datetime: "2026-01-16T14:00",
-      },
-    ],
-  },
-  {
-    day: new Date("2026-05-08"),
-    events: [
-      {
-        id: 13,
-        name: "Screening call — backend",
-        time: "10:00 AM",
-        datetime: "2026-05-08T10:00",
-      },
-    ],
-  },
-  {
-    day: new Date("2026-05-09"),
-    events: [
-      {
-        id: 14,
-        name: "On-site panel interview",
-        time: "2:00 PM",
-        datetime: "2026-05-09T14:00",
-      },
-      {
-        id: 15,
-        name: "HM debrief",
-        time: "4:00 PM",
-        datetime: "2026-05-09T16:00",
-      },
-    ],
-  },
-  {
-    day: new Date("2026-05-12"),
-    events: [
-      {
-        id: 16,
-        name: "Technical interview",
-        time: "11:00 AM",
-        datetime: "2026-05-12T11:00",
-      },
-    ],
-  },
-];
+function calendarCancelErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (
+    err &&
+    typeof err === "object" &&
+    "error" in err &&
+    typeof (err as { error: unknown }).error === "string"
+  ) {
+    return (err as { error: string }).error;
+  }
+  return "ยกเลิกไม่สำเร็จ";
+}
+
+function fetchRangeForDateInMonth(anchor: Date): { from: Date; to: Date } {
+  const firstDay = startOfMonth(anchor);
+  return {
+    from: startOfWeek(firstDay, { locale: th }),
+    to: endOfWeek(endOfMonth(firstDay), { locale: th }),
+  };
+}
 
 export function InterviewsCalendar() {
+  const queryClient = useQueryClient();
+  const [fetchRange, setFetchRange] = useState(() =>
+    fetchRangeForDateInMonth(new Date()),
+  );
+
+  const cancelCalendarMut = useMutation({
+    mutationFn: async (googleEventId: string) => {
+      const { data, error } = await api.api.interviews[
+        "calendar-events"
+      ].cancel.post({ googleEventId }, { fetch: { credentials: "include" } });
+      if (error) throw error.value;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("ยกเลิกนัดในปฏิทินแล้ว");
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews-calendar-events"],
+      });
+    },
+    onError: (err: unknown) => {
+      toast.error(calendarCancelErrorMessage(err));
+    },
+  });
+
+  const onVisibleRangeChange = useCallback(
+    (range: { from: Date; to: Date }) => {
+      setFetchRange(range);
+    },
+    [],
+  );
+
+  const calendarQuery = useQuery({
+    queryKey: [
+      "interviews-calendar-events",
+      fetchRange.from.toISOString(),
+      fetchRange.to.toISOString(),
+    ],
+    queryFn: async () => {
+      const { data, error } = await api.api.interviews["calendar-events"].get({
+        query: {
+          from: fetchRange.from.toISOString(),
+          to: fetchRange.to.toISOString(),
+        },
+        fetch: { credentials: "include" },
+      });
+      if (error) {
+        const raw = error.value;
+        if (
+          raw &&
+          typeof raw === "object" &&
+          "error" in raw &&
+          typeof (raw as { error: unknown }).error === "string"
+        ) {
+          throw new Error((raw as { error: string }).error);
+        }
+        throw new Error("โหลดปฏิทินไม่สำเร็จ");
+      }
+      if (!data) throw new Error("ไม่มีข้อมูล");
+      return data;
+    },
+  });
+
+  const calendarData: Array<CalendarData> = useMemo(() => {
+    const events = calendarQuery.data?.events;
+    if (!events?.length) return [];
+    return groupGoogleCalendarEventsToCalendarData(events);
+  }, [calendarQuery.data?.events]);
+
+  const apiError = calendarQuery.isError
+    ? calendarQuery.error instanceof Error
+      ? calendarQuery.error.message
+      : "โหลดปฏิทินไม่สำเร็จ"
+    : null;
+
   return (
-    <div className="mt-6 overflow-hidden rounded-lg border bg-card text-card-foreground">
-      <FullScreenCalendar data={dummyEvents} />
+    <div className="mt-6 space-y-3">
+      {apiError ? (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          {apiError}
+        </p>
+      ) : null}
+      <FullScreenCalendar
+        data={calendarData}
+        calendarLoading={calendarQuery.isFetching}
+        onVisibleRangeChange={onVisibleRangeChange}
+        onCancelCalendarEvent={async (googleEventId): Promise<void> => {
+          await cancelCalendarMut.mutateAsync(googleEventId);
+        }}
+        cancelCalendarPending={cancelCalendarMut.isPending}
+      />
     </div>
   );
 }

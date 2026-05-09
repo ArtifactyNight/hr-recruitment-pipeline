@@ -1,3 +1,43 @@
+### [2026-05-09] - Calendar sidebar: reminder, organizer, guests, notes
+**Prompt:** add more information — reminder, organizer, x person x yes, notes
+**Output:** `GoogleCalendarListEvent` + `Event` gain `remindersLabel`, `organizerEmail`, `attendeeTotal`/`attendeeAccepted`, `notesPlain` (HTML stripped); `sidebarFieldsFromListEvent` in list mapper reuses reminder formatter; sidebar rows with Bell/User/Users/FileText icons + Thai labels (`การแจ้งเตือน`, `ผู้จัด`, `ผู้เข้าร่วม · N คน · ตอบรับ M`, `หมายเหตุ`).
+**Edited:** `google-calendar-list-event.ts`, `google-calendar-service.ts`, `google-calendar-feed.ts`, `fullscreen-calendar.tsx`, `cowork-log.md`
+
+### [2026-05-09] - Calendar sidebar: cancel row always visible
+**Prompt:** add cancel button
+**Output:** ยกเลิกนัด moved to its own full-width row (border-t) below Meet actions when `onCancelCalendarEvent` is set; disabled after event start with `title` hint instead of hiding.
+**Edited:** `fullscreen-calendar.tsx`, `cowork-log.md`
+
+### [2026-05-09] - Calendar sidebar: Meet links, cancel, strikethrough
+**Prompt:** add join meeting link, copy meet link in card; cancel schedule with strikethrough when cancelled
+**Output:** `Event.meetLink` from `hangoutLink`; sidebar rows: เข้าประชุม / คัดลอกลิงก์ (sonner), ยกเลิกนัด + AlertDialog; cancelled cards use muted border/bg + existing line-through. `cancelPrimaryCalendarEvent` patches Google `status: cancelled`; `POST /interviews/calendar-events/cancel` syncs matching `Interview` + applicant stage like DELETE; `InterviewsCalendar` `useMutation` + invalidate `interviews-calendar-events`.
+**Edited:** `fullscreen-calendar.tsx`, `google-calendar-feed.ts`, `google-calendar-service.ts`, `interview-routes.ts`, `interviews-calendar.tsx`, `cowork-log.md`
+
+### [2026-05-09] - Calendar API: Meet-only filter
+**Prompt:** only google meet scheduler event only
+**Output:** `listPrimaryCalendarEvents` skips items unless `eventHasGoogleMeet`: `hangoutLink` with `meet.google.com`, or `conferenceSolution` `hangoutsMeet`, or a video entry point URI to Meet.
+**Edited:** `google-calendar-service.ts`, `google-calendar-list-event.ts` comment, `cowork-log.md`
+
+### [2026-05-09] - Calendar feed: parseISO crash (Eden Date decode)
+**Prompt:** fix bug with nextjs mcp
+**Output:** Next devtools log showed `parseISO(row.startIso)` → `dateString.split is not a function` because API values arrived as `Date` on the client. Added `instantFromApi` for `string | Date`; widened `GoogleCalendarListEvent.startIso/endIso`; normalize `datetime` with `toISOString()` for sort keys.
+**Edited:** `google-calendar-feed.ts`, `google-calendar-list-event.ts`, `cowork-log.md`
+
+### [2026-05-09] - Interviews: Google Calendar API + cancelled styling
+**Prompt:** implement api and display real calendar meet data; incoming vs cancelled (strikethrough)
+**Output:** `GET /api/interviews/calendar-events?from=&to=` lists primary calendar via `listPrimaryCalendarEvents` (confirmed/tentative/cancelled). DTO `GoogleCalendarListEvent` in `types/google-calendar-list-event.ts`. Client `InterviewsCalendar` uses TanStack Query + `groupGoogleCalendarEventsToCalendarData`; `FullScreenCalendar` `Event.status`, string `id`, `onVisibleRangeChange` + `useMemo` month anchor, `calendarLoading` opacity; strikethrough / muted for cancelled in sidebar + desktop cells; dot indicators muted for cancelled.
+**Edited:** `google-calendar-service.ts`, `interview-routes.ts`, `google-calendar-feed.ts`, `google-calendar-list-event.ts`, `fullscreen-calendar.tsx`, `interviews-calendar.tsx`, `cowork-log.md`
+
+### [2026-05-09] - FullScreen calendar: events in separate Card
+**Prompt:** separated to new card (outside calendar card)
+**Output:** Root layout `flex-col gap-4 lg:flex-row`: first shadcn `Card` wraps toolbar + grid only; second `Card` wraps `SelectedDayEventsPanel` (panel is `CardHeader`/`CardContent` only, no nested outer Card). `interviews-calendar` drops single bordered wrapper so Chrome is per-Card.
+**Edited:** `fullscreen-calendar.tsx`, `interviews-calendar.tsx`, `cowork-log.md`
+
+### [2026-05-09] - FullScreen calendar: selected-day event sidebar
+**Prompt:** when click calendar show event list on right (Card pattern example)
+**Output:** `getEventsForCalendarDay` merges/sorts by `datetime`. `SelectedDayEventsPanel` uses shadcn `Card` + Thai `format` title (`EEEE d MMMM yyyy`), rows with title + `ClockIcon` + time; empty state + optional `onScheduleForDate`. Layout: `lg:flex-row` with calendar `min-w-0 flex-1` and `aside` `lg:w-80 border-l`; stacked on small screens. Fixed JSX: close left column before `aside` so sidebar is sibling under row.
+**Edited:** `src/components/ui/fullscreen-calendar.tsx`, `cowork-log.md`
+
 ### [2026-05-09] - FullScreen calendar: disable past days
 **Prompt:** disabled previous day from today
 **Output:** `isPastCalendarDay` via `isBefore(day, startOfToday())`. Mobile `<button disabled>`; desktop month cell is `role="button"` with guarded click/keyboard, `aria-disabled`, `tabIndex=-1` when past, muted styles + no hover. Inner day control is a `span` so past cells don’t nest a disabled button.

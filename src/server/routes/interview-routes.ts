@@ -10,10 +10,12 @@ import { addHours, subHours } from "date-fns";
 import { Elysia, t } from "elysia";
 
 import {
+  cancelPrimaryCalendarEvent,
   deleteCalendarEvent,
   fetchPrimaryCalendarEvent,
   hasPrimaryCalendarBusyOverlap,
   insertEventWithMeet,
+  listPrimaryCalendarEvents,
   patchEventDetails,
   snapshotFromGoogleCalendarEvent,
 } from "@/server/google-calendar/google-calendar-service";
@@ -124,6 +126,141 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
     }
     return { suggestions: Array.from(seen.values()) };
   })
+  .get(
+    "/calendar-events",
+    async ({ query, set }) => {
+      const { userId } = await auth();
+      if (!userId) {
+        set.status = 401;
+        return { error: "ต้องเข้าสู่ระบบ", events: [] };
+      }
+      let gToken: string;
+      try {
+        ({ token: gToken } = await getGoogleTokenForUserId(userId));
+      } catch (e) {
+        if (
+          typeof e === "object" &&
+          e !== null &&
+          "message" in e &&
+          (e as { message: unknown }).message === NO_GOOGLE_OAUTH_TOKEN
+        ) {
+          set.status = 403;
+          return {
+            error: "ต้องเชื่อมต่อ Google Calendar",
+            events: [],
+          };
+        }
+        set.status = 502;
+        return {
+          error: googleCalendarErrorText(e),
+          events: [],
+        };
+      }
+      const timeMin = new Date(query.from);
+      const timeMax = new Date(query.to);
+      if (Number.isNaN(timeMin.getTime()) || Number.isNaN(timeMax.getTime())) {
+        set.status = 400;
+        return { error: "from / to ไม่ถูกต้อง", events: [] };
+      }
+      try {
+        const events = await listPrimaryCalendarEvents({
+          accessToken: gToken,
+          timeMin,
+          timeMax,
+        });
+        return { events };
+      } catch (e) {
+        set.status = 502;
+        return {
+          error: googleCalendarErrorText(e),
+          events: [],
+        };
+      }
+    },
+    {
+      query: t.Object({
+        from: t.String(),
+        to: t.String(),
+      }),
+    },
+  )
+  .post(
+    "/calendar-events/cancel",
+    async ({ body, set }) => {
+      const { userId } = await auth();
+      if (!userId) {
+        set.status = 401;
+        return { error: "ต้องเข้าสู่ระบบ" };
+      }
+      const dbUser = await ensureUserFromClerkId(userId);
+      let gToken: string;
+      try {
+        ({ token: gToken } = await getGoogleTokenForUserId(userId));
+      } catch (e) {
+        if (
+          typeof e === "object" &&
+          e !== null &&
+          "message" in e &&
+          (e as { message: unknown }).message === NO_GOOGLE_OAUTH_TOKEN
+        ) {
+          set.status = 403;
+          return {
+            error:
+              "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google และให้ Clerk ขอ scope ปฏิทินที่ตั้งค่าไว้",
+          };
+        }
+        set.status = 502;
+        return { error: googleCalendarErrorText(e) };
+      }
+
+      const googleEventId = body.googleEventId.trim();
+      if (!googleEventId) {
+        set.status = 400;
+        return { error: "ไม่มีรหัสอีเวนต์" };
+      }
+
+      try {
+        await cancelPrimaryCalendarEvent({
+          accessToken: gToken,
+          eventId: googleEventId,
+        });
+      } catch (e) {
+        set.status = 502;
+        return { error: googleCalendarErrorText(e) };
+      }
+
+      const existing = await prisma.interview.findFirst({
+        where: {
+          googleEventId,
+          organizerUserId: dbUser.id,
+        },
+        select: {
+          id: true,
+          applicantId: true,
+          status: true,
+        },
+      });
+      if (existing && existing.status !== "CANCELLED") {
+        await prisma.$transaction([
+          prisma.interview.update({
+            where: { id: existing.id },
+            data: { status: "CANCELLED" },
+          }),
+          prisma.applicant.update({
+            where: { id: existing.applicantId },
+            data: { stage: "PRE_SCREEN_CALL" },
+          }),
+        ]);
+      }
+
+      return { ok: true as const };
+    },
+    {
+      body: t.Object({
+        googleEventId: t.String(),
+      }),
+    },
+  )
   .get(
     "/:id",
     async ({ params, set }) => {
