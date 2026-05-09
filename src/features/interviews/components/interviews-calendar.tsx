@@ -8,7 +8,6 @@ import {
   type CreateInterviewSubmitPayload,
 } from "@/components/calendar/create-event-dialog";
 import type { InterviewEventSheetToolbarHandlers } from "@/components/calendar/event-sheet";
-import { Badge } from "@/components/reui/badge";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -43,7 +42,7 @@ import {
   parseISO,
   startOfDay,
 } from "date-fns";
-import { CalendarPlusIcon, LinkIcon } from "lucide-react";
+import { CalendarPlusIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -154,11 +153,10 @@ function interviewRowToFormSeed(row: InterviewWithRelations): {
 function InterviewEventSheetForm(props: {
   readonly row: InterviewWithRelations;
   readonly interviewId: string;
-  readonly linked: boolean;
   readonly onInvalidate: () => void;
   readonly onDismiss: () => void;
 }) {
-  const { row, interviewId, linked, onInvalidate, onDismiss } = props;
+  const { row, interviewId, onInvalidate, onDismiss } = props;
   const queryClient = useQueryClient();
   const seed = interviewRowToFormSeed(row);
   const [startLocal, setStartLocal] = useState(seed.startLocal);
@@ -200,15 +198,10 @@ function InterviewEventSheetForm(props: {
     },
   });
 
-  const fieldsDisabled = patchMut.isPending || !linked;
+  const fieldsDisabled = patchMut.isPending;
 
   return (
     <>
-      {!linked ? (
-        <p className="text-amber-700 text-xs dark:text-amber-400">
-          เชื่อม Google Calendar เพื่อบันทึกการเปลี่ยนแปลง
-        </p>
-      ) : null}
       <div className="grid gap-3 pt-1">
         <Field>
           <Label htmlFor="evt-start">เลื่อนวันเวลา</Label>
@@ -248,7 +241,7 @@ function InterviewEventSheetForm(props: {
         </Button>
         <Button
           type="button"
-          disabled={patchMut.isPending || !linked || !startLocal}
+          disabled={patchMut.isPending || !startLocal}
           onClick={() => patchMut.mutate()}
         >
           {patchMut.isPending ? "บันทึก…" : "บันทึกการแก้ไข"}
@@ -261,13 +254,12 @@ function InterviewEventSheetForm(props: {
 function InterviewEventSheetBody(props: {
   readonly event: CalendarEvent;
   readonly closeSheet: () => void;
-  readonly linked: boolean;
   readonly onInvalidate: () => void;
   readonly registerToolbar?: (
     handlers: InterviewEventSheetToolbarHandlers | null,
   ) => void;
 }) {
-  const { event, closeSheet, linked, onInvalidate, registerToolbar } = props;
+  const { event, closeSheet, onInvalidate, registerToolbar } = props;
   const interviewId = event.interviewId;
 
   const detailQuery = useQuery({
@@ -334,10 +326,6 @@ function InterviewEventSheetBody(props: {
         setEditOpen(true);
       },
       onDelete: () => {
-        if (!linked) {
-          toast.error("เชื่อม Google Calendar ก่อนจึงจะยกเลิกนัดได้");
-          return;
-        }
         setDeleteOpen(true);
       },
     };
@@ -347,7 +335,6 @@ function InterviewEventSheetBody(props: {
   }, [
     registerToolbar,
     interviewId,
-    linked,
     row,
     detailQuery.isLoading,
     detailQuery.isError,
@@ -374,7 +361,6 @@ function InterviewEventSheetBody(props: {
               key={formKey}
               row={row}
               interviewId={interviewId!}
-              linked={linked}
               onInvalidate={onInvalidate}
               onDismiss={() => setEditOpen(false)}
             />
@@ -428,17 +414,6 @@ export function InterviewsCalendar() {
       rangeTo: Math.ceil(end.getTime() + pad),
     };
   }, [currentWeekStart]);
-
-  const googleStatusQuery = useQuery({
-    queryKey: ["integrations", "google", "status"],
-    queryFn: async () => {
-      const { data, error } = await api.api.integrations.google.status.get({
-        fetch: { credentials: "include" },
-      });
-      if (error) throw error.value;
-      return data;
-    },
-  });
 
   const applicantsQuery = useQuery({
     queryKey: ["applicants", "interviews"],
@@ -504,16 +479,6 @@ export function InterviewsCalendar() {
     });
   }, [queryClient]);
 
-  useEffect(() => {
-    const g = searchParams.get("google");
-    const msg = searchParams.get("message");
-    if (g === "connected") {
-      void googleStatusQuery.refetch();
-    } else if (g === "error" && msg) {
-      toast.error(decodeURIComponent(msg));
-    }
-  }, [searchParams, googleStatusQuery]);
-
   const createMut = useMutation({
     mutationFn: async (payload: CreateInterviewSubmitPayload) => {
       const { data, error } = await api.api.interviews.post(
@@ -544,32 +509,11 @@ export function InterviewsCalendar() {
     },
   });
 
-  const linked = googleStatusQuery.data?.linked === true;
-
   const createErrMsg = createMut.isError ? errFromApi(createMut.error) : null;
   const interviewDbOverlapMessage =
     createErrMsg !== null && isInterviewDbOverlapErrorMessage(createErrMsg)
       ? createErrMsg
       : null;
-
-  const interviewsBeforePrimary = linked ? (
-    <Button variant="secondary">
-      <LinkIcon className="size-4" />
-      <span>เชื่อมบัญชี Google แล้ว</span>
-    </Button>
-  ) : (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className="shrink-0 whitespace-nowrap"
-      onClick={() => {
-        window.location.href = "/api/integrations/google/start";
-      }}
-    >
-      เชื่อมบัญชี Google
-    </Button>
-  );
 
   const openCreateAt = useCallback((d: Date) => {
     setInterviewFormSession((n) => n + 1);
@@ -591,7 +535,6 @@ export function InterviewsCalendar() {
                 type="button"
                 variant="secondary"
                 size="sm"
-                disabled={!linked}
                 onClick={() => {
                   setInterviewFormSession((n) => n + 1);
                   setInterviewSeedAt(new Date());
@@ -609,8 +552,6 @@ export function InterviewsCalendar() {
           <CalendarHeader
             variant="interviews"
             hideSidebarTrigger
-            interviewsBeforePrimary={interviewsBeforePrimary}
-            primaryActionDisabled={!linked}
             onPrimaryAction={() => openCreateAt(new Date())}
             primaryActionLabel="สร้างนัด"
           />
@@ -622,7 +563,6 @@ export function InterviewsCalendar() {
                 <InterviewEventSheetBody
                   event={ev}
                   closeSheet={closeSheet}
-                  linked={linked}
                   onInvalidate={invalidateInterviews}
                   registerToolbar={registerToolbar}
                 />
@@ -632,13 +572,11 @@ export function InterviewsCalendar() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted-foreground">
-        <p>เชื่อม Google เพื่อสร้าง Meet กันซ้อน และคลิกการ์ดนัดเพื่อแก้ไข</p>
-        {!linked ? (
-          <Badge variant="outline">
-            ดูอย่างเดียว — เชื่อม Google เพื่อแก้ไข
-          </Badge>
-        ) : null}
+      <div className="flex flex-wrap items-center justify-end gap-2 px-1 text-xs text-muted-foreground">
+        <p className="mr-auto max-w-[min(100%,28rem)]">
+          Google Calendar / Meet ใช้โทเค็นจากการลงชื่อเข้าด้วย Google —
+          คลิกการ์ดนัดเพื่อแก้ไขหรือยกเลิก
+        </p>
         <Link href="/candidates" className="text-primary underline">
           ผู้สมัคร
         </Link>
@@ -657,7 +595,6 @@ export function InterviewsCalendar() {
           }
         }}
         applicants={applicantsQuery.data?.applicants ?? []}
-        googleLinked={linked}
         prefillApplicantId={interviewCreatePrefillApplicantId}
         interviewSeedAt={interviewSeedAt}
         onCreateInterview={(p) => createMut.mutate(p)}

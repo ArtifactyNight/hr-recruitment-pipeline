@@ -254,3 +254,13 @@
 **Prompt:** ถ้าขึ้นว่ามีนัดทับในระบบ แจ้งด้วย shadcn `alert.tsx` ใน `create-event-dialog.tsx`
 **Output:** โหมดสัมภาษณ์แสดง `Alert` destructive + `AlertTriangle` เมื่อข้อความ error จาก API มี `"นัดที่ทับ"` (ตรงกับ `DB_CONFLICT` ใน `interview-routes`); ส่ง `interviewDbOverlapMessage` จาก `createMut`; ไม่ toast ซ้ำสำหรับเคสนี้; ปิด dialog / เปลี่ยนวันเวลาผู้สมัคร → `reset()` mutation
 **Edited:** `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### [2026-05-09] - Google Calendar: Clerk OAuth access token
+**Prompt:** use `getGoogleToken` / `clerkClient.users.getUserOauthAccessToken` instead of stored refresh token
+**Output:** `src/lib/get-google-token.ts`: `getGoogleToken`, `getGoogleTokenForUserId`, `clerkGoogleLinkStatus` (provider `oauth_google`). Interview routes + Calendar API ใช้ access token ต่อคำขอ; `google-calendar-service` ใช้ `OAuth2Client` + `access_token` เท่านั้น (ไม่ต้อง `GOOGLE_CLIENT_*`). ลบ `/api/integrations/google/start|callback`, `google-oauth-state`, `google-token-crypto`; `/integrations/google/status` อิง Clerk `externalAccounts`. UI `/interviews` ปุ่มเชื่อมไป `/settings` + `ClerkAccountSettings` (`UserProfile` hash) บนหน้าตั้งค่า; `README` อัปเดต; `proxy.ts` เอา public OAuth routes ออก; `interviews/page` ห่อ `Suspense` ให้ build ผ่าน
+**Edited:** `get-google-token.ts`, `google-calendar-service.ts`, `interview-routes.ts`, `interviews-calendar.tsx`, `settings/page.tsx`, `clerk-account-settings.tsx`, `interviews/page.tsx`, `proxy.ts`, `README.md`, `cowork-log.md`; ลบ `google/start`, `google/callback`, `google-oauth-state.ts`, `google-token-crypto.ts`
+
+### [2026-05-09] - ลบ flow เชื่อม Google แยก (ใช้ token ตอน sign-in)
+**Prompt:** ลบการเชื่อมบัญชี Google — sign-in ได้ permission แล้ว เรียก Calendar ผ่าน `get-google-token.ts`
+**Output:** ลบ `clerkGoogleLinkStatus`, `/api/integrations/google/status`, `integrationsGoogleRoutes`; `NO_GOOGLE_OAUTH_TOKEN` + ข้อ 403 เมื่อไม่มี token; หน้า `/interviews` ไม่ query status / ไม่ปิดการสร้างนัด — ลบปุ่มเชื่อม Badge คำใบ้; `CreateEventDialog` ไม่รับ `googleLinked`; ลบ `ClerkAccountSettings` + คืนหน้า settings เรียบ; README ลบ status route + flow เชื่อมใน settings
+**Edited:** `get-google-token.ts`, `interview-routes.ts`, `elysia-app.ts`, `interviews-calendar.tsx`, `create-event-dialog.tsx`, `settings/page.tsx`, `README.md`, ลบ `clerk-account-settings.tsx`, `cowork-log.md`

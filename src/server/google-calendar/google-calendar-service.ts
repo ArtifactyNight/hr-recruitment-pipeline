@@ -104,46 +104,14 @@ export function snapshotFromGoogleCalendarEvent(
   };
 }
 
-/**
- * Full Calendar access — required for events.insert with Meet (conferenceData)
- * on some accounts; `calendar.events` alone can return 403 insufficient scopes.
- * Users who connected with the old scope must revoke the app and reconnect.
- */
-const CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar";
-
 /** Ask Google Calendar to email all guests (invite / updates / cancel). */
 const CALENDAR_SEND_UPDATES = "all";
 
-export function getCalendarRedirectUri(): string {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.APP_URL ??
-    "http://localhost:3000";
-  return `${base.replace(/\/$/, "")}/api/integrations/google/callback`;
-}
-
-export function createOAuthClient(): OAuth2Client {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET ไม่ครบ");
-  }
-  return new OAuth2Client(clientId, clientSecret, getCalendarRedirectUri());
-}
-
-export async function exchangeAuthCode(code: string) {
-  const client = createOAuthClient();
-  const { tokens } = await client.getToken(code);
-  return tokens;
-}
-
-export function calendarAuthorizedClient(refreshToken: string) {
-  const auth = createOAuthClient();
-  auth.setCredentials({ refresh_token: refreshToken });
+function calendarAuthorizedClient(accessToken: string) {
+  const auth = new OAuth2Client();
+  auth.setCredentials({ access_token: accessToken });
   return calendar({ version: "v3", auth });
 }
-
-export { CALENDAR_EVENTS_SCOPE };
 
 export type CalendarEventTimes = {
   summary: string;
@@ -155,10 +123,10 @@ export type CalendarEventTimes = {
 };
 
 export async function insertEventWithMeet(opts: {
-  refreshToken: string;
+  accessToken: string;
   payload: CalendarEventTimes;
 }) {
-  const cal = calendarAuthorizedClient(opts.refreshToken);
+  const cal = calendarAuthorizedClient(opts.accessToken);
   const timeZone = opts.payload.timeZone ?? "Asia/Bangkok";
   const requestId =
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -202,11 +170,11 @@ export async function insertEventWithMeet(opts: {
 }
 
 export async function patchEventDetails(opts: {
-  refreshToken: string;
+  accessToken: string;
   eventId: string;
   payload: CalendarEventTimes;
 }) {
-  const cal = calendarAuthorizedClient(opts.refreshToken);
+  const cal = calendarAuthorizedClient(opts.accessToken);
   const timeZone = opts.payload.timeZone ?? "Asia/Bangkok";
   await cal.events.patch({
     calendarId: "primary",
@@ -223,10 +191,10 @@ export async function patchEventDetails(opts: {
 }
 
 export async function deleteCalendarEvent(opts: {
-  refreshToken: string;
+  accessToken: string;
   eventId: string;
 }) {
-  const cal = calendarAuthorizedClient(opts.refreshToken);
+  const cal = calendarAuthorizedClient(opts.accessToken);
   await cal.events.delete({
     calendarId: "primary",
     eventId: opts.eventId,
@@ -235,10 +203,10 @@ export async function deleteCalendarEvent(opts: {
 }
 
 export async function fetchPrimaryCalendarEvent(opts: {
-  refreshToken: string;
+  accessToken: string;
   eventId: string;
 }): Promise<calendar_v3.Schema$Event> {
-  const cal = calendarAuthorizedClient(opts.refreshToken);
+  const cal = calendarAuthorizedClient(opts.accessToken);
   const res = await cal.events.get({
     calendarId: "primary",
     eventId: opts.eventId,
@@ -251,13 +219,13 @@ export async function fetchPrimaryCalendarEvent(opts: {
 
 /** true = slot has clash on primary calendar busy blocks */
 export async function hasPrimaryCalendarBusyOverlap(opts: {
-  refreshToken: string;
+  accessToken: string;
   rangeStartIso: string;
   rangeEndIso: string;
   slotStart: Date;
   slotEnd: Date;
 }): Promise<boolean> {
-  const cal = calendarAuthorizedClient(opts.refreshToken);
+  const cal = calendarAuthorizedClient(opts.accessToken);
   const res = await cal.freebusy.query({
     requestBody: {
       timeMin: opts.rangeStartIso,

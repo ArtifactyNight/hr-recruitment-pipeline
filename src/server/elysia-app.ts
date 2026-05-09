@@ -2,7 +2,6 @@ import { Elysia } from "elysia";
 
 import { applicantRoutes } from "@/server/routes/applicant-routes";
 import {
-  integrationsGoogleRoutes,
   interviewRoutes,
   interviewerRoutes,
 } from "@/server/routes/interview-routes";
@@ -18,7 +17,6 @@ export const elysiaApp = new Elysia({ prefix: "/api" })
   .use(screenerRoutes)
   .use(jobRoutes)
   .use(applicantRoutes)
-  .use(integrationsGoogleRoutes)
   .use(interviewerRoutes)
   .use(interviewRoutes);
 

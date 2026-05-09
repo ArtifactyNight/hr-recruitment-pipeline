@@ -14,5 +14,4 @@ export function createQueryClient() {
   });
 }
 
-/** Use only from Server Components / Route Handlers (one client per request). */
 export const getQueryClient = cache(createQueryClient);

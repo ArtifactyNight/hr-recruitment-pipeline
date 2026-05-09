@@ -1,6 +1,9 @@
 import type { InterviewStatus } from "@/generated/prisma/client";
 import { ensureUserFromClerkId } from "@/lib/clerk-db-user";
-import { decryptGoogleRefreshToken } from "@/lib/google-token-crypto";
+import {
+  getGoogleTokenForUserId,
+  NO_GOOGLE_OAUTH_TOKEN,
+} from "@/lib/get-google-token";
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { addHours, subHours } from "date-fns";
@@ -31,37 +34,6 @@ function googleCalendarErrorText(e: unknown): string {
     return "";
   }
 }
-
-async function googleRefreshTokenForUser(userId: number): Promise<string> {
-  const link = await prisma.userGoogleCalendar.findUnique({
-    where: { userId },
-  });
-  if (!link) {
-    throw new Error("LINK_GOOGLE_FIRST");
-  }
-  return decryptGoogleRefreshToken(link.refreshTokenEncrypted);
-}
-
-export const integrationsGoogleRoutes = new Elysia({
-  prefix: "/integrations/google",
-}).get("/status", async ({ set }) => {
-  const { userId } = await auth();
-  if (!userId) {
-    set.status = 401;
-    return { error: "ต้องเข้าสู่ระบบ" };
-  }
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: { googleCalendar: true },
-  });
-  if (!user?.googleCalendar) {
-    return { linked: false as const, googleEmail: null as null | string };
-  }
-  return {
-    linked: true as const,
-    googleEmail: user.googleCalendar.googleEmail,
-  };
-});
 
 export const interviewerRoutes = new Elysia({ prefix: "/interviewers" }).get(
   "/",
@@ -189,9 +161,9 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       const eventId = row.googleEventId?.trim();
       if (eventId) {
         try {
-          const rt = await googleRefreshTokenForUser(dbUser.id);
+          const { token: gToken } = await getGoogleTokenForUserId(userId);
           const gEv = await fetchPrimaryCalendarEvent({
-            refreshToken: rt,
+            accessToken: gToken,
             eventId,
           });
           calendarSnapshot = snapshotFromGoogleCalendarEvent(gEv);
@@ -213,19 +185,20 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         return { error: "ต้องเข้าสู่ระบบ" };
       }
       const dbUser = await ensureUserFromClerkId(userId);
-      let rt: string;
+      let gToken: string;
       try {
-        rt = await googleRefreshTokenForUser(dbUser.id);
+        ({ token: gToken } = await getGoogleTokenForUserId(userId));
       } catch (e) {
         if (
           typeof e === "object" &&
           e !== null &&
           "message" in e &&
-          (e as { message: unknown }).message === "LINK_GOOGLE_FIRST"
+          (e as { message: unknown }).message === NO_GOOGLE_OAUTH_TOKEN
         ) {
-          set.status = 428;
+          set.status = 403;
           return {
-            error: "เชื่อม Google Calendar ก่อน",
+            error:
+              "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google และให้ Clerk ขอ scope ปฏิทินที่ตั้งค่าไว้",
           };
         }
         throw e;
@@ -293,7 +266,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
 
       const slotEnd = new Date(slotStart.getTime() + duration * 60_000);
       const fb = await hasPrimaryCalendarBusyOverlap({
-        refreshToken: rt,
+        accessToken: gToken,
         rangeStartIso: subHours(slotStart, 24).toISOString(),
         rangeEndIso: addHours(slotEnd, 24).toISOString(),
         slotStart,
@@ -324,7 +297,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       let google: { eventId: string; meetLink: string | null | undefined };
       try {
         google = await insertEventWithMeet({
-          refreshToken: rt,
+          accessToken: gToken,
           payload: {
             summary,
             description,
@@ -343,7 +316,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
           set.status = 403;
           return {
             error:
-              "โทเค็น Google ไม่มีสิทธิ์ที่ต้องการ — ไปถอนการเข้าถึงแอปนี้ใน Google Account แล้วกด เชื่อมบัญชี Google ใหม่จากหน้า /interviews (และต้องให้ขอทั้งหมดใน consent)",
+              "โทเค็น Google ไม่มีสิทธิ์ที่ต้องการ — ใน Clerk Dashboard เพิ่ม OAuth scope `https://www.googleapis.com/auth/calendar` แล้วให้ผู้ใช้ลงชื่อเข้าด้วย Google ใหม่",
             code: "GOOGLE_INSUFFICIENT_SCOPES" as const,
           };
         }
@@ -391,7 +364,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       } catch {
         try {
           await deleteCalendarEvent({
-            refreshToken: rt,
+            accessToken: gToken,
             eventId: google.eventId,
           });
         } catch {
@@ -433,13 +406,14 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       }
 
       const dbUser = await ensureUserFromClerkId(userId);
-      let rt: string;
+      let gToken: string;
       try {
-        rt = await googleRefreshTokenForUser(dbUser.id);
+        ({ token: gToken } = await getGoogleTokenForUserId(userId));
       } catch {
-        set.status = 428;
+        set.status = 403;
         return {
-          error: "เชื่อม Google Calendar ก่อน",
+          error:
+            "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google และให้ Clerk ขอ scope ปฏิทินที่ตั้งค่าไว้",
         };
       }
 
@@ -505,7 +479,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         }
         const slotEnd = new Date(nextStart.getTime() + nextDuration * 60_000);
         const fb = await hasPrimaryCalendarBusyOverlap({
-          refreshToken: rt,
+          accessToken: gToken,
           rangeStartIso: subHours(nextStart, 24).toISOString(),
           rangeEndIso: addHours(slotEnd, 24).toISOString(),
           slotStart: nextStart,
@@ -561,7 +535,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
 
       try {
         await patchEventDetails({
-          refreshToken: rt,
+          accessToken: gToken,
           eventId: existing.googleEventId,
           payload: {
             summary,
@@ -626,12 +600,15 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         return { error: "ต้องเข้าสู่ระบบ" };
       }
       const dbUser = await ensureUserFromClerkId(userId);
-      let rt: string;
+      let gToken: string;
       try {
-        rt = await googleRefreshTokenForUser(dbUser.id);
+        ({ token: gToken } = await getGoogleTokenForUserId(userId));
       } catch {
-        set.status = 428;
-        return { error: "เชื่อม Google Calendar ก่อน" };
+        set.status = 403;
+        return {
+          error:
+            "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google และให้ Clerk ขอ scope ปฏิทินที่ตั้งค่าไว้",
+        };
       }
 
       const existing = await prisma.interview.findFirst({
@@ -658,7 +635,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       if (existing.googleEventId) {
         try {
           await deleteCalendarEvent({
-            refreshToken: rt,
+            accessToken: gToken,
             eventId: existing.googleEventId,
           });
         } catch {

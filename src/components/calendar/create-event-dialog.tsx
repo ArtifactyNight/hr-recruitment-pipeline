@@ -55,7 +55,6 @@ interface CreateEventDialogProps {
   /** Bump when opening the interviews dialog so the form remounts with fresh seed values */
   interviewFormSession?: number;
   applicants?: Array<ApplicantOption>;
-  googleLinked?: boolean;
   prefillApplicantId?: string;
   interviewSeedAt?: Date | null;
   onCreateInterview?: (payload: CreateInterviewSubmitPayload) => void;
@@ -117,7 +116,6 @@ type InterviewCreateFormBodyProps = {
   seedAt: Date | null;
   prefillApplicantId?: string;
   applicants: Array<ApplicantOption>;
-  googleLinked: boolean;
   createInterviewPending: boolean;
   onCreateInterview?: (payload: CreateInterviewSubmitPayload) => void;
   goToDate: (date: Date) => void;
@@ -130,7 +128,6 @@ function InterviewCreateFormBody({
   seedAt,
   prefillApplicantId,
   applicants,
-  googleLinked,
   createInterviewPending,
   onCreateInterview,
   goToDate,
@@ -156,7 +153,7 @@ function InterviewCreateFormBody({
     e.preventDefault();
     setSlotError(null);
 
-    if (!googleLinked || !applicantId) {
+    if (!applicantId) {
       return;
     }
 
@@ -322,10 +319,7 @@ function InterviewCreateFormBody({
         >
           ปิด
         </Button>
-        <Button
-          type="submit"
-          disabled={createInterviewPending || !googleLinked || !applicantId}
-        >
+        <Button type="submit" disabled={createInterviewPending || !applicantId}>
           {createInterviewPending ? "บันทึก…" : "สร้างนัด"}
         </Button>
       </DialogFooter>
@@ -339,7 +333,6 @@ export function CreateEventDialog({
   variant = "default",
   interviewFormSession = 0,
   applicants = [],
-  googleLinked = false,
   prefillApplicantId,
   interviewSeedAt = null,
   onCreateInterview,
@@ -416,7 +409,8 @@ export function CreateEventDialog({
             {isInterview ? (
               <>
                 เลือกผู้สมัคร วันและช่วงเวลา ผู้ร่วมสัมภาษณ์ และโน้ต — ระบบสร้าง
-                Google Meet และอีเวนต์ใน Calendar เมื่อเชื่อมบัญชี Google แล้ว
+                Google Meet และอีเวนต์ใน Calendar (โทเค็นมาจากการลงชื่อเข้าด้วย
+                Google ผ่าน Clerk)
               </>
             ) : (
               <>เพิ่มกิจกรรมใหม่ในปฏิทิน กรอกรายละเอียดด้านล่าง</>
@@ -430,7 +424,6 @@ export function CreateEventDialog({
               seedAt={interviewSeedAt}
               prefillApplicantId={prefillApplicantId}
               applicants={applicants}
-              googleLinked={googleLinked}
               createInterviewPending={createInterviewPending}
               onCreateInterview={onCreateInterview}
               goToDate={goToDate}
