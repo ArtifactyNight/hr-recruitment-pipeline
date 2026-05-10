@@ -21,50 +21,19 @@ import {
   ApplicantScheduleInterviewDialog,
   emptyScheduleInterviewFormState,
   scheduleInterviewFormStateForDate,
-  type ScheduleInterviewFormState,
-  type ScheduleInterviewSubmitInput,
 } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
+import {
+  useCancelCalendarEventMutation,
+  useCalendarEventsQuery,
+  useCalendarScheduleApplicantsQuery,
+  useScheduleInterviewMutation,
+} from "@/features/interviews/api/use-interviews";
 import { groupGoogleCalendarEventsToCalendarData } from "@/features/interviews/lib/google-calendar-feed";
+import { useInterviewsCalendarStore } from "@/features/interviews/store/interviews-calendar-store";
 import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { endOfMonth, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
-import { th } from "date-fns/locale";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
-
-function calendarCancelErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (
-    err &&
-    typeof err === "object" &&
-    "error" in err &&
-    typeof (err as { error: unknown }).error === "string"
-  ) {
-    return (err as { error: string }).error;
-  }
-  return "ยกเลิกไม่สำเร็จ";
-}
-
-function scheduleInterviewErrorMessage(err: unknown): string {
-  if (
-    err &&
-    typeof err === "object" &&
-    "error" in err &&
-    typeof (err as { error: unknown }).error === "string"
-  ) {
-    return (err as { error: string }).error;
-  }
-  if (err instanceof Error) return err.message;
-  return "กำหนดนัดไม่สำเร็จ";
-}
-
-function fetchRangeForDateInMonth(anchor: Date): { from: Date; to: Date } {
-  const firstDay = startOfMonth(anchor);
-  return {
-    from: startOfWeek(firstDay, { locale: th }),
-    to: endOfWeek(endOfMonth(firstDay), { locale: th }),
-  };
-}
+import { useShallow } from "zustand/react/shallow";
 
 type ApplicantsResponse = NonNullable<
   Awaited<ReturnType<typeof api.api.applicants.get>>["data"]
@@ -116,86 +85,22 @@ function ApplicantPickerField({
 }
 
 export function InterviewsCalendar() {
-  const queryClient = useQueryClient();
-  const [fetchRange, setFetchRange] = useState(() =>
-    fetchRangeForDateInMonth(new Date()),
-  );
-  const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [selectedApplicantId, setSelectedApplicantId] = useState("");
-  const [scheduleForm, setScheduleForm] = useState<ScheduleInterviewFormState>(
-    () => emptyScheduleInterviewFormState(),
-  );
+  const {
+    fetchRange,
+    setFetchRange,
+    scheduleOpen,
+    setScheduleOpen,
+    selectedApplicantId,
+    setSelectedApplicantId,
+    scheduleForm,
+    setScheduleForm,
+    resetSchedule,
+  } = useInterviewsCalendarStore(useShallow((s) => s));
 
-  const cancelCalendarMut = useMutation({
-    mutationFn: async (googleEventId: string) => {
-      const { data, error } = await api.api.interviews[
-        "calendar-events"
-      ].cancel.post({ googleEventId }, { fetch: { credentials: "include" } });
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success("ยกเลิกนัดในปฏิทินแล้ว");
-      void queryClient.invalidateQueries({
-        queryKey: ["interviews-calendar-events"],
-      });
-    },
-    onError: (err: unknown) => {
-      toast.error(calendarCancelErrorMessage(err));
-    },
-  });
-
-  const applicantsQuery = useQuery({
-    queryKey: ["applicants", "interviews-calendar-schedule"],
-    queryFn: async () => {
-      const { data, error } = await api.api.applicants.get({
-        fetch: { credentials: "include" },
-      });
-      if (error) throw error.value;
-      return data;
-    },
-    staleTime: 60_000,
-  });
-
-  const scheduleInterviewMut = useMutation({
-    mutationFn: async (input: ScheduleInterviewSubmitInput) => {
-      const { data, error } = await api.api.interviews.post(
-        {
-          applicantId: input.applicantId,
-          scheduledAt: input.scheduledAt,
-          durationMinutes: input.durationMinutes,
-          interviewerEmails: input.interviewerEmails,
-          extraNotes: input.extraNotes,
-        },
-        { fetch: { credentials: "include" } },
-      );
-      if (error) throw error.value;
-      if (!data?.interview) {
-        throw new Error("ไม่มีข้อมูลนัด");
-      }
-      return data.interview;
-    },
-    onSuccess: () => {
-      toast.success("กำหนดนัดแล้ว");
-      setScheduleOpen(false);
-      setScheduleForm(emptyScheduleInterviewFormState());
-      setSelectedApplicantId("");
-      void queryClient.invalidateQueries({
-        queryKey: ["interviews-calendar-events"],
-      });
-      void queryClient.invalidateQueries({ queryKey: ["applicants"] });
-    },
-    onError: (err: unknown) => {
-      toast.error(scheduleInterviewErrorMessage(err));
-    },
-  });
-
-  const onVisibleRangeChange = useCallback(
-    (range: { from: Date; to: Date }) => {
-      setFetchRange(range);
-    },
-    [],
-  );
+  const calendarQuery = useCalendarEventsQuery(fetchRange);
+  const applicantsQuery = useCalendarScheduleApplicantsQuery();
+  const cancelCalendarMut = useCancelCalendarEventMutation();
+  const scheduleInterviewMut = useScheduleInterviewMutation();
 
   const scheduleCandidates = useMemo(() => {
     return (applicantsQuery.data?.applicants ?? []).filter(
@@ -217,46 +122,18 @@ export function InterviewsCalendar() {
       setSelectedApplicantId(scheduleCandidates[0]?.id ?? "");
       setScheduleOpen(true);
     },
-    [scheduleCandidates],
+    [scheduleCandidates, setScheduleForm, setSelectedApplicantId, setScheduleOpen],
   );
 
-  const onScheduleDialogOpenChange = useCallback((open: boolean) => {
-    setScheduleOpen(open);
-    if (open) return;
-    setScheduleForm(emptyScheduleInterviewFormState());
-    setSelectedApplicantId("");
-  }, []);
-
-  const calendarQuery = useQuery({
-    queryKey: [
-      "interviews-calendar-events",
-      fetchRange.from.toISOString(),
-      fetchRange.to.toISOString(),
-    ],
-    queryFn: async () => {
-      const { data, error } = await api.api.interviews["calendar-events"].get({
-        query: {
-          from: fetchRange.from.toISOString(),
-          to: fetchRange.to.toISOString(),
-        },
-        fetch: { credentials: "include" },
-      });
-      if (error) {
-        const raw = error.value;
-        if (
-          raw &&
-          typeof raw === "object" &&
-          "error" in raw &&
-          typeof (raw as { error: unknown }).error === "string"
-        ) {
-          throw new Error((raw as { error: string }).error);
-        }
-        throw new Error("โหลดปฏิทินไม่สำเร็จ");
-      }
-      if (!data) throw new Error("ไม่มีข้อมูล");
-      return data;
+  const onScheduleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      setScheduleOpen(open);
+      if (open) return;
+      setScheduleForm(emptyScheduleInterviewFormState());
+      setSelectedApplicantId("");
     },
-  });
+    [setScheduleOpen, setScheduleForm, setSelectedApplicantId],
+  );
 
   const calendarData: Array<CalendarData> = useMemo(() => {
     const events = calendarQuery.data?.events;
@@ -280,7 +157,7 @@ export function InterviewsCalendar() {
       <FullScreenCalendar
         data={calendarData}
         calendarLoading={calendarQuery.isFetching}
-        onVisibleRangeChange={onVisibleRangeChange}
+        onVisibleRangeChange={setFetchRange}
         onScheduleForDate={openScheduleForDate}
         onCancelCalendarEvent={async (googleEventId): Promise<void> => {
           await cancelCalendarMut.mutateAsync(googleEventId);
@@ -293,9 +170,18 @@ export function InterviewsCalendar() {
         onOpenChange={onScheduleDialogOpenChange}
         schedulePending={scheduleInterviewMut.isPending}
         formState={scheduleForm}
-        setFormState={setScheduleForm}
+        setFormState={(value) => {
+          setScheduleForm(
+            typeof value === "function" ? value(scheduleForm) : value,
+          );
+        }}
         onScheduleInterview={async (input) => {
-          await scheduleInterviewMut.mutateAsync(input);
+          await scheduleInterviewMut.mutateAsync(input, {
+            onSuccess: () => {
+              toast.success("กำหนดนัดแล้ว");
+              resetSchedule();
+            },
+          });
         }}
         beforeFields={
           <ApplicantPickerField

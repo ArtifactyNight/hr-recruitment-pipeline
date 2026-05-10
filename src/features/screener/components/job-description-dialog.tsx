@@ -8,12 +8,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { JobDetailResponse } from "@/features/screener/lib/resume-screener-utils";
 import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
-import { api } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { useScreenerJobDetailQuery } from "@/features/screener/api/use-screener";
 import { FileTextIcon } from "lucide-react";
-import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 
 type JobDescriptionDialogProps = {
@@ -28,25 +25,7 @@ export function JobDescriptionDialog({ selectedJobId }: JobDescriptionDialogProp
     })),
   );
 
-  const detailQuery = useQuery({
-    queryKey: ["screener-job-detail", selectedJobId],
-    queryFn: async () => {
-      if (!selectedJobId) {
-        return null;
-      }
-      const { data, error } = await api.api.screener.jobs({
-        id: selectedJobId,
-      }).get({ fetch: { credentials: "include" } });
-      if (error) {
-        toast.error("โหลด JD ไม่ได้");
-        return null;
-      }
-      return data as JobDetailResponse;
-    },
-    enabled: jdDialogOpen && Boolean(selectedJobId),
-    staleTime: 60 * 1000,
-    retry: false,
-  });
+  const detailQuery = useScreenerJobDetailQuery(selectedJobId, jdDialogOpen);
 
   const jdDetail = detailQuery.data ?? null;
   const jdLoading = detailQuery.isPending || detailQuery.isFetching;

@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ChangeEvent } from "react";
+import { useCallback, useMemo, type ChangeEvent } from "react";
 
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import { formatReportText } from "@/features/screener/lib/resume-screener-utils";
+import { useEvaluateMutation, useAddToTrackerMutation } from "@/features/screener/api/use-screener";
+import { useScreenerJobsQuery } from "@/features/screener/api/use-screener-jobs";
+import { useResumeScreenerStore } from "@/features/screener/store/resume-screener-store";
 import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
-import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCopyToClipboard } from "usehooks-ts";
+import { useShallow } from "zustand/react/shallow";
 
 import { AddToTrackerDialog } from "./add-to-tracker-dialog";
 import { ResumeInputCard } from "./resume-input-card";
@@ -36,16 +38,48 @@ function isEvaluateSuccess(data: unknown): data is {
 
 export function ResumeScreener() {
   const [, copyToClipboard] = useCopyToClipboard();
-  const queryClient = useQueryClient();
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [resumeText, setResumeText] = useState<string>("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [report, setReport] = useState<FitReport | null>(null);
-  const [trackerJobId, setTrackerJobId] = useState<string | null>(null);
-  const [detectedName, setDetectedName] = useState("");
-  const [detectedEmail, setDetectedEmail] = useState("");
-  const [trackerDraftName, setTrackerDraftName] = useState("");
-  const [trackerDraftEmail, setTrackerDraftEmail] = useState("");
+
+  const {
+    jobId,
+    setJobId,
+    resumeText,
+    setResumeText,
+    selectedFile,
+    setSelectedFile,
+    report,
+    setReport,
+    trackerJobId,
+    setTrackerJobId,
+    detectedName,
+    setDetectedName,
+    detectedEmail,
+    setDetectedEmail,
+    trackerDraftName,
+    setTrackerDraftName,
+    trackerDraftEmail,
+    setTrackerDraftEmail,
+  } = useResumeScreenerStore(
+    useShallow((s) => ({
+      jobId: s.jobId,
+      setJobId: s.setJobId,
+      resumeText: s.resumeText,
+      setResumeText: s.setResumeText,
+      selectedFile: s.selectedFile,
+      setSelectedFile: s.setSelectedFile,
+      report: s.report,
+      setReport: s.setReport,
+      trackerJobId: s.trackerJobId,
+      setTrackerJobId: s.setTrackerJobId,
+      detectedName: s.detectedName,
+      setDetectedName: s.setDetectedName,
+      detectedEmail: s.detectedEmail,
+      setDetectedEmail: s.setDetectedEmail,
+      trackerDraftName: s.trackerDraftName,
+      setTrackerDraftName: s.setTrackerDraftName,
+      trackerDraftEmail: s.trackerDraftEmail,
+      setTrackerDraftEmail: s.setTrackerDraftEmail,
+    })),
+  );
 
   const trackerDialogOpen = useScreenerDialogStore((s) => s.trackerDialogOpen);
   const setTrackerDialogOpen = useScreenerDialogStore(
@@ -56,73 +90,9 @@ export function ResumeScreener() {
     (s) => s.setReportDialogOpen,
   );
 
-  const jobsQuery = useQuery({
-    queryKey: ["screener-jobs"],
-    queryFn: async () => {
-      const { data, error } = await api.api.screener.jobs.get({
-        fetch: { credentials: "include" },
-      });
-      if (error) throw error.value;
-      return data;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const evaluateMutation = useMutation({
-    mutationFn: async (input: {
-      cvText?: string;
-      jobDescriptionId: string;
-      file?: File;
-    }) => {
-      const { data, error } = await api.api.screener.evaluate.post(
-        {
-          jobDescriptionId: input.jobDescriptionId,
-          file: input.file,
-          cvText: input.cvText,
-        },
-        { fetch: { credentials: "include" } },
-      );
-      if (error) throw error.value;
-      return data;
-    },
-    onError: () => {
-      toast.error("วิเคราะห์ไม่สำเร็จ");
-    },
-  });
-
-  const addMutation = useMutation({
-    mutationFn: async (input: {
-      jobDescriptionId: string;
-      name: string;
-      email: string;
-      resumeText?: string;
-      report: FitReport;
-      file?: File | null;
-    }) => {
-      const payload = JSON.stringify({
-        jobDescriptionId: input.jobDescriptionId,
-        name: input.name,
-        email: input.email,
-        resumeText: input.resumeText,
-        report: input.report,
-      });
-      const { data, error } = await api.api.screener["add-to-tracker"].post(
-        {
-          payload,
-          file: input.file ?? undefined,
-        },
-        { fetch: { credentials: "include" } },
-      );
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["applicants"] });
-    },
-    onError: () => {
-      toast.error("เพิ่มเข้า Tracker ไม่สำเร็จ");
-    },
-  });
+  const jobsQuery = useScreenerJobsQuery();
+  const evaluateMutation = useEvaluateMutation();
+  const addMutation = useAddToTrackerMutation();
 
   const jobs = useMemo(() => {
     return jobsQuery.data?.jobs ?? [];
@@ -167,8 +137,7 @@ export function ResumeScreener() {
       if (!isEvaluateSuccess(data)) {
         return;
       }
-      const reportNext = data.report ?? null;
-      setReport(reportNext);
+      setReport(data.report ?? null);
       setTrackerJobId(data.matchedJobId ?? null);
       setDetectedName(data.detectedName ?? "");
       setDetectedEmail(data.detectedEmail ?? "");
@@ -182,6 +151,10 @@ export function ResumeScreener() {
     resumeText,
     selectedFile,
     selectedJobId,
+    setDetectedEmail,
+    setDetectedName,
+    setReport,
+    setTrackerJobId,
     setReportDialogOpen,
   ]);
 
@@ -194,7 +167,16 @@ export function ResumeScreener() {
     setDetectedEmail("");
     setJobId(null);
     setReportDialogOpen(false);
-  }, [setReportDialogOpen]);
+  }, [
+    setDetectedEmail,
+    setDetectedName,
+    setJobId,
+    setReport,
+    setResumeText,
+    setSelectedFile,
+    setTrackerJobId,
+    setReportDialogOpen,
+  ]);
 
   const onCopyReport = useCallback(async () => {
     if (!report) return;
@@ -212,7 +194,7 @@ export function ResumeScreener() {
     setTrackerDraftName(detectedName.trim());
     setTrackerDraftEmail(detectedEmail.trim());
     setTrackerDialogOpen(true);
-  }, [detectedEmail, detectedName, setTrackerDialogOpen]);
+  }, [detectedEmail, detectedName, setTrackerDraftEmail, setTrackerDraftName, setTrackerDialogOpen]);
 
   const onSubmitTracker = useCallback(async () => {
     if (!report || !trackerJobId) {
@@ -270,12 +252,12 @@ export function ResumeScreener() {
       setReportDialogOpen(false);
       toast.message(`ใช้ไฟล์ ${file.name} — กดวิเคราะห์เพื่อส่ง PDF เข้า AI`);
     },
-    [setReportDialogOpen],
+    [setDetectedEmail, setDetectedName, setReport, setResumeText, setSelectedFile, setReportDialogOpen],
   );
 
   const onRemoveFile = useCallback(() => {
     setSelectedFile(null);
-  }, []);
+  }, [setSelectedFile]);
 
   const onJobChange = useCallback(
     (value: string) => {
@@ -286,7 +268,7 @@ export function ResumeScreener() {
       setDetectedEmail("");
       setReportDialogOpen(false);
     },
-    [setReportDialogOpen],
+    [setDetectedEmail, setDetectedName, setJobId, setReport, setTrackerJobId, setReportDialogOpen],
   );
 
   const analyzePending = evaluateMutation.isPending;

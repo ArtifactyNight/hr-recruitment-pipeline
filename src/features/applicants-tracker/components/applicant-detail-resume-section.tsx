@@ -1,6 +1,5 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -10,8 +9,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  useDeleteResumeMutation,
+  useDownloadResumeMutation,
+  useSaveCvTextMutation,
+  useUploadResumeMutation,
+} from "@/features/applicants-tracker/api/use-resume-mutations";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
-import { api } from "@/lib/api";
 import {
   ChevronsUpDownIcon,
   DownloadIcon,
@@ -34,121 +38,20 @@ type ApplicantDetailResumeSectionProps = {
   }) => void;
 };
 
-function resumeSectionErrorMessage(err: unknown): string {
-  if (
-    err &&
-    typeof err === "object" &&
-    "error" in err &&
-    typeof (err as { error: unknown }).error === "string"
-  ) {
-    return (err as { error: string }).error;
-  }
-  if (err instanceof Error) return err.message;
-  return "ดำเนินการไม่สำเร็จ";
-}
-
 export function ApplicantDetailResumeSection({
   applicant,
   applicantsQueryKey,
   onCvPatch,
 }: ApplicantDetailResumeSectionProps) {
-  const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
   const [textDraft, setTextDraft] = useState(applicant.cvText ?? "");
 
-  const downloadMut = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.api
-        .applicants({ id: applicant.id })
-        ["resume-url"].get({
-          fetch: { credentials: "include" },
-        });
-      if (error) throw error.value;
-      if (!data?.url) throw new Error("ไม่มีลิงก์ดาวน์โหลด");
-      return data.url;
-    },
-    onSuccess: (url) => {
-      window.open(url, "_blank", "noopener,noreferrer");
-    },
-    onError: (e: unknown) => {
-      toast.error(resumeSectionErrorMessage(e));
-    },
-  });
-
-  const uploadMut = useMutation({
-    mutationFn: async (file: File) => {
-      const { data, error } = await api.api
-        .applicants({ id: applicant.id })
-        .resume.post({ file }, { fetch: { credentials: "include" } });
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: (data) => {
-      if (data && "cvFileKey" in data && "cvFileName" in data) {
-        onCvPatch({
-          cvFileKey: data.cvFileKey as string,
-          cvFileName: data.cvFileName as string,
-          cvText: applicant.cvText,
-        });
-      }
-      void queryClient.invalidateQueries({ queryKey: [...applicantsQueryKey] });
-      toast.success("อัปโหลด resume แล้ว");
-    },
-    onError: (e: unknown) => {
-      toast.error(resumeSectionErrorMessage(e));
-    },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.api
-        .applicants({ id: applicant.id })
-        .resume.delete(undefined, { fetch: { credentials: "include" } });
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: () => {
-      onCvPatch({
-        cvFileKey: null,
-        cvFileName: null,
-        cvText: applicant.cvText,
-      });
-      void queryClient.invalidateQueries({ queryKey: [...applicantsQueryKey] });
-      toast.success("ลบไฟล์ resume แล้ว");
-    },
-    onError: (e: unknown) => {
-      toast.error(resumeSectionErrorMessage(e));
-    },
-  });
-
-  const saveTextMut = useMutation({
-    mutationFn: async (text: string) => {
-      const { data, error } = await api.api
-        .applicants({ id: applicant.id })
-        .patch({ cvText: text }, { fetch: { credentials: "include" } });
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: (data) => {
-      const updated =
-        data && typeof data === "object" && "applicant" in data
-          ? (data.applicant as { cvText?: string | null } | null)
-          : null;
-      onCvPatch({
-        cvText: updated?.cvText ?? null,
-        cvFileKey: applicant.cvFileKey,
-        cvFileName: applicant.cvFileName,
-      });
-      void queryClient.invalidateQueries({ queryKey: [...applicantsQueryKey] });
-      setIsEditingText(false);
-      toast.success("บันทึกข้อความแล้ว");
-    },
-    onError: (e: unknown) => {
-      toast.error(resumeSectionErrorMessage(e));
-    },
-  });
+  const downloadMut = useDownloadResumeMutation(applicant.id);
+  const uploadMut = useUploadResumeMutation(applicant.id, applicantsQueryKey);
+  const deleteMut = useDeleteResumeMutation(applicant.id, applicantsQueryKey);
+  const saveTextMut = useSaveCvTextMutation(applicant.id, applicantsQueryKey);
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -161,7 +64,17 @@ export function ApplicantDetailResumeSection({
       toast.error("กรุณาเลือกไฟล์ PDF");
       return;
     }
-    uploadMut.mutate(file);
+    uploadMut.mutate(file, {
+      onSuccess: (data) => {
+        if (data && "cvFileKey" in data && "cvFileName" in data) {
+          onCvPatch({
+            cvFileKey: data.cvFileKey as string,
+            cvFileName: data.cvFileName as string,
+            cvText: applicant.cvText,
+          });
+        }
+      },
+    });
   }
 
   const hasPdf = Boolean(applicant.cvFileKey);
@@ -222,7 +135,17 @@ export function ApplicantDetailResumeSection({
                     size="sm"
                     className="border-destructive/40 text-destructive hover:bg-destructive/10"
                     disabled={pdfBusy}
-                    onClick={() => deleteMut.mutate()}
+                    onClick={() =>
+                      deleteMut.mutate(undefined, {
+                        onSuccess: () => {
+                          onCvPatch({
+                            cvFileKey: null,
+                            cvFileName: null,
+                            cvText: applicant.cvText,
+                          });
+                        },
+                      })
+                    }
                   >
                     <Trash2Icon data-icon="inline-start" />
                     ลบไฟล์
@@ -276,7 +199,24 @@ export function ApplicantDetailResumeSection({
                     type="button"
                     size="sm"
                     disabled={saveTextMut.isPending}
-                    onClick={() => saveTextMut.mutate(textDraft)}
+                    onClick={() =>
+                      saveTextMut.mutate(textDraft, {
+                        onSuccess: (data) => {
+                          const updated =
+                            data && typeof data === "object" && "applicant" in data
+                              ? (data.applicant as {
+                                  cvText?: string | null;
+                                } | null)
+                              : null;
+                          onCvPatch({
+                            cvText: updated?.cvText ?? null,
+                            cvFileKey: applicant.cvFileKey,
+                            cvFileName: applicant.cvFileName,
+                          });
+                          setIsEditingText(false);
+                        },
+                      })
+                    }
                   >
                     {saveTextMut.isPending ? (
                       <Loader2Icon

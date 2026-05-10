@@ -1,27 +1,15 @@
 "use client";
 
 import { Container } from "@/components/layout/container";
+import { useDashboardStatsQuery } from "@/features/dashboard/api/use-dashboard";
 import { DashboardOpenPositions } from "@/features/dashboard/components/dashboard-open-positions";
 import { DashboardPipelineOverview } from "@/features/dashboard/components/dashboard-pipeline-overview";
 import { DashboardRecentApplicants } from "@/features/dashboard/components/dashboard-recent-applicants";
 import { DashboardStatsCards } from "@/features/dashboard/components/dashboard-stats-cards";
 import { DashboardUpcomingInterviews } from "@/features/dashboard/components/dashboard-upcoming-interviews";
-import { api } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
 
 export default function DashboardPage() {
-  const statsQuery = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: async () => {
-      const { data, error } = await api.api.dashboard.stats.get({
-        fetch: { credentials: "include" },
-      });
-      if (error) throw error.value;
-      return data;
-    },
-    staleTime: 60_000,
-  });
-
+  const statsQuery = useDashboardStatsQuery();
   const data = statsQuery.data;
 
   return (

@@ -13,140 +13,53 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  useCreateJobMutation,
+  useDeleteJobMutation,
+  useJobsAdminQuery,
+  usePatchJobActiveMutation,
+  useUpdateJobMutation,
+} from "@/features/jobs/api/use-jobs";
 import { JobFormDialog } from "@/features/jobs/components/job-form-dialog";
 import { JobsTable } from "@/features/jobs/components/jobs-table";
 import type {
   AdminJobRow,
   CreateJobFormValues,
 } from "@/features/jobs/lib/job-description-schema";
-import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useJobsStore } from "@/features/jobs/store/jobs-store";
 import { PlusIcon } from "lucide-react";
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
-
-function getErrorMessage(body: unknown): string {
-  if (
-    body &&
-    typeof body === "object" &&
-    "error" in body &&
-    typeof (body as { error: unknown }).error === "string"
-  ) {
-    return (body as { error: string }).error;
-  }
-  return "เกิดข้อผิดพลาด";
-}
+import { useShallow } from "zustand/react/shallow";
 
 export default function JobsPage() {
-  const queryClient = useQueryClient();
-  const [formOpen, setFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [formSerial, setFormSerial] = useState(0);
-  const [editing, setEditing] = useState<AdminJobRow | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AdminJobRow | null>(null);
+  const {
+    formOpen,
+    formMode,
+    formSerial,
+    editing,
+    deleteTarget,
+    openCreate,
+    openEdit,
+    closeForm,
+    setDeleteTarget,
+  } = useJobsStore(
+    useShallow((s) => ({
+      formOpen: s.formOpen,
+      formMode: s.formMode,
+      formSerial: s.formSerial,
+      editing: s.editing,
+      deleteTarget: s.deleteTarget,
+      openCreate: s.openCreate,
+      openEdit: s.openEdit,
+      closeForm: s.closeForm,
+      setDeleteTarget: s.setDeleteTarget,
+    })),
+  );
 
-  const jobsQuery = useQuery({
-    queryKey: ["jobs-admin"],
-    queryFn: async () => {
-      const { data, error } = await api.api.jobs.get({
-        fetch: { credentials: "include" },
-      });
-      if (error) throw error.value;
-      return data?.jobs ?? [];
-    },
-  });
-
-  const invalidateAll = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["jobs-admin"] });
-    void queryClient.invalidateQueries({ queryKey: ["screener-jobs"] });
-  }, [queryClient]);
-
-  const createMut = useMutation({
-    mutationFn: async (body: CreateJobFormValues) => {
-      const { data, error } = await api.api.jobs.post(
-        {
-          title: body.title,
-          description: body.description,
-          requirements: body.requirements,
-          isActive: body.isActive,
-        },
-        { fetch: { credentials: "include" } },
-      );
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success("สร้างตำแหน่งแล้ว");
-      setFormOpen(false);
-      invalidateAll();
-    },
-    onError: (err: unknown) => {
-      toast.error(getErrorMessage(err));
-    },
-  });
-
-  const updateMut = useMutation({
-    mutationFn: async (input: { id: string; body: CreateJobFormValues }) => {
-      const { data, error } = await api.api.jobs({ id: input.id }).patch(
-        {
-          title: input.body.title,
-          description: input.body.description,
-          requirements: input.body.requirements,
-          isActive: input.body.isActive,
-        },
-        { fetch: { credentials: "include" } },
-      );
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success("บันทึกแล้ว");
-      setFormOpen(false);
-      setEditing(null);
-      invalidateAll();
-    },
-    onError: (err: unknown) => {
-      toast.error(getErrorMessage(err));
-    },
-  });
-
-  const patchActiveMut = useMutation({
-    mutationFn: async (input: { id: string; isActive: boolean }) => {
-      const { data, error } = await api.api
-        .jobs({ id: input.id })
-        .patch(
-          { isActive: input.isActive },
-          { fetch: { credentials: "include" } },
-        );
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: (_data, vars) => {
-      toast.success(vars.isActive ? "เปิดรับสมัครแล้ว" : "ปิดรับสมัครแล้ว");
-      invalidateAll();
-    },
-    onError: (err: unknown) => {
-      toast.error(getErrorMessage(err));
-    },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: async (id: string) => {
-      const { data, error } = await api.api.jobs({ id }).delete(undefined, {
-        fetch: { credentials: "include" },
-      });
-      if (error) throw error.value;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success("ลบตำแหน่งแล้ว");
-      setDeleteTarget(null);
-      invalidateAll();
-    },
-    onError: (err: unknown) => {
-      toast.error(getErrorMessage(err));
-    },
-  });
+  const jobsQuery = useJobsAdminQuery();
+  const createMut = useCreateJobMutation();
+  const updateMut = useUpdateJobMutation();
+  const patchActiveMut = usePatchJobActiveMutation();
+  const deleteMut = useDeleteJobMutation();
 
   const data = jobsQuery.data ? jobsQuery.data : ([] as Array<AdminJobRow>);
 
@@ -155,27 +68,13 @@ export default function JobsPage() {
       ? patchActiveMut.variables.id
       : null;
 
-  function openCreate() {
-    setFormMode("create");
-    setEditing(null);
-    setFormSerial((s) => s + 1);
-    setFormOpen(true);
-  }
-
-  function openEdit(row: AdminJobRow) {
-    setFormMode("edit");
-    setEditing(row);
-    setFormSerial((s) => s + 1);
-    setFormOpen(true);
-  }
-
   function onFormSubmit(values: CreateJobFormValues) {
     if (formMode === "create") {
-      createMut.mutate(values);
+      createMut.mutate(values, { onSuccess: () => closeForm() });
       return;
     }
     if (!editing) return;
-    updateMut.mutate({ id: editing.id, body: values });
+    updateMut.mutate({ id: editing.id, body: values }, { onSuccess: () => closeForm() });
   }
 
   const formPending = createMut.isPending || updateMut.isPending;
@@ -216,8 +115,7 @@ export default function JobsPage() {
         key={formSerial}
         open={formOpen}
         onOpenChange={(open) => {
-          setFormOpen(open);
-          if (!open) setEditing(null);
+          if (!open) closeForm();
         }}
         mode={formMode}
         initial={editing}
@@ -266,7 +164,9 @@ export default function JobsPage() {
               onClick={(e) => {
                 e.preventDefault();
                 if (deleteTarget) {
-                  deleteMut.mutate(deleteTarget.id);
+                  deleteMut.mutate(deleteTarget.id, {
+                    onSuccess: () => setDeleteTarget(null),
+                  });
                 }
               }}
             >
