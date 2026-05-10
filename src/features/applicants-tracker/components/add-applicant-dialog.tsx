@@ -468,9 +468,9 @@ export function AddApplicantDialog({
                 <Separator />
 
                 <Field className="gap-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-col gap-2">
                     <FieldLabel className="w-auto">
-                      Resume / CV (PDF)
+                      อัปโหลด Resume / CV
                     </FieldLabel>
                     <div className="flex flex-wrap items-center gap-2">
                       {addResumeFile ? (
