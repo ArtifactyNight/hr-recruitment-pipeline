@@ -483,3 +483,11 @@
 **Output:** Full README rewrite — stack table, prerequisites (Node ≥20/pnpm ≥9/PG ≥15), quick start steps, env vars table (all vars documented with required flag), Google OAuth setup section (what's needed + links), deep feature-based architecture section (why vs type-based, annotated directory tree, what goes in each subfolder, shared code map, API layer, pipeline stages). Updated .env.example: removed stale Clerk vars and unused GOOGLE_TOKEN_ENCRYPTION_KEY, added comments with setup links.
 
 **Edited:** README.md, .env.example
+
+### 2026-05-11 04:27 - Refactor TanStack Query hooks to queryOptions/mutationOptions pattern
+
+**Prompt:** Migrate all `/api/` feature hooks to use `queryOptions`/`mutationOptions` factories instead of `return useQuery/useMutation` wrappers. Files named `queries.ts` and `mutations.ts`. Pattern from TanStack Query v5 docs.
+
+**Output:** Created `queries.ts` and `mutations.ts` for 5 features (applicants-tracker, dashboard, interviews, jobs, screener). Updated 7 consumer files (candidates/page, jobs/page, dashboard/page, applicant-detail-resume-section, interviews-calendar, job-description-dialog, resume-screener) to use `useQuery(featureQueries.xxx())` and `useMutation(featureMutations.xxx(queryClient))` pattern. Mutations needing queryClient accept it as a parameter. Old `use-*.ts` files remain but are no longer imported.
+
+**Edited:** 16 files created/modified. Zero new TS errors in new files.

@@ -4,17 +4,9 @@ import { useCallback, useMemo } from "react";
 
 import { Container } from "@/components/layout/container";
 import { HeaderSection } from "@/components/layout/header-section";
+import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
 import { applicantKeys } from "@/features/applicants-tracker/api/query-keys";
-import { useApplicantsQuery } from "@/features/applicants-tracker/api/use-applicants";
-import {
-  useAiConfirmMutation,
-  useAnalyzeDraftMutation,
-  useCreateApplicantMutation,
-  useDeleteApplicantMutation,
-  usePatchApplicantMutation,
-  useScheduleApplicantInterviewMutation,
-  useScreenApplicantMutation,
-} from "@/features/applicants-tracker/api/use-applicants-mutations";
+import { applicantQueries } from "@/features/applicants-tracker/api/queries";
 import { AddApplicantDialog } from "@/features/applicants-tracker/components/add-applicant-dialog";
 import { ApplicantDetailDialog } from "@/features/applicants-tracker/components/applicant-detail-dialog";
 import { ApplicantKanbanBoardView } from "@/features/applicants-tracker/components/applicant-kanban-board-view";
@@ -24,10 +16,10 @@ import { ApplicantTrackerTable } from "@/features/applicants-tracker/components/
 import { DeleteApplicantAlert } from "@/features/applicants-tracker/components/delete-applicant-alert";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
-import { useScreenerJobsQuery } from "@/features/screener/api/use-screener-jobs";
+import { screenerQueries } from "@/features/screener/api/queries";
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import type { ApplicantStage } from "@/generated/prisma/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useDebounceValue } from "usehooks-ts";
@@ -95,8 +87,8 @@ export default function CandidatesPage() {
 
   const applicantsQueryKey = applicantKeys.list(filters);
 
-  const applicantsQuery = useApplicantsQuery(filters);
-  const jobsQuery = useScreenerJobsQuery();
+  const applicantsQuery = useQuery(applicantQueries.list(filters));
+  const jobsQuery = useQuery(screenerQueries.jobs());
 
   const list = useMemo(() => {
     return applicantsQuery.data?.applicants ?? [];
@@ -110,13 +102,13 @@ export default function CandidatesPage() {
     void queryClient.invalidateQueries({ queryKey: ["applicants"] });
   }, [queryClient]);
 
-  const patchApplicantMut = usePatchApplicantMutation(applicantsQueryKey);
-  const deleteMut = useDeleteApplicantMutation(applicantsQueryKey);
-  const screenApplicantMut = useScreenApplicantMutation();
-  const analyzeDraftMut = useAnalyzeDraftMutation();
-  const manualCreateMut = useCreateApplicantMutation(applicantsQueryKey, jobs);
-  const aiConfirmMut = useAiConfirmMutation();
-  const scheduleInterviewMut = useScheduleApplicantInterviewMutation();
+  const patchApplicantMut = useMutation(applicantMutations.patch(applicantsQueryKey, queryClient));
+  const deleteMut = useMutation(applicantMutations.delete(applicantsQueryKey, queryClient));
+  const screenApplicantMut = useMutation(applicantMutations.screen(queryClient));
+  const analyzeDraftMut = useMutation(applicantMutations.analyzeDraft());
+  const manualCreateMut = useMutation(applicantMutations.create(applicantsQueryKey, queryClient, jobs));
+  const aiConfirmMut = useMutation(applicantMutations.aiConfirm(queryClient));
+  const scheduleInterviewMut = useMutation(applicantMutations.scheduleInterview(queryClient));
 
   const patchStage = useCallback(
     (input: { id: string; stage: ApplicantStage }) =>
@@ -300,7 +292,7 @@ export default function CandidatesPage() {
           if (!detail) return;
           screenApplicantMut.mutate(detail.id, {
             onSuccess: (data) => {
-              const applicant = data?.applicant;
+              const applicant = (data as { applicant?: unknown } | null)?.applicant;
               if (
                 applicant &&
                 typeof applicant === "object" &&

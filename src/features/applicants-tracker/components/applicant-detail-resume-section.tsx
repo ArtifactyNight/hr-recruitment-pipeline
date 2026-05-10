@@ -9,12 +9,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  useDeleteResumeMutation,
-  useDownloadResumeMutation,
-  useSaveCvTextMutation,
-  useUploadResumeMutation,
-} from "@/features/applicants-tracker/api/use-resume-mutations";
+import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import {
   ChevronsUpDownIcon,
@@ -48,10 +44,11 @@ export function ApplicantDetailResumeSection({
   const [isEditingText, setIsEditingText] = useState(false);
   const [textDraft, setTextDraft] = useState(applicant.cvText ?? "");
 
-  const downloadMut = useDownloadResumeMutation(applicant.id);
-  const uploadMut = useUploadResumeMutation(applicant.id, applicantsQueryKey);
-  const deleteMut = useDeleteResumeMutation(applicant.id, applicantsQueryKey);
-  const saveTextMut = useSaveCvTextMutation(applicant.id, applicantsQueryKey);
+  const queryClient = useQueryClient();
+  const downloadMut = useMutation(applicantMutations.downloadResume(applicant.id));
+  const uploadMut = useMutation(applicantMutations.uploadResume(applicant.id, applicantsQueryKey, queryClient));
+  const deleteMut = useMutation(applicantMutations.deleteResume(applicant.id, applicantsQueryKey, queryClient));
+  const saveTextMut = useMutation(applicantMutations.saveCvText(applicant.id, applicantsQueryKey, queryClient));
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

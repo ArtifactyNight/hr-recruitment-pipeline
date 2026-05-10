@@ -18,29 +18,22 @@ import {
   emptyScheduleInterviewFormState,
   scheduleInterviewFormStateForDate,
 } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
-import {
-  useCalendarEventsQuery,
-  useCalendarScheduleApplicantsQuery,
-  useCancelCalendarEventMutation,
-  usePatchInterviewMutation,
-  useScheduleInterviewMutation,
-} from "@/features/interviews/api/use-interviews";
+import { interviewMutations } from "@/features/interviews/api/mutations";
+import { interviewQueries } from "@/features/interviews/api/queries";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FullScreenCalendar,
   type CalendarData,
 } from "@/features/interviews/components/fullscreen-calendar";
 import { groupGoogleCalendarEventsToCalendarData } from "@/features/interviews/lib/google-calendar-feed";
 import { useInterviewsCalendarStore } from "@/features/interviews/store/interviews-calendar-store";
-import { api } from "@/lib/api";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 
-type ApplicantsResponse = NonNullable<
-  Awaited<ReturnType<typeof api.api.applicants.get>>["data"]
->;
+import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 
-type ScheduleApplicant = ApplicantsResponse["applicants"][number];
+type ScheduleApplicant = TrackerApplicant;
 
 interface ApplicantPickerFieldProps {
   applicants: Array<ScheduleApplicant>;
@@ -98,11 +91,12 @@ export function InterviewsCalendar() {
     resetSchedule,
   } = useInterviewsCalendarStore(useShallow((s) => s));
 
-  const calendarQuery = useCalendarEventsQuery(fetchRange);
-  const applicantsQuery = useCalendarScheduleApplicantsQuery();
-  const cancelCalendarMut = useCancelCalendarEventMutation();
-  const patchInterviewMut = usePatchInterviewMutation();
-  const scheduleInterviewMut = useScheduleInterviewMutation();
+  const queryClient = useQueryClient();
+  const calendarQuery = useQuery(interviewQueries.calendarEvents(fetchRange));
+  const applicantsQuery = useQuery(interviewQueries.calendarScheduleApplicants());
+  const cancelCalendarMut = useMutation(interviewMutations.cancelCalendarEvent(queryClient));
+  const patchInterviewMut = useMutation(interviewMutations.patch(queryClient));
+  const scheduleInterviewMut = useMutation(interviewMutations.schedule(queryClient));
 
   const scheduleCandidates = useMemo(() => {
     return (applicantsQuery.data?.applicants ?? []).filter(
@@ -145,7 +139,7 @@ export function InterviewsCalendar() {
   const calendarData: Array<CalendarData> = useMemo(() => {
     const events = calendarQuery.data?.events;
     if (!events?.length) return [];
-    return groupGoogleCalendarEventsToCalendarData(events);
+    return groupGoogleCalendarEventsToCalendarData(events as Parameters<typeof groupGoogleCalendarEventsToCalendarData>[0]);
   }, [calendarQuery.data?.events]);
 
   const apiError = calendarQuery.isError

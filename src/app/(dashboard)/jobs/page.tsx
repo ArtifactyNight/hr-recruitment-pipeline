@@ -13,13 +13,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  useCreateJobMutation,
-  useDeleteJobMutation,
-  useJobsAdminQuery,
-  usePatchJobActiveMutation,
-  useUpdateJobMutation,
-} from "@/features/jobs/api/use-jobs";
+import { jobMutations } from "@/features/jobs/api/mutations";
+import { jobQueries } from "@/features/jobs/api/queries";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { JobFormDialog } from "@/features/jobs/components/job-form-dialog";
 import { JobsTable } from "@/features/jobs/components/jobs-table";
 import type {
@@ -55,11 +51,12 @@ export default function JobsPage() {
     })),
   );
 
-  const jobsQuery = useJobsAdminQuery();
-  const createMut = useCreateJobMutation();
-  const updateMut = useUpdateJobMutation();
-  const patchActiveMut = usePatchJobActiveMutation();
-  const deleteMut = useDeleteJobMutation();
+  const queryClient = useQueryClient();
+  const jobsQuery = useQuery(jobQueries.admin());
+  const createMut = useMutation(jobMutations.create(queryClient));
+  const updateMut = useMutation(jobMutations.update(queryClient));
+  const patchActiveMut = useMutation(jobMutations.patchActive(queryClient));
+  const deleteMut = useMutation(jobMutations.delete(queryClient));
 
   const data = jobsQuery.data ? jobsQuery.data : ([] as Array<AdminJobRow>);
 

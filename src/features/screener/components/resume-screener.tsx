@@ -2,11 +2,9 @@
 
 import { useCallback, useMemo, type ChangeEvent } from "react";
 
-import {
-  useAddToTrackerMutation,
-  useEvaluateMutation,
-} from "@/features/screener/api/use-screener";
-import { useScreenerJobsQuery } from "@/features/screener/api/use-screener-jobs";
+import { screenerMutations } from "@/features/screener/api/mutations";
+import { screenerQueries } from "@/features/screener/api/queries";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import { formatReportText } from "@/features/screener/lib/resume-screener-utils";
 import { useResumeScreenerStore } from "@/features/screener/store/resume-screener-store";
@@ -93,9 +91,10 @@ export function ResumeScreener() {
     (s) => s.setReportDialogOpen,
   );
 
-  const jobsQuery = useScreenerJobsQuery();
-  const evaluateMutation = useEvaluateMutation();
-  const addMutation = useAddToTrackerMutation();
+  const queryClient = useQueryClient();
+  const jobsQuery = useQuery(screenerQueries.jobs());
+  const evaluateMutation = useMutation(screenerMutations.evaluate());
+  const addMutation = useMutation(screenerMutations.addToTracker(queryClient));
 
   const jobs = useMemo(() => {
     return jobsQuery.data?.jobs ?? [];

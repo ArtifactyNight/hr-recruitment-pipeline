@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
-import { useScreenerJobDetailQuery } from "@/features/screener/api/use-screener";
+import { screenerQueries } from "@/features/screener/api/queries";
+import { useQuery } from "@tanstack/react-query";
 import { FileTextIcon } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
@@ -25,7 +26,7 @@ export function JobDescriptionDialog({ selectedJobId }: JobDescriptionDialogProp
     })),
   );
 
-  const detailQuery = useScreenerJobDetailQuery(selectedJobId, jdDialogOpen);
+  const detailQuery = useQuery(screenerQueries.jobDetail(selectedJobId, jdDialogOpen));
 
   const jdDetail = detailQuery.data ?? null;
   const jdLoading = detailQuery.isPending || detailQuery.isFetching;
