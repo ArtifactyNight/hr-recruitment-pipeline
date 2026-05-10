@@ -3,14 +3,6 @@
 import { useCallback, useMemo } from "react";
 
 import { Container } from "@/components/layout/container";
-import { AddApplicantDialog } from "@/features/applicants-tracker/components/add-applicant-dialog";
-import { ApplicantDetailDialog } from "@/features/applicants-tracker/components/applicant-detail-dialog";
-import { ApplicantKanbanBoardView } from "@/features/applicants-tracker/components/applicant-kanban-board-view";
-import type { ScheduleInterviewSubmitInput } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
-import { ApplicantTrackerFilters } from "@/features/applicants-tracker/components/applicant-tracker-filters";
-import { ApplicantTrackerHeader } from "@/features/applicants-tracker/components/applicant-tracker-header";
-import { ApplicantTrackerTable } from "@/features/applicants-tracker/components/applicant-tracker-table";
-import { DeleteApplicantAlert } from "@/features/applicants-tracker/components/delete-applicant-alert";
 import { applicantKeys } from "@/features/applicants-tracker/api/query-keys";
 import { useApplicantsQuery } from "@/features/applicants-tracker/api/use-applicants";
 import {
@@ -22,6 +14,14 @@ import {
   useScheduleApplicantInterviewMutation,
   useScreenApplicantMutation,
 } from "@/features/applicants-tracker/api/use-applicants-mutations";
+import { AddApplicantDialog } from "@/features/applicants-tracker/components/add-applicant-dialog";
+import { ApplicantDetailDialog } from "@/features/applicants-tracker/components/applicant-detail-dialog";
+import { ApplicantKanbanBoardView } from "@/features/applicants-tracker/components/applicant-kanban-board-view";
+import type { ScheduleInterviewSubmitInput } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
+import { ApplicantTrackerControls } from "@/features/applicants-tracker/components/applicant-tracker-controls";
+import { ApplicantTrackerHeader } from "@/features/applicants-tracker/components/applicant-tracker-header";
+import { ApplicantTrackerTable } from "@/features/applicants-tracker/components/applicant-tracker-table";
+import { DeleteApplicantAlert } from "@/features/applicants-tracker/components/delete-applicant-alert";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
 import { useScreenerJobsQuery } from "@/features/screener/api/use-screener-jobs";
@@ -140,8 +140,16 @@ export default function CandidatesPage() {
 
   return (
     <Container className="flex flex-col gap-6">
-      <ApplicantTrackerHeader
-        total={total}
+      <ApplicantTrackerHeader total={total} />
+
+      <ApplicantTrackerControls
+        searchInput={searchInput}
+        onSearchChange={setSearchInput}
+        jobFilter={jobFilter}
+        onJobFilterChange={setJobFilter}
+        sourceFilter={sourceFilter}
+        onSourceFilterChange={setSourceFilter}
+        jobs={jobs}
         view={view}
         onViewChange={setView}
         onAddClick={() => {
@@ -151,16 +159,6 @@ export default function CandidatesPage() {
             setAddJobId(jobs[0].id);
           }
         }}
-      />
-
-      <ApplicantTrackerFilters
-        searchInput={searchInput}
-        onSearchChange={setSearchInput}
-        jobFilter={jobFilter}
-        onJobFilterChange={setJobFilter}
-        sourceFilter={sourceFilter}
-        onSourceFilterChange={setSourceFilter}
-        jobs={jobs}
       />
 
       {view === "board" ? (
@@ -221,9 +219,7 @@ export default function CandidatesPage() {
                   : "";
               const s = useApplicantTrackerStore.getState();
               setAddAiReport(report);
-              setAddName(
-                detectedName.trim() || s.addName.trim() || "ผู้สมัคร",
-              );
+              setAddName(detectedName.trim() || s.addName.trim() || "ผู้สมัคร");
               setAddEmail(detectedEmail.trim() || s.addEmail.trim());
               setAddFlowStep("ai_confirm");
               toast.success("วิเคราะห์เสร็จแล้ว — ตรวจข้อมูลแล้วบันทึก");
