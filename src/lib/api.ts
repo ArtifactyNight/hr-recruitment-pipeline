@@ -1,6 +1,6 @@
 import { treaty } from "@elysiajs/eden";
 
-import type { App } from "@/server/elysia-app";
+import type { App } from "@/server";
 
 function getBaseUrl() {
   if (typeof window !== "undefined") return window.location.origin;

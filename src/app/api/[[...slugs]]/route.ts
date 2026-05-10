@@ -1,4 +1,4 @@
-import { elysiaApp } from "@/server/elysia-app";
+import { elysiaApp } from "@/server";
 
 function handler(request: Request) {
   return elysiaApp.fetch(request);

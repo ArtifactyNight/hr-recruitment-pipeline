@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Trim, lowercase, dedupe (order preserved). */
 function normalizeInterviewerEmailList(raw: Array<string>): Array<string> {
   const seen = new Set<string>();
   const out: Array<string> = [];

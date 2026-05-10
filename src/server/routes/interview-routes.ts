@@ -19,8 +19,8 @@ import {
   patchEventDetails,
   snapshotFromGoogleCalendarEvent,
 } from "@/server/google-calendar/google-calendar-service";
-import { findDbInterviewConflict } from "@/server/interview-scheduling-lib";
-import { ensureInterviewerIdsFromEmails } from "@/server/interviewer-email-lib";
+import { findDbInterviewConflict } from "@/server/lib/interview-scheduling";
+import { ensureInterviewerIdsFromEmails } from "@/server/lib/interviewer-email";
 import type { InterviewCalendarUiSnapshot } from "@/types/interview-calendar-snapshot";
 
 const TZ = "Asia/Bangkok";

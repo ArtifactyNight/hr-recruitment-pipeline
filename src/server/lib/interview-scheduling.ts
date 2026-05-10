@@ -21,7 +21,6 @@ function intervalsOverlap(
   return aMs < bEnd && aEnd > bMs;
 }
 
-/** ผู้จัดว่างจากมุมนัดใน DB หรือไม่ */
 export async function findDbInterviewConflict(opts: {
   organizerUserId: number;
   slotStart: Date;
