@@ -77,7 +77,7 @@ export function TrackerCard({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "pointer-events-none h-6 shrink-0 rounded-md border-0 px-2 py-0 text-xs tabular-nums font-bold items-center ",
+                    "pointer-events-none h-6 shrink-0 rounded-md border-0 px-2 py-0 text-xs tabular-nums font-bold items-center",
                     scoreBadgeClass(score),
                   )}
                 >

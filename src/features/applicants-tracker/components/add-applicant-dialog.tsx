@@ -745,7 +745,7 @@ export function AddApplicantDialog({
             >
               {isAnalyzing ? (
                 <Loader2Icon
-                  data-icon="inline-start"
+                  data-icon="inline-sta/rt"
                   className="animate-spin"
                 />
               ) : (
