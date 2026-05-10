@@ -29,6 +29,7 @@ import {
   ClockIcon,
   ExternalLinkIcon,
   FileTextIcon,
+  MoreVerticalIcon,
   PlusCircleIcon,
   SearchIcon,
   UserIcon,
@@ -55,6 +56,13 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useCopyToClipboard } from "usehooks-ts";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PostponeInterviewDialog } from "@/features/interviews/components/postpone-interview-dialog";
 
 export type CalendarEventStatus = "confirmed" | "tentative" | "cancelled";
@@ -181,10 +189,10 @@ function SelectedDayEventsPanel({
 
   return (
     <>
-      <CardHeader className="border-b px-4 pb-3 pt-4">
+      <CardHeader>
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 px-4 pb-4 pt-4">
+      <CardContent>
         <div className="space-y-3">
           {events.length > 0 ? (
             events.map((event) => {
@@ -205,7 +213,7 @@ function SelectedDayEventsPanel({
                 <div
                   key={`${event.id}-${event.datetime}`}
                   className={cn(
-                    "rounded-lg border p-3",
+                    "relative rounded-lg border p-3 pr-10",
                     cancelled
                       ? "border-muted-foreground/40 bg-muted/30 opacity-90"
                       : "border-border",
@@ -292,78 +300,77 @@ function SelectedDayEventsPanel({
                           ) : null}
                         </div>
                       </div>
-                      {showMeetActions ? (
-                        <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-                          <Button size="sm" asChild>
-                            <Link
-                              href={meetUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="gap-1.5"
-                            >
-                              <ExternalLinkIcon />
-                              เข้าประชุม
-                            </Link>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              const ok = await copyToClipboard(meetUrl);
-                              if (ok) toast.success("คัดลอกลิงก์แล้ว");
-                              else toast.error("คัดลอกไม่ได้");
-                            }}
-                          >
-                            <ClipboardCopyIcon />
-                            คัดลอกลิงก์
-                          </Button>
-                        </div>
-                      ) : null}
                     </div>
-                    {showCancelSlot || canPostpone ? (
-                      <div className="flex flex-wrap gap-2 border-border pt-3">
-                        {canPostpone ? (
+
+                    <div className="absolute right-2 top-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={postponeInterviewPending}
-                            className="min-w-0 flex-1 gap-1.5 sm:flex-initial"
-                            onClick={() => setEventToPostpone(event)}
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            disabled={cancelled}
                           >
-                            <CalendarClockIcon
-                              className="size-3.5 shrink-0"
-                              aria-hidden
+                            <MoreVerticalIcon
+                              className="size-4"
+                              aria-hidden="true"
                             />
-                            เลื่อนเวลา
+                            <span className="sr-only">Actions</span>
                           </Button>
-                        ) : null}
-                        {showCancelSlot ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            title={
-                              cancelDisabledPast
-                                ? "เริ่มไปแล้ว — ยกเลิกได้จาก Google Calendar"
-                                : undefined
-                            }
-                            disabled={
-                              cancelDisabledPast || cancelCalendarPending
-                            }
-                            className="min-w-0 flex-1 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-initial"
-                            onClick={() => setEventToCancel(event)}
-                          >
-                            <CalendarX2Icon
-                              className="size-3.5 shrink-0"
-                              aria-hidden
-                            />
-                            ยกเลิกนัด
-                          </Button>
-                        ) : null}
-                      </div>
-                    ) : null}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {showMeetActions ? (
+                            <>
+                              <DropdownMenuItem asChild>
+                                <Link
+                                  href={meetUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLinkIcon data-icon="inline-start" />
+                                  เข้าประชุม
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  const ok = await copyToClipboard(meetUrl);
+                                  if (ok) toast.success("คัดลอกลิงก์แล้ว");
+                                  else toast.error("คัดลอกไม่ได้");
+                                }}
+                              >
+                                <ClipboardCopyIcon data-icon="inline-start" />
+                                คัดลอกลิงก์
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                          {showMeetActions &&
+                            (canPostpone || showCancelSlot) && (
+                              <DropdownMenuSeparator />
+                            )}
+                          {canPostpone ? (
+                            <DropdownMenuItem
+                              disabled={postponeInterviewPending}
+                              onClick={() => setEventToPostpone(event)}
+                            >
+                              <CalendarClockIcon data-icon="inline-start" />
+                              เลื่อนเวลา
+                            </DropdownMenuItem>
+                          ) : null}
+                          {showCancelSlot ? (
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={
+                                cancelDisabledPast || cancelCalendarPending
+                              }
+                              onClick={() => setEventToCancel(event)}
+                            >
+                              <CalendarX2Icon data-icon="inline-start" />
+                              ยกเลิกนัด
+                            </DropdownMenuItem>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </div>
               );
