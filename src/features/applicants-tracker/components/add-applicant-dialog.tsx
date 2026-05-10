@@ -32,10 +32,10 @@ import { FitRow } from "@/features/screener/components/fit-row";
 import { FitStatusBadge } from "@/features/screener/components/fit-status-badge";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { RiFilePaper2Fill, RiSparklingFill } from "@remixicon/react";
 import {
   ArrowLeftIcon,
   Loader2Icon,
-  PenLineIcon,
   SparklesIcon,
   UploadIcon,
 } from "lucide-react";
@@ -268,8 +268,11 @@ export function AddApplicantDialog({
                   disabled={jobsLoading || jobs.length === 0}
                   onClick={() => setAddFlowStep("manual")}
                 >
-                  <PenLineIcon className="size-8 text-muted-foreground" />
-                  <span className="font-semibold">กรอกข้อมูลเอง</span>
+                  <div className="bg-primary/10 rounded-lg p-2">
+                    <RiFilePaper2Fill className="size-8 text-primary" />
+                  </div>
+
+                  <span className="font-semibold text-lg">กรอกข้อมูลเอง</span>
                   <span className="text-center text-xs font-normal text-muted-foreground">
                     PDF หรือวางข้อความ — วิเคราะห์ AI ทีหลังได้
                   </span>
@@ -281,8 +284,12 @@ export function AddApplicantDialog({
                   disabled={jobsLoading || jobs.length === 0}
                   onClick={() => setAddFlowStep("ai_review")}
                 >
-                  <SparklesIcon className="size-8 text-muted-foreground" />
-                  <span className="font-semibold">วิเคราะห์ด้วย AI</span>
+                  <div className="bg-primary/10 rounded-lg p-2">
+                    <RiSparklingFill className="size-8 text-primary" />
+                  </div>
+                  <span className="font-semibold text-lg">
+                    วิเคราะห์ด้วย AI
+                  </span>
                   <span className="text-center text-xs font-normal text-muted-foreground">
                     เลือก JD แล้วส่ง resume เข้า AI ก่อนบันทึก
                   </span>
