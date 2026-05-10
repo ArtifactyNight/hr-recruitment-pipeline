@@ -10,25 +10,13 @@ import {
   fileHasBytes,
   fitReportToScreeningScalars,
 } from "@/server/lib/resume-screening-service";
-import { auth } from "@clerk/nextjs/server";
+import { authPlugin } from "@/server/lib/auth-plugin";
 import { randomUUID } from "node:crypto";
 
 import { Elysia, t } from "elysia";
 
-const screenerAuth = new Elysia({ name: "screener-auth" })
-  .derive(async () => {
-    const { userId } = await auth();
-    return { clerkUserId: userId ?? null };
-  })
-  .onBeforeHandle(({ clerkUserId, set }) => {
-    if (!clerkUserId) {
-      set.status = 401;
-      return { error: "ต้องเข้าสู่ระบบ" };
-    }
-  });
-
 export const screenerRoutes = new Elysia({ prefix: "/screener" })
-  .use(screenerAuth)
+  .use(authPlugin)
   .get(
     "/jobs",
     async () => {
@@ -72,12 +60,6 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       }
 
       try {
-        const { userId } = await auth();
-        if (!userId) {
-          set.status = 401;
-          return { error: "ต้องเข้าสู่ระบบ" };
-        }
-
         const result = await evaluateResumeAgainstJob({
           jobDescriptionId,
           cvText: fileHasBytes(file) ? undefined : cvText || undefined,

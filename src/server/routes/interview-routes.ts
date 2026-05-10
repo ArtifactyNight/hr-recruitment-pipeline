@@ -1,11 +1,10 @@
 import type { InterviewStatus } from "@/generated/prisma/client";
-import { ensureUserFromClerkId } from "@/lib/clerk-db-user";
 import {
   getGoogleTokenForUserId,
   NO_GOOGLE_OAUTH_TOKEN,
 } from "@/lib/get-google-token";
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { authPlugin } from "@/server/lib/auth-plugin";
 import { addHours, subHours } from "date-fns";
 import { Elysia, t } from "elysia";
 
@@ -37,33 +36,22 @@ function googleCalendarErrorText(e: unknown): string {
   }
 }
 
-export const interviewerRoutes = new Elysia({ prefix: "/interviewers" }).get(
-  "/",
-  async ({ set }) => {
-    const { userId } = await auth();
-    if (!userId) {
-      set.status = 401;
-      return { error: "ต้องเข้าสู่ระบบ" };
-    }
+export const interviewerRoutes = new Elysia({ prefix: "/interviewers" })
+  .use(authPlugin)
+  .get("/", async () => {
     const rows = await prisma.interviewer.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true, email: true, title: true },
     });
     return { interviewers: rows };
-  },
-);
+  });
 
 export const interviewRoutes = new Elysia({ prefix: "/interviews" })
+  .use(authPlugin)
   .get(
     "/",
-    async ({ query, set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ" };
-      }
-      const dbUser = await ensureUserFromClerkId(userId);
+    async ({ query, user }) => {
       const from = query.from
         ? new Date(query.from)
         : subHours(new Date(), 168);
@@ -71,7 +59,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
 
       const rows = await prisma.interview.findMany({
         where: {
-          organizerUserId: dbUser.id,
+          organizerUserId: user!.id,
           scheduledAt: { gte: from, lte: to },
         },
         include: {
@@ -100,17 +88,11 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       }),
     },
   )
-  .get("/suggested-emails", async ({ set }) => {
-    const { userId } = await auth();
-    if (!userId) {
-      set.status = 401;
-      return { error: "ต้องเข้าสู่ระบบ" };
-    }
-    const dbUser = await ensureUserFromClerkId(userId);
+  .get("/suggested-emails", async ({ user }) => {
     const rows = await prisma.interviewer.findMany({
       where: {
         interviews: {
-          some: { organizerUserId: dbUser.id },
+          some: { organizerUserId: user!.id },
         },
       },
       select: { email: true, name: true },
@@ -128,15 +110,10 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
   })
   .get(
     "/calendar-events",
-    async ({ query, set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ", events: [] };
-      }
+    async ({ query, user, set }) => {
       let gToken: string;
       try {
-        ({ token: gToken } = await getGoogleTokenForUserId(userId));
+        ({ token: gToken } = await getGoogleTokenForUserId(user!.id));
       } catch (e) {
         if (
           typeof e === "object" &&
@@ -163,7 +140,6 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         return { error: "from / to ไม่ถูกต้อง", events: [] };
       }
       try {
-        const dbUser = await ensureUserFromClerkId(userId);
         const events = await listPrimaryCalendarEvents({
           accessToken: gToken,
           timeMin,
@@ -174,7 +150,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         if (googleIds.length > 0) {
           const linked = await prisma.interview.findMany({
             where: {
-              organizerUserId: dbUser.id,
+              organizerUserId: user!.id,
               googleEventId: { in: googleIds },
               status: { not: "CANCELLED" },
             },
@@ -208,16 +184,10 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
   )
   .post(
     "/calendar-events/cancel",
-    async ({ body, set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ" };
-      }
-      const dbUser = await ensureUserFromClerkId(userId);
+    async ({ body, user, set }) => {
       let gToken: string;
       try {
-        ({ token: gToken } = await getGoogleTokenForUserId(userId));
+        ({ token: gToken } = await getGoogleTokenForUserId(user!.id));
       } catch (e) {
         if (
           typeof e === "object" &&
@@ -227,8 +197,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         ) {
           set.status = 403;
           return {
-            error:
-              "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google และให้ Clerk ขอ scope ปฏิทินที่ตั้งค่าไว้",
+            error: "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google อีกครั้ง",
           };
         }
         set.status = 502;
@@ -254,7 +223,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       const existing = await prisma.interview.findFirst({
         where: {
           googleEventId,
-          organizerUserId: dbUser.id,
+          organizerUserId: user!.id,
         },
         select: {
           id: true,
@@ -285,17 +254,11 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
   )
   .get(
     "/:id",
-    async ({ params, set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ" };
-      }
-      const dbUser = await ensureUserFromClerkId(userId);
+    async ({ params, user, set }) => {
       const row = await prisma.interview.findFirst({
         where: {
           id: params.id,
-          organizerUserId: dbUser.id,
+          organizerUserId: user!.id,
         },
         include: {
           applicant: {
@@ -320,7 +283,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       const eventId = row.googleEventId?.trim();
       if (eventId) {
         try {
-          const { token: gToken } = await getGoogleTokenForUserId(userId);
+          const { token: gToken } = await getGoogleTokenForUserId(user!.id);
           const gEv = await fetchPrimaryCalendarEvent({
             accessToken: gToken,
             eventId,
@@ -337,16 +300,10 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
   )
   .post(
     "/",
-    async ({ body, set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ" };
-      }
-      const dbUser = await ensureUserFromClerkId(userId);
+    async ({ body, user, set }) => {
       let gToken: string;
       try {
-        ({ token: gToken } = await getGoogleTokenForUserId(userId));
+        ({ token: gToken } = await getGoogleTokenForUserId(user!.id));
       } catch (e) {
         if (
           typeof e === "object" &&
@@ -356,8 +313,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         ) {
           set.status = 403;
           return {
-            error:
-              "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google และให้ Clerk ขอ scope ปฏิทินที่ตั้งค่าไว้",
+            error: "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google อีกครั้ง",
           };
         }
         throw e;
@@ -411,7 +367,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       }
 
       const dbHit = await findDbInterviewConflict({
-        organizerUserId: dbUser.id,
+        organizerUserId: user!.id,
         slotStart,
         durationMinutes: duration,
       });
@@ -475,7 +431,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
           set.status = 403;
           return {
             error:
-              "โทเค็น Google ไม่มีสิทธิ์ที่ต้องการ — ใน Clerk Dashboard เพิ่ม OAuth scope `https://www.googleapis.com/auth/calendar` แล้วให้ผู้ใช้ลงชื่อเข้าด้วย Google ใหม่",
+              "โทเค็น Google ไม่มีสิทธิ์ที่ต้องการ — ลงชื่อเข้าด้วย Google ใหม่เพื่อให้สิทธิ์ปฏิทิน",
             code: "GOOGLE_INSUFFICIENT_SCOPES" as const,
           };
         }
@@ -488,7 +444,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
           const inv = await tx.interview.create({
             data: {
               applicantId: applicant.id,
-              organizerUserId: dbUser.id,
+              organizerUserId: user!.id,
               scheduledAt: slotStart,
               durationMinutes: duration,
               status: "SCHEDULED",
@@ -541,7 +497,6 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         scheduledAt: t.String(),
         durationMinutes: t.Optional(t.Number()),
         interviewerIds: t.Optional(t.Array(t.String())),
-        /** ถ้าส่งฟิลด์นี้ จะใช้แทน `interviewerIds` (อีเมลหลายคน → upsert เป็น Interviewer) */
         interviewerEmails: t.Optional(t.Array(t.String())),
         extraNotes: t.Optional(t.String()),
         descriptionOverride: t.Optional(t.String()),
@@ -550,12 +505,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
   )
   .patch(
     "/:id",
-    async ({ params, body, set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ" };
-      }
+    async ({ params, body, user, set }) => {
       const hasChange =
         body.scheduledAt !== undefined ||
         body.durationMinutes !== undefined ||
@@ -566,22 +516,20 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         return { error: "ไม่มีข้อมูลที่แก้ไข" };
       }
 
-      const dbUser = await ensureUserFromClerkId(userId);
       let gToken: string;
       try {
-        ({ token: gToken } = await getGoogleTokenForUserId(userId));
+        ({ token: gToken } = await getGoogleTokenForUserId(user!.id));
       } catch {
         set.status = 403;
         return {
-          error:
-            "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google และให้ Clerk ขอ scope ปฏิทินที่ตั้งค่าไว้",
+          error: "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google อีกครั้ง",
         };
       }
 
       const existing = await prisma.interview.findFirst({
         where: {
           id: params.id,
-          organizerUserId: dbUser.id,
+          organizerUserId: user!.id,
         },
         include: {
           applicant: {
@@ -626,7 +574,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         body.durationMinutes !== undefined
       ) {
         const dbHit = await findDbInterviewConflict({
-          organizerUserId: dbUser.id,
+          organizerUserId: user!.id,
           slotStart: nextStart,
           durationMinutes: nextDuration,
           excludeInterviewId: existing.id,
@@ -754,28 +702,21 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
   )
   .delete(
     "/:id",
-    async ({ params, set }) => {
-      const { userId } = await auth();
-      if (!userId) {
-        set.status = 401;
-        return { error: "ต้องเข้าสู่ระบบ" };
-      }
-      const dbUser = await ensureUserFromClerkId(userId);
+    async ({ params, user, set }) => {
       let gToken: string;
       try {
-        ({ token: gToken } = await getGoogleTokenForUserId(userId));
+        ({ token: gToken } = await getGoogleTokenForUserId(user!.id));
       } catch {
         set.status = 403;
         return {
-          error:
-            "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google และให้ Clerk ขอ scope ปฏิทินที่ตั้งค่าไว้",
+          error: "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google อีกครั้ง",
         };
       }
 
       const existing = await prisma.interview.findFirst({
         where: {
           id: params.id,
-          organizerUserId: dbUser.id,
+          organizerUserId: user!.id,
         },
         select: {
           id: true,

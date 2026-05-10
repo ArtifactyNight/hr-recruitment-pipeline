@@ -1,7 +1,6 @@
 import type { ApplicantStage } from "@/generated/prisma/client";
-import { ensureUserFromClerkId } from "@/lib/clerk-db-user";
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { authPlugin } from "@/server/lib/auth-plugin";
 import { Elysia } from "elysia";
 
 const PIPELINE_STAGES: ApplicantStage[] = [
@@ -13,26 +12,11 @@ const PIPELINE_STAGES: ApplicantStage[] = [
   "HIRED",
 ];
 
-const dashboardAuth = new Elysia({ name: "dashboard-auth" })
-  .derive(async () => {
-    const { userId } = await auth();
-    return { clerkUserId: userId ?? null };
-  })
-  .onBeforeHandle(({ clerkUserId, set }) => {
-    if (!clerkUserId) {
-      set.status = 401;
-      return { error: "ต้องเข้าสู่ระบบ" };
-    }
-  });
-
 export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
-  .use(dashboardAuth)
+  .use(authPlugin)
   .get(
     "/stats",
-    async () => {
-      const { userId } = await auth();
-      const dbUser = await ensureUserFromClerkId(userId!);
-
+    async ({ user }) => {
       const [stageGroups, screeningStats, upcomingInterviewRows, recentApplicantRows, openPositionRows] =
         await Promise.all([
           prisma.applicant.groupBy({
@@ -45,7 +29,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
           }),
           prisma.interview.findMany({
             where: {
-              organizerUserId: dbUser.id,
+              organizerUserId: user!.id,
               status: "SCHEDULED",
               scheduledAt: { gte: new Date() },
             },

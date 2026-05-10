@@ -1,21 +1,9 @@
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { authPlugin } from "@/server/lib/auth-plugin";
 import { Elysia, t } from "elysia";
 
-const jobAuth = new Elysia({ name: "job-auth" })
-  .derive(async () => {
-    const { userId } = await auth();
-    return { clerkUserId: userId ?? null };
-  })
-  .onBeforeHandle(({ clerkUserId, set }) => {
-    if (!clerkUserId) {
-      set.status = 401;
-      return { error: "ต้องเข้าสู่ระบบ" };
-    }
-  });
-
 export const jobRoutes = new Elysia({ prefix: "/jobs" })
-  .use(jobAuth)
+  .use(authPlugin)
   .get(
     "/",
     async () => {

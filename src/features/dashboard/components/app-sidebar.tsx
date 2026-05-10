@@ -12,17 +12,20 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { routeSegmentLabels } from "@/features/dashboard/lib/route-labels";
-import { UserButton } from "@clerk/nextjs";
+import { authClient } from "@/lib/auth-client";
 import {
   BriefcaseIcon,
   Building2Icon,
   CalendarDaysIcon,
   HomeIcon,
+  LogOutIcon,
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ComponentProps } from "react";
 
 const mainNav: Array<{
@@ -49,6 +52,19 @@ export function AppSidebar({
   ...sidebarProps
 }: ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session } = authClient.useSession();
+
+  function handleSignOut() {
+    authClient.signOut({
+      fetchOptions: { onSuccess: () => router.push("/sign-in") },
+    });
+  }
+
+  const userName = session?.user?.name ?? session?.user?.email ?? "บัญชีของคุณ";
+  const initials = (session?.user?.name ?? session?.user?.email ?? "?")
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <Sidebar variant={variant} {...sidebarProps}>
@@ -98,33 +114,23 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="gap-2">
-        {/* <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={
-                pathname === "/settings" || pathname.startsWith("/settings/")
-              }
-              tooltip="ตั้งค่า"
-            >
-              <Link href="/settings">
-                <SettingsIcon />
-                <span>{routeSegmentLabels.settings}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu> */}
         <div className="flex items-center gap-2 px-2 pb-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "size-8",
-              },
-            }}
-          />
-          <span className="truncate text-xs text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden">
-            บัญชีของคุณ
+          <Avatar className="size-8 shrink-0">
+            <AvatarImage src={session?.user?.image ?? ""} />
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          </Avatar>
+          <span className="truncate text-xs text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden flex-1">
+            {userName}
           </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0 group-data-[collapsible=icon]:hidden"
+            onClick={handleSignOut}
+            title="ออกจากระบบ"
+          >
+            <LogOutIcon className="size-4" />
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>

@@ -1,7 +1,6 @@
 import { QueryProvider } from "@/components/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist_Mono, Google_Sans } from "next/font/google";
 import "./globals.css";
@@ -34,12 +33,10 @@ export default function RootLayout({
       className={`${font.className} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ClerkProvider afterSignOutUrl="/sign-in">
-          <QueryProvider>
-            <TooltipProvider>{children}</TooltipProvider>
-            <Toaster richColors />
-          </QueryProvider>
-        </ClerkProvider>
+        <QueryProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+          <Toaster richColors />
+        </QueryProvider>
       </body>
     </html>
   );

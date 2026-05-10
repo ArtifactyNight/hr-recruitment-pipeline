@@ -5,7 +5,6 @@ import {
   type InterviewStatus,
   Prisma,
 } from "@/generated/prisma/client";
-import { ensureUserFromClerkId } from "@/lib/clerk-db-user";
 import prisma from "@/lib/prisma";
 import {
   deleteResumeFromR2,
@@ -20,22 +19,11 @@ import {
   fileHasBytes,
   fitReportToScreeningScalars,
 } from "@/server/lib/resume-screening-service";
-import { auth } from "@clerk/nextjs/server";
+import { authPlugin } from "@/server/lib/auth-plugin";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
-const applicantAuth = new Elysia({ name: "applicant-auth" })
-  .derive(async () => {
-    const { userId } = await auth();
-    return { clerkUserId: userId ?? null };
-  })
-  .onBeforeHandle(({ clerkUserId, set }) => {
-    if (!clerkUserId) {
-      set.status = 401;
-      return { error: "ต้องเข้าสู่ระบบ" };
-    }
-  });
 
 const stageUnion = t.Union([
   t.Literal("APPLIED"),
@@ -71,7 +59,7 @@ function strengthsToTags(raw: unknown): Array<string> {
 }
 
 function applicantInterviewSubset(
-  organizerUserId: number,
+  organizerUserId: string,
 ): Prisma.InterviewFindManyArgs {
   return {
     where: {
@@ -226,12 +214,10 @@ function screeningErrorResponse(error: unknown): {
 }
 
 export const applicantRoutes = new Elysia({ prefix: "/applicants" })
-  .use(applicantAuth)
+  .use(authPlugin)
   .get(
     "/",
-    async ({ query }) => {
-      const { userId } = await auth();
-      const dbUser = await ensureUserFromClerkId(userId!);
+    async ({ query, user }) => {
       const search = query.search?.trim() ?? "";
       const jobDescriptionId = query.jobDescriptionId?.trim();
       const source = query.source as ApplicantSource | undefined;
@@ -268,7 +254,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
               strengths: true,
             },
           },
-          interviews: applicantInterviewSubset(dbUser.id),
+          interviews: applicantInterviewSubset(user!.id),
         },
         orderBy: { appliedAt: "desc" },
       });
@@ -330,14 +316,10 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   )
   .post(
     "/",
-    async ({ body, set }) => {
-      const { userId } = await auth();
-      const [dbUser, job] = await Promise.all([
-        ensureUserFromClerkId(userId!),
-        prisma.jobDescription.findFirst({
-          where: { id: body.jobDescriptionId, isActive: true },
-        }),
-      ]);
+    async ({ body, set, user }) => {
+      const job = await prisma.jobDescription.findFirst({
+        where: { id: body.jobDescriptionId, isActive: true },
+      });
       if (!job) {
         set.status = 404;
         return { error: "ไม่พบตำแหน่งนี้" };
@@ -375,7 +357,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
               strengths: true,
             },
           },
-          interviews: applicantInterviewSubset(dbUser.id),
+          interviews: applicantInterviewSubset(user!.id),
         },
       });
       const fromScreening = applicantListFields(created.screeningResult);
@@ -457,7 +439,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   )
   .post(
     "/with-resume",
-    async ({ body, set }) => {
+    async ({ body, set, user }) => {
       let raw: unknown;
       try {
         raw = JSON.parse(body.payload) as unknown;
@@ -490,8 +472,6 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         set.status = 404;
         return { error: "ไม่พบตำแหน่งนี้" };
       }
-      const { userId } = await auth();
-      const dbUser = await ensureUserFromClerkId(userId!);
       try {
         const applicant = await prisma.applicant.create({
           data: {
@@ -525,7 +505,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                 strengths: true,
               },
             },
-            interviews: applicantInterviewSubset(dbUser.id),
+            interviews: applicantInterviewSubset(user!.id),
           },
         });
         if (hasFile) {
@@ -567,7 +547,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                   strengths: true,
                 },
               },
-              interviews: applicantInterviewSubset(dbUser.id),
+              interviews: applicantInterviewSubset(user!.id),
             },
           });
           const fromScreening = applicantListFields(updated.screeningResult);
@@ -635,7 +615,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   )
   .post(
     "/with-screening",
-    async ({ body, set }) => {
+    async ({ body, set, user }) => {
       let raw: unknown;
       try {
         raw = JSON.parse(body.payload) as unknown;
@@ -670,8 +650,6 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       }
       const report = parsed.data.report;
       const screeningData = fitReportToScreeningScalars(report);
-      const { userId } = await auth();
-      const dbUser = await ensureUserFromClerkId(userId!);
       try {
         const applicant = await prisma.applicant.create({
           data: {
@@ -708,7 +686,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                 strengths: true,
               },
             },
-            interviews: applicantInterviewSubset(dbUser.id),
+            interviews: applicantInterviewSubset(user!.id),
           },
         });
 
@@ -775,7 +753,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                 strengths: true,
               },
             },
-            interviews: applicantInterviewSubset(dbUser.id),
+            interviews: applicantInterviewSubset(user!.id),
           },
         });
         const fromScreening = applicantListFields(updated.screeningResult);
@@ -942,9 +920,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   )
   .patch(
     "/:id",
-    async ({ params, body, set }) => {
-      const { userId } = await auth();
-      const dbUser = await ensureUserFromClerkId(userId!);
+    async ({ params, body, set, user }) => {
       try {
         const data: Prisma.ApplicantUpdateInput = {};
         if (body.stage !== undefined) {
@@ -987,7 +963,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                 strengths: true,
               },
             },
-            interviews: applicantInterviewSubset(dbUser.id),
+            interviews: applicantInterviewSubset(user!.id),
           },
         });
         const fromScreening = applicantListFields(updated.screeningResult);
@@ -1029,9 +1005,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   )
   .post(
     "/:id/screen",
-    async ({ params, set }) => {
-      const { userId } = await auth();
-      const dbUser = await ensureUserFromClerkId(userId!);
+    async ({ params, set, user }) => {
       const applicant = await prisma.applicant.findFirst({
         where: { id: params.id },
         select: {
@@ -1111,7 +1085,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                 strengths: true,
               },
             },
-            interviews: applicantInterviewSubset(dbUser.id),
+            interviews: applicantInterviewSubset(user!.id),
           },
         });
         if (!updated) {

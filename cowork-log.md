@@ -444,3 +444,22 @@
 **Prompt:** `/shadcn use react-hook-form`
 **Output:** Wired the add applicant dialog to `react-hook-form` with a Zod resolver, shadcn `FieldError` validation states, submit-based manual/AI-confirm saves, and grouped radix `SelectItem` composition while keeping Zustand synced as the tracker source of truth.
 **Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-10 23:23] - Migrate Clerk to Better Auth
+
+**Prompt:** Remove Clerk and migrate to better-auth (Google OAuth only). Tasks: (1) migrate middleware to better-auth with Elysia auth plugin, (2) build sign-in page with shadcn UI.
+
+**Output:**
+- Created `src/middleware.ts` with cookie-based session check (public: `/sign-in`, `/api/auth/*`)
+- Created `src/lib/auth-client.ts` using `createAuthClient` from better-auth/react
+- Created `src/server/lib/auth-plugin.ts` — shared Elysia derive plugin calling `auth.api.getSession()`
+- Created `src/app/sign-in/page.tsx` — shadcn Card centered, Google OAuth button
+- Migrated all 5 route files (applicant, interview, dashboard, job, screener) from Clerk `auth()` + `ensureUserFromClerkId` to better-auth plugin pattern
+- Replaced `src/lib/get-google-token.ts` to read from Prisma `Account` table with token refresh via Google OAuth endpoint
+- Fixed `organizerUserId: number` → `string` in `interview-scheduling.ts` to match Prisma schema
+- Updated sidebar: replaced Clerk `UserButton` with Avatar + name + sign-out via `authClient.signOut()`
+- Removed `ClerkProvider` from `layout.tsx`
+- Deleted `src/proxy.ts`, `src/lib/clerk-db-user.ts`, `src/app/sign-in/[[...sign-in]]/`
+- Removed `@clerk/nextjs` package and Clerk env vars
+
+**Edited:** src/middleware.ts (new), src/lib/auth-client.ts (new), src/server/lib/auth-plugin.ts (new), src/app/sign-in/page.tsx (new), src/server/routes/applicant-routes.ts, src/server/routes/interview-routes.ts, src/server/routes/dashboard-routes.ts, src/server/routes/job-routes.ts, src/server/routes/screener-routes.ts, src/lib/get-google-token.ts, src/lib/auth.ts, src/server/lib/interview-scheduling.ts, src/features/dashboard/components/app-sidebar.tsx, src/app/layout.tsx, .env

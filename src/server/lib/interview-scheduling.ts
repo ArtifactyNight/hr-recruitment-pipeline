@@ -22,7 +22,7 @@ function intervalsOverlap(
 }
 
 export async function findDbInterviewConflict(opts: {
-  organizerUserId: number;
+  organizerUserId: string;
   slotStart: Date;
   durationMinutes: number;
   excludeInterviewId?: string | undefined;

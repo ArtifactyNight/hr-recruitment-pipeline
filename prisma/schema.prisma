@@ -13,18 +13,74 @@ datasource db {
 }
 
 model User {
-  id                  Int                 @id @default(autoincrement())
-  clerkId             String              @unique
-  email               String              @unique
-  name                String?
-  interviewer         Interviewer?
-  googleCalendar      UserGoogleCalendar?
-  interviewsOrganized Interview[]
+  id                 String              @id
+  name               String
+  email              String
+  emailVerified      Boolean             @default(false)
+  image              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  sessions           Session[]
+  accounts           Account[]
+  userGoogleCalendar UserGoogleCalendar?
+  interviewer        Interviewer?
+  interviews         Interview[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
 
 model UserGoogleCalendar {
   id                    String   @id @default(cuid())
-  userId                Int      @unique
+  userId                String   @unique
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   refreshTokenEncrypted String   @db.Text
   googleEmail           String
@@ -110,7 +166,7 @@ enum FitStatus {
 
 model Interviewer {
   id         String      @id @default(cuid())
-  userId     Int?        @unique
+  userId     String?     @unique
   user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   name       String
   email      String      @unique
@@ -125,7 +181,7 @@ model Interview {
   id              String          @id @default(cuid())
   applicantId     String
   applicant       Applicant       @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  organizerUserId Int?
+  organizerUserId String?
   organizer       User?           @relation(fields: [organizerUserId], references: [id], onDelete: SetNull)
   googleMeetLink  String?
   googleEventId   String?
