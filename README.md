@@ -87,7 +87,7 @@ After any schema change: `pnpm prisma generate && pnpm prisma db push` (dev) or 
 
 ## Google OAuth Setup
 
-Better Auth handles sessions, token storage, and refresh rotation. The Google OAuth access token is stored in your own `Account` table — `src/lib/get-google-token.ts` retrieves it with a Prisma query. No vendor SDK, no third-party token API.
+Better Auth handles the full OAuth flow — sessions, token storage, and refresh rotation — without custom middleware. The Google OAuth access token is stored directly in your own `Account` table (Prisma), which means `src/lib/get-google-token.ts` retrieves it with a plain database query. No vendor SDK, no third-party token API, no security-critical token code to maintain yourself.
 
 What you need:
 - Google Cloud project with **Google Calendar API** enabled
@@ -97,13 +97,26 @@ What you need:
 → [Create OAuth credentials](https://console.cloud.google.com/apis/credentials)  
 → [Enable Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com)
 
+## Architecture
+
+### Why These Technologies
+
+**Elysia + Eden Treaty**  
+Elysia provides a REST API with TypeBox validation — requests are rejected before the handler runs, and the response shape is part of the type signature. Eden Treaty derives a fully-typed client from that signature directly, so there are no manually written API types anywhere in the frontend. When a route changes, the component that consumes it shows a TypeScript error immediately. This end-to-end type safety without a codegen step was the main reason to pick this over tRPC (RPC-only, no clean REST surface) or raw fetch (manual types that drift).
+
+**Better Auth**  
+Better Auth covers the full auth stack — OAuth, sessions, token storage, refresh rotation — without writing a single JWT handler or callback route. The key advantage for this app: it stores the Google OAuth access token in your own `Account` table, so Calendar API calls are a plain Prisma query rather than a call to a third-party token API. Compared to building auth from scratch, this eliminates hundreds of lines of security-critical code while keeping full ownership of user data.
+
+**Zustand + TanStack Query**  
+These two handle different problems and should not be mixed. TanStack Query owns all server state — fetching, caching, background refetching, and optimistic updates for applicants, jobs, and interviews. Zustand owns client-only UI state — which dialog is open, what step a multi-step form is on, filter values. Zustand's minimal API (one `create()` call, no providers, no reducers) keeps the learning curve low. The rule: if it came from the server, it lives in TanStack Query; if it only exists in the browser, it lives in Zustand.
+
 ---
 
-## Codebase Architecture
+### Feature-Based Architecture
 
-### Feature-Based Structure
+Code is organized by **feature**, not by type. Each feature is a self-contained vertical slice — its own components, API hooks, state store, and utilities live together in `src/features/<feature>/`.
 
-Code is organized by **feature**, not by type. Each feature owns its components, API hooks, state, and utilities in one folder. When you work on something, you open one folder — not four.
+The alternative — grouping by type (`/components`, `/hooks`, `/stores`) — works fine for small apps but degrades at medium scale. You end up with a `components/` folder of 40+ unrelated files and finding everything for one feature means jumping across four top-level folders. Feature-based architecture collocates related code: when something breaks in the interview scheduler, you open `src/features/interviews/` and everything is there. Cross-feature imports are visible and intentional.
 
 ```
 src/features/
@@ -135,6 +148,10 @@ src/server/       # Elysia app, route handlers, server-only services
 src/types/        # Shared TypeScript types
 ```
 
+If two features import the same thing, it moves to `src/components/` or `src/lib/` — not stays in either feature.
+
+---
+
 ### API Layer
 
 All API requests go through Elysia (`src/server/elysia-app.ts`) via a Next.js catch-all route at `src/app/api/[[...slugs]]/route.ts`. Eden Treaty generates the typed client — import `api` from `@/lib/api` and call endpoints like functions. Types are inferred automatically from the Elysia route definitions.
@@ -149,7 +166,9 @@ All API requests go through Elysia (`src/server/elysia-app.ts`) via a Next.js ca
 /api/auth              # Better Auth
 ```
 
-### Applicant Pipeline Stages
+---
+
+### Applicant Pipeline
 
 ```
 APPLIED → SCREENING → PRE_SCREEN_CALL → FIRST_INTERVIEW → OFFER → HIRED
