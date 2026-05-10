@@ -107,7 +107,7 @@ export function ApplicantDetailNotesSection({
         placeholder="บันทึกข้อมูลเพิ่มเติมจาก HR..."
         disabled={patchPending}
         rows={4}
-        className="min-h-24 resize-y read-only:bg-muted/30 read-only:cursor-default"
+        className="min-h-24 resize-y read-only:bg-muted/30 read-only:cursor-default mt-2"
       />
     </div>
   );

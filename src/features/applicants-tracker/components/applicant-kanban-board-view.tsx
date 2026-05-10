@@ -156,7 +156,7 @@ export function ApplicantKanbanBoardView({
       getItemValue={getItemValue}
       className="w-full"
     >
-      <KanbanBoard className="w-full min-w-0 gap-4 grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+      <KanbanBoard className="w-full min-w-0 gap-4 grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {STAGE_ORDER.map((stageId) => {
           const items = columns[stageId] ?? [];
           return (
