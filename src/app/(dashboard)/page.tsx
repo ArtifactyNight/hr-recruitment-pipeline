@@ -1,21 +1,67 @@
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
-import { DataTable } from "@/components/data-table";
-import { SectionCards } from "@/components/section-cards";
+"use client";
 
-import data from "./data.json";
+import { Container } from "@/components/layout/container";
+import { DashboardOpenPositions } from "@/features/dashboard/components/dashboard-open-positions";
+import { DashboardPipelineOverview } from "@/features/dashboard/components/dashboard-pipeline-overview";
+import { DashboardRecentApplicants } from "@/features/dashboard/components/dashboard-recent-applicants";
+import { DashboardStatsCards } from "@/features/dashboard/components/dashboard-stats-cards";
+import { DashboardUpcomingInterviews } from "@/features/dashboard/components/dashboard-upcoming-interviews";
+import { api } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
-export default function Home() {
+export default function DashboardPage() {
+  const statsQuery = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const { data, error } = await api.api.dashboard.stats.get({
+        fetch: { credentials: "include" },
+      });
+      if (error) throw error.value;
+      return data;
+    },
+    staleTime: 60_000,
+  });
+
+  const data = statsQuery.data;
+
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-          <SectionCards />
-          <div className="px-4 lg:px-6">
-            <ChartAreaInteractive />
-          </div>
-          <DataTable data={data} />
+    <Container className="flex flex-col gap-6">
+      <DashboardStatsCards
+        totalApplicants={data?.totalApplicants ?? 0}
+        inProgress={data?.inProgress ?? 0}
+        upcomingInterviews={data?.upcomingInterviews ?? 0}
+        aiScreened={data?.aiScreened ?? 0}
+        avgScore={data?.avgScore ?? 0}
+        hired={data?.hired ?? 0}
+        rejected={data?.rejected ?? 0}
+        loading={statsQuery.isLoading}
+      />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <DashboardPipelineOverview
+            pipelineStages={data?.pipelineStages ?? []}
+            loading={statsQuery.isLoading}
+          />
+        </div>
+        <div className="lg:col-span-2">
+          <DashboardRecentApplicants
+            recentApplicants={data?.recentApplicants ?? []}
+            loading={statsQuery.isLoading}
+          />
         </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <DashboardUpcomingInterviews
+          upcomingInterviewList={data?.upcomingInterviewList ?? []}
+          loading={statsQuery.isLoading}
+        />
+        <DashboardOpenPositions
+          openPositions={data?.openPositions ?? []}
+          loading={statsQuery.isLoading}
+        />
+      </div>
+    </Container>
   );
 }

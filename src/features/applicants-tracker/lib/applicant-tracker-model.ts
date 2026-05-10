@@ -58,7 +58,7 @@ export const stageLabel: Record<ApplicantStage, string> = {
   SCREENING: "Screening",
   PRE_SCREEN_CALL: "Pre-Screen Call",
   FIRST_INTERVIEW: "First Interview",
-  OFFER: "offer",
+  OFFER: "Offer",
   HIRED: "Hired",
   REJECTED: "Rejected",
 };

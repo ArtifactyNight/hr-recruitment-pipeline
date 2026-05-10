@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 
 import { applicantRoutes } from "@/server/routes/applicant-routes";
+import { dashboardRoutes } from "@/server/routes/dashboard-routes";
 import {
   interviewRoutes,
   interviewerRoutes,
@@ -14,6 +15,7 @@ export const elysiaApp = new Elysia({ prefix: "/api" })
     message: "Service API is ready",
   }))
   .get("/health", () => ({ status: "ok" as const }))
+  .use(dashboardRoutes)
   .use(screenerRoutes)
   .use(jobRoutes)
   .use(applicantRoutes)
