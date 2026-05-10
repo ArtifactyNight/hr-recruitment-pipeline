@@ -294,9 +294,7 @@ export default function CandidatesPage() {
       const { data, error } = await api.api.applicants["analyze-draft"].post(
         {
           jobDescriptionId: state.addJobId,
-          cvText: state.addResumeFile
-            ? undefined
-            : state.addResumeText.trim() || undefined,
+          cvText: state.addResumeText.trim() || undefined,
           file: state.addResumeFile ?? undefined,
         },
         { fetch: { credentials: "include" } },

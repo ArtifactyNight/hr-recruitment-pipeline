@@ -1,8 +1,10 @@
 "use client";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert";
 import { Button } from "@/components/ui/button";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import { formatScoreOneDecimal } from "@/features/applicants-tracker/lib/tracker-display-helpers";
+import { RiSparklingFill } from "@remixicon/react";
 import { Loader2Icon, SparklesIcon } from "lucide-react";
 
 type ApplicantDetailAiScoresProps = {
@@ -28,35 +30,36 @@ export function ApplicantDetailAiScores({
 
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">ยังไม่วิเคราะห์ด้วย AI</p>
-            <p className="text-xs text-muted-foreground">
-              {hasResumeEvidence
-                ? "ให้ AI ให้คะแนนตาม JD ของตำแหน่งนี้ (ใช้ข้อความหรือไฟล์ PDF ที่บันทึกไว้)"
-                : "เพิ่มข้อความหรือไฟล์ resume ในส่วน Resume / CV ก่อน"}
-            </p>
-          </div>
+      <Alert variant="warning">
+        <SparklesIcon />
+        <AlertTitle>ยังไม่วิเคราะห์ด้วย AI</AlertTitle>
+        <AlertDescription>
+          <p>
+            {hasResumeEvidence
+              ? "ให้ AI ให้คะแนนตาม JD ของตำแหน่งนี้ (ใช้ข้อความหรือไฟล์ PDF ที่บันทึกไว้)"
+              : "เพิ่มข้อความหรือไฟล์ resume ในส่วน Resume / CV ก่อน"}
+          </p>
           {onScreenWithAi ? (
-            <Button
-              type="button"
-              disabled={screenAiPending || !hasResumeEvidence}
-              onClick={onScreenWithAi}
-            >
-              {screenAiPending ? (
-                <Loader2Icon
-                  data-icon="inline-start"
-                  className="animate-spin"
-                />
-              ) : (
-                <SparklesIcon data-icon="inline-start" />
-              )}
-              วิเคราะห์ด้วย AI
-            </Button>
+            <div className="mt-3">
+              <Button
+                type="button"
+                disabled={screenAiPending || !hasResumeEvidence}
+                onClick={onScreenWithAi}
+              >
+                {screenAiPending ? (
+                  <Loader2Icon
+                    data-icon="inline-start"
+                    className="animate-spin"
+                  />
+                ) : (
+                  <RiSparklingFill />
+                )}
+                วิเคราะห์ด้วย AI
+              </Button>
+            </div>
           ) : null}
-        </div>
-      </div>
+        </AlertDescription>
+      </Alert>
     );
   }
 

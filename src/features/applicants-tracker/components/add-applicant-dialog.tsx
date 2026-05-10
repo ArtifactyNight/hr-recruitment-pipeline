@@ -233,11 +233,11 @@ export function AddApplicantDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn(
-          "flex max-h-[min(90vh,880px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl",
+          "sm:max-w-xl",
           addFlowStep === "ai_confirm" && "sm:max-w-2xl",
         )}
       >
-        <DialogHeader className="flex shrink-0 flex-row items-start gap-3 border-b border-border px-6 py-4">
+        <DialogHeader>
           <div className="min-w-0 flex-1">
             <DialogTitle className="text-left">{dialogTitle}</DialogTitle>
             <p className="mt-1 text-left text-sm text-muted-foreground">
@@ -245,7 +245,7 @@ export function AddApplicantDialog({
                 ? "เลือกวิธีเพิ่ม — ข้อมูลและการคัดกรองอยู่ใน Applicant Tracker"
                 : null}
               {addFlowStep === "manual"
-                ? "ต้องมีข้อความ resume หรือไฟล์ PDF อย่างใดอย่างหนึ่ง"
+                ? "ต้องมีข้อความ Resume หรือไฟล์ PDF อย่างใดอย่างหนึ่ง"
                 : null}
               {addFlowStep === "ai_review"
                 ? "เลือกตำแหน่งงาน แล้วแนบ resume เพื่อให้ AI สรุปคะแนน"
@@ -257,7 +257,7 @@ export function AddApplicantDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+        <div>
           {addFlowStep === "pick" ? (
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -467,52 +467,57 @@ export function AddApplicantDialog({
 
                 <Separator />
 
+                <Field className="gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <FieldLabel className="w-auto">
+                      Resume / CV (PDF)
+                    </FieldLabel>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {addResumeFile ? (
+                        <span className="max-w-[min(100%,12rem)] truncate text-xs text-muted-foreground">
+                          {addResumeFile.name}
+                        </span>
+                      ) : null}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        className="hidden"
+                        onChange={onPdfSelected}
+                      />
+                      {addResumeFile ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setAddResumeFile(null)}
+                        >
+                          ลบไฟล์
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <UploadIcon data-icon="inline-start" />
+                        {addResumeFile ? "แทนที่ PDF" : "อัปโหลด PDF"}
+                      </Button>
+                    </div>
+                  </div>
+                </Field>
                 <Controller
                   name="resumeText"
                   control={addApplicantForm.control}
                   render={({ field }) => (
                     <Field className="gap-2">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <FieldLabel
-                          htmlFor="add-applicant-resume"
-                          className="w-auto"
-                        >
-                          Resume (PDF หรือข้อความ)
-                        </FieldLabel>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {addResumeFile ? (
-                            <span className="max-w-[min(100%,12rem)] truncate text-xs text-muted-foreground">
-                              {addResumeFile.name}
-                            </span>
-                          ) : null}
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="application/pdf,.pdf"
-                            className="hidden"
-                            onChange={onPdfSelected}
-                          />
-                          {addResumeFile ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setAddResumeFile(null)}
-                            >
-                              ลบไฟล์
-                            </Button>
-                          ) : null}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <UploadIcon data-icon="inline-start" />
-                            อัปโหลด PDF
-                          </Button>
-                        </div>
-                      </div>
+                      <FieldLabel
+                        htmlFor="add-applicant-resume"
+                        className="w-auto"
+                      >
+                        เนื้อหาอีเมล / ข้อความเพิ่มเติม
+                      </FieldLabel>
                       <Textarea
                         {...field}
                         id="add-applicant-resume"
@@ -520,14 +525,9 @@ export function AddApplicantDialog({
                           field.onChange(event);
                           setAddResumeText(event.target.value);
                         }}
-                        disabled={addResumeFile !== null}
-                        className="min-h-40 text-sm disabled:cursor-not-allowed disabled:opacity-70"
-                        placeholder={
-                          addResumeFile
-                            ? "ปิดการแก้ไขขณะใช้ไฟล์ PDF"
-                            : "วางข้อความ resume ที่นี่"
-                        }
-                        aria-label="ข้อความเรซูเม่"
+                        className="min-h-40 text-sm"
+                        placeholder="วางเนื้อหาอีเมล หรือข้อความเพิ่มเติมที่ช่วย AI วิเคราะห์ (ไม่บังคับ)"
+                        aria-label="ข้อความเพิ่มเติม"
                       />
                     </Field>
                   )}

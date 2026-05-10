@@ -427,7 +427,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       try {
         const result = await evaluateResumeAgainstJob({
           jobDescriptionId,
-          cvText: fileHasBytes(file) ? undefined : cvText || undefined,
+          cvText: cvText || undefined,
           file: fileHasBytes(file) ? file : undefined,
         });
         return {
@@ -954,9 +954,13 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           const n = body.notes.trim();
           data.notes = n.length > 0 ? n : null;
         }
+        if (body.cvText !== undefined) {
+          const cv = body.cvText.trim();
+          data.cvText = cv.length > 0 ? cv : null;
+        }
         if (Object.keys(data).length === 0) {
           set.status = 400;
-          return { error: "ต้องส่ง stage หรือ notes อย่างน้อยหนึ่งค่า" };
+          return { error: "ต้องส่ง stage, notes หรือ cvText อย่างน้อยหนึ่งค่า" };
         }
         const updated = await prisma.applicant.update({
           where: { id: params.id },
@@ -1018,6 +1022,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       body: t.Object({
         stage: t.Optional(stageUnion),
         notes: t.Optional(t.String({ maxLength: 16_000 })),
+        cvText: t.Optional(t.String({ maxLength: 100_000 })),
       }),
       detail: { tags: ["applicants"], summary: "อัปเดตผู้สมัคร" },
     },
@@ -1059,6 +1064,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             pdfBuffer: bytes,
             pdfFilename: applicant.cvFileName ?? "resume.pdf",
             pdfMediaType: contentType,
+            cvText: applicant.cvText ?? undefined,
           });
         } else if (applicant.cvText?.trim()) {
           evalResult = await evaluateResumeAgainstJob({

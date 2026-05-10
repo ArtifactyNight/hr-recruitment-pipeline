@@ -153,7 +153,12 @@ export async function evaluateResumeAgainstJob(input: {
                 mediaType,
                 filename,
               },
-              { type: "text", text: prompt },
+              {
+                type: "text",
+                text: cvText
+                  ? `${prompt}\n\nADDITIONAL CONTEXT FROM HR (email / notes):\n${cvText}`
+                  : prompt,
+              },
             ],
           },
         ],

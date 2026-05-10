@@ -50,7 +50,7 @@ export function ApplicantDetailNotesSection({
   }
 
   return (
-    <div className="space-y-2 rounded-xl border border-border/50 bg-background p-4">
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Label
           htmlFor={`applicant-notes-${applicant.id}`}
