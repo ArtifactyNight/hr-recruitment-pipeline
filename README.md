@@ -1,30 +1,47 @@
-# HR Recruitment Pipeline
+# HR Recruitment Pipeline — Project Brief
 
-Mini HR tool for managing the full hiring loop: post job descriptions, screen resumes with AI, track candidates through a pipeline, and schedule interviews via Google Calendar + Meet.
+## Overview
 
-## Stack
+You are building an internal HR tool for managing the full recruitment loop. The system covers four core workflows:
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 15 (App Router), React 19 |
-| Styling | Tailwind CSS v4, shadcn/ui |
-| Backend API | Elysia 1.4 (mounted at `/api`) |
-| Database | PostgreSQL + Prisma 7 |
-| Auth | Better Auth — Google OAuth |
-| Data fetching | TanStack Query v5 + Eden Treaty (`@/lib/api`) |
-| State | Zustand v5 |
-| AI screening | Google Generative AI (Gemini) via Vercel AI SDK |
-| File storage | Cloudflare R2 (PDF resumes) |
-| Calendar | Google Calendar API + Google Meet |
+1. **Job Descriptions** — create and manage open positions
+2. **Resume Screening** — paste or upload a resume, run it against a JD with AI, get a scored fit report
+3. **Applicant Tracker** — kanban-style pipeline for moving candidates through stages
+4. **Interview Scheduler** — book Google Meet interviews, sync to Google Calendar, track status
 
-## Prerequisites
+This is an internal tool for HR teams, not a public-facing product. Prioritize clarity and correctness over polish.
+
+---
+
+## Tech Stack
+
+The stack is already decided. Do not introduce new dependencies without a clear reason.
+
+| Layer | Technology | Reason |
+|-------|-----------|--------|
+| Framework | Next.js 15 (App Router), React 19 | Full-stack, file-based routing, RSC support |
+| Styling | Tailwind CSS v4, shadcn/ui | Consistent UI with minimal custom CSS |
+| Backend API | Elysia 1.4 | REST endpoints with end-to-end type safety via Eden Treaty — no codegen, no manual API types |
+| Database | PostgreSQL + Prisma 7 | Relational data, type-safe queries, migration support |
+| Auth | Better Auth — Google OAuth | Full auth stack (sessions, token storage, refresh) self-hosted; Google token stored in your DB so Calendar API is a plain Prisma query |
+| Data fetching | TanStack Query v5 + Eden Treaty | Eden derives typed client from Elysia's type signature; TanStack Query handles caching, optimistic updates, background refetch |
+| State | Zustand v5 | Low-friction client UI state (dialogs, form steps, filters) — server state belongs in TanStack Query, not here |
+| AI screening | Google Generative AI (Gemini) via Vercel AI SDK | Structured output for fit scoring |
+| File storage | Cloudflare R2 | PDF resume uploads via presigned URLs |
+| Calendar | Google Calendar API + Google Meet | Interview scheduling, Meet link generation, conflict detection |
+
+---
+
+## Getting Started
+
+### Prerequisites
 
 - Node.js ≥ 20
 - pnpm ≥ 9
 - PostgreSQL ≥ 15
-- A Google Cloud project with **Google Calendar API** enabled and an OAuth 2.0 client configured (see [Google OAuth Setup](#google-oauth-setup))
+- A Google Cloud project with **Google Calendar API** enabled and OAuth 2.0 credentials (see [Google OAuth Setup](#google-oauth-setup))
 
-## Quick Start
+### Setup
 
 ```bash
 # 1. Install dependencies
@@ -32,7 +49,7 @@ pnpm install
 
 # 2. Configure environment
 cp .env.example .env.local
-# Fill in all values in .env.local
+# Fill in all values — see Environment Variables below
 
 # 3. Push the database schema
 pnpm prisma db push
@@ -43,16 +60,16 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with Google.
 
-## Environment Variables
+---
 
-Copy `.env.example` to `.env.local` and fill in the values.
+## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `BETTER_AUTH_SECRET` | ✅ | Random secret ≥ 32 chars — used to sign sessions |
+| `BETTER_AUTH_SECRET` | ✅ | Random secret ≥ 32 chars — signs sessions |
 | `BETTER_AUTH_URL` | ✅ | Base URL of the app (e.g. `http://localhost:3000`) |
-| `NEXT_PUBLIC_APP_URL` | ✅ | Same as `BETTER_AUTH_URL` — exposed to the client |
+| `NEXT_PUBLIC_APP_URL` | ✅ | Same as `BETTER_AUTH_URL`, exposed to the client |
 | `GOOGLE_CLIENT_ID` | ✅ | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | ✅ | Google OAuth client secret |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | ✅ | Gemini API key for AI resume screening |
@@ -62,118 +79,94 @@ Copy `.env.example` to `.env.local` and fill in the values.
 | `R2_BUCKET_NAME` | ✅ | R2 bucket name |
 | `R2_PUBLIC_URL` | ✅ | Public base URL of the R2 bucket |
 
-> **R2 note:** All R2 vars are required. Without them the server rejects PDF uploads with `503`. Text-only resumes still work if you want to skip storage for now — set the vars to placeholder strings and avoid uploading PDFs.
+> **R2 note:** Required for PDF resume uploads. Without it the server returns `503` on upload. Text-only resumes still work — set placeholder values if you want to defer storage setup.
 
-After any schema change: `pnpm prisma generate && pnpm prisma db push` (or `pnpm prisma migrate dev` in a team environment).
+After any schema change: `pnpm prisma generate && pnpm prisma db push` (dev) or `pnpm prisma migrate dev` (team/production).
+
+---
 
 ## Google OAuth Setup
 
-Better Auth uses Google OAuth for sign-in **and** to obtain a Calendar access token for each user.
+Better Auth handles sessions, token storage, and refresh rotation. The Google OAuth access token is stored in your own `Account` table — `src/lib/get-google-token.ts` retrieves it with a Prisma query. No vendor SDK, no third-party token API.
 
 What you need:
-- A Google Cloud project with **Google Calendar API** enabled
-- An OAuth 2.0 web client with this authorized redirect URI:  
-  `{BETTER_AUTH_URL}/api/auth/callback/google`
-- Scopes requested at login: `email`, `profile`, `https://www.googleapis.com/auth/calendar`
+- Google Cloud project with **Google Calendar API** enabled
+- OAuth 2.0 web client with authorized redirect URI: `{BETTER_AUTH_URL}/api/auth/callback/google`
+- Scopes: `email`, `profile`, `https://www.googleapis.com/auth/calendar`
 
 → [Create OAuth credentials](https://console.cloud.google.com/apis/credentials)  
 → [Enable Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com)
 
-The Calendar access token is stored per-user in the `Account` table by Better Auth and retrieved at request time via `src/lib/get-google-token.ts`.
+---
 
-## Architecture
+## Codebase Architecture
 
-### Feature-Based Architecture
+### Feature-Based Structure
 
-Code is organized by **feature**, not by type. Each feature is a self-contained vertical slice — its own components, API hooks, state store, and utilities live together in `src/features/<feature>/`.
-
-**Why feature-based instead of type-based?**
-
-The alternative — grouping by type (`/components`, `/hooks`, `/stores`) — works fine for small apps but degrades as the codebase grows. You end up with a `components/` folder containing 40+ files with no obvious relationship between them. Finding everything related to "job descriptions" means jumping between four top-level folders.
-
-Feature-based architecture collocates related code. When you work on the interview scheduler, you open `src/features/interviews/` and everything you need is there. Cross-feature coupling is visible and intentional — if `applicants-tracker` imports from `screener`, you know it.
+Code is organized by **feature**, not by type. Each feature owns its components, API hooks, state, and utilities in one folder. When you work on something, you open one folder — not four.
 
 ```
 src/features/
 ├── applicants-tracker/   # Kanban board, applicant detail dialog, CV upload
-│   ├── api/              # TanStack Query hooks (mutations + queries)
-│   ├── components/       # React components scoped to this feature
-│   ├── lib/              # Pure functions: models, display helpers, validation
-│   └── store/            # Zustand store (UI state: filters, add-dialog flow)
+│   ├── api/              # TanStack Query hooks (queries + mutations)
+│   ├── components/       # React components for this feature only
+│   ├── lib/              # Pure functions: models, display helpers, Zod schemas
+│   └── store/            # Zustand store for UI state (dialogs, form steps, filters)
 │
 ├── dashboard/            # Stats cards, pipeline chart, upcoming interviews
-│   ├── api/
-│   ├── components/
-│   └── lib/
-│
-├── interviews/           # Full-screen calendar, reschedule dialog, Google sync
-│   ├── api/
-│   ├── components/
-│   ├── lib/
-│   └── store/
-│
+├── interviews/           # Calendar view, reschedule dialog, Google Calendar sync
 ├── jobs/                 # Job description CRUD
-│   ├── api/
-│   ├── components/
-│   ├── lib/
-│   └── store/
-│
-├── screener/             # Standalone AI screener (paste JD + resume → scores)
-│   ├── api/
-│   ├── components/
-│   ├── lib/
-│   └── store/
-│
+├── screener/             # Standalone AI screener page
 └── settings/             # User settings (Google Calendar connection)
-    └── components/
 ```
 
-**What goes where:**
+**Rules:**
+- `api/` — TanStack Query hooks only. No direct fetch calls.
+- `lib/` — No React, no side effects. Pure functions only.
+- `store/` — UI state only. Server state belongs in TanStack Query.
+- If two features share a component or utility, move it to `src/components/` or `src/lib/`.
 
-- `api/` — TanStack Query hooks. Queries (`use-*-query.ts`) and mutations (`use-*-mutations.ts`). No fetch logic — that lives in the Elysia backend.
-- `components/` — React components that render the feature's UI. Only imported by `src/app/` route pages or other components within the same feature.
-- `lib/` — Framework-agnostic functions: data transformations, display helpers, Zod schemas, constants. No React, no side effects.
-- `store/` — Zustand stores for client-side UI state (open/closed dialogs, filter values, multi-step form progress). Server state lives in TanStack Query, not here.
-
-**Shared code** that doesn't belong to one feature lives in:
+**Shared code:**
 
 ```
-src/components/   # Generic UI primitives (shadcn/ui wrappers, layout)
-src/lib/          # App-wide utilities: auth client, Prisma client, API client
+src/components/   # Generic UI (shadcn/ui wrappers, layout primitives)
+src/lib/          # Auth client, Prisma client, Eden API client
 src/server/       # Elysia app, route handlers, server-only services
-src/types/        # Shared TypeScript types (e.g. GoogleCalendarListEvent)
+src/types/        # Shared TypeScript types
 ```
 
 ### API Layer
 
-`src/app/api/[[...slugs]]/route.ts` forwards all requests to the Elysia app at `src/server/elysia-app.ts`. Elysia handles routing, TypeBox validation, and authentication middleware. Eden Treaty generates a fully-typed client from the Elysia type signature — no `fetch` calls or manual types on the frontend.
+All API requests go through Elysia (`src/server/elysia-app.ts`) via a Next.js catch-all route at `src/app/api/[[...slugs]]/route.ts`. Eden Treaty generates the typed client — import `api` from `@/lib/api` and call endpoints like functions. Types are inferred automatically from the Elysia route definitions.
 
 ```
-/api/applicants        # CRUD + AI screening + resume upload
+/api/applicants        # CRUD, stage updates, AI screening, resume upload
 /api/interviews        # Schedule, reschedule, cancel + Google Calendar sync
-/api/interviewers      # Interviewer management
+/api/interviewers      # Interviewer list
 /api/jobs              # Job description CRUD
-/api/screener          # Standalone AI screening endpoint
+/api/screener          # Standalone AI screening
 /api/stats             # Dashboard aggregates
-/api/auth              # Better Auth handler
+/api/auth              # Better Auth
 ```
 
-### Applicant Pipeline
+### Applicant Pipeline Stages
 
 ```
 APPLIED → SCREENING → PRE_SCREEN_CALL → FIRST_INTERVIEW → OFFER → HIRED
                                                                  ↘ REJECTED
 ```
 
-Stage transitions are driven by user actions in the tracker or automatically by interview events (scheduling → `FIRST_INTERVIEW`, cancellation → `PRE_SCREEN_CALL`).
+Transitions happen via manual stage selection in the tracker, or automatically: scheduling an interview moves the applicant to `FIRST_INTERVIEW`; cancelling moves them back to `PRE_SCREEN_CALL`.
+
+---
 
 ## Scripts
 
 ```bash
-pnpm dev              # Start dev server
-pnpm build            # Production build
-pnpm lint             # ESLint
-pnpm prisma studio    # Open Prisma Studio (DB browser)
-pnpm prisma db push   # Sync schema to database (dev)
-pnpm prisma migrate dev  # Create a migration (team/production)
-```
+bun dev                   # Start dev server
+bun build                 # Production build
+bun lint                  # ESLint
+bunx prisma studio        # Database browser
+bunx prisma db push       # Sync schema (dev)
+bunx prisma migrate dev   # Create migration (team/production)
+``
