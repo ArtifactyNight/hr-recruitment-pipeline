@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 
 import { Container } from "@/components/layout/container";
+import { HeaderSection } from "@/components/layout/header-section";
 import { applicantKeys } from "@/features/applicants-tracker/api/query-keys";
 import { useApplicantsQuery } from "@/features/applicants-tracker/api/use-applicants";
 import {
@@ -19,7 +20,6 @@ import { ApplicantDetailDialog } from "@/features/applicants-tracker/components/
 import { ApplicantKanbanBoardView } from "@/features/applicants-tracker/components/applicant-kanban-board-view";
 import type { ScheduleInterviewSubmitInput } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
 import { ApplicantTrackerControls } from "@/features/applicants-tracker/components/applicant-tracker-controls";
-import { ApplicantTrackerHeader } from "@/features/applicants-tracker/components/applicant-tracker-header";
 import { ApplicantTrackerTable } from "@/features/applicants-tracker/components/applicant-tracker-table";
 import { DeleteApplicantAlert } from "@/features/applicants-tracker/components/delete-applicant-alert";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
@@ -140,7 +140,10 @@ export default function CandidatesPage() {
 
   return (
     <Container className="flex flex-col gap-6">
-      <ApplicantTrackerHeader total={total} />
+      <HeaderSection
+        title="Applicant Tracker"
+        description={`${total} คน — ลากการ์ดในบอร์ดเพื่อเปลี่ยนสเตจ หรือเลือกจากตาราง`}
+      />
 
       <ApplicantTrackerControls
         searchInput={searchInput}

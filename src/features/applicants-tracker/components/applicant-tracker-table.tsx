@@ -86,7 +86,9 @@ export function ApplicantTrackerTable({
                   </div>
                 </TableCell>
                 <TableCell className="max-w-[12rem] truncate">
-                  {row.positionTitle}
+                  <Badge variant="secondary" className="rounded-md">
+                    {row.positionTitle}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="font-normal">
