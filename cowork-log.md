@@ -1,3 +1,8 @@
+### [2026-05-10] - Postpone interview time from calendar
+**Prompt:** add postpone appointment time feature
+**Output:** Calendar feed enriched with `interviewId` (Prisma match on `googleEventId`) + `durationMinutes` (Google window); sidebar **`เลื่อนเวลา`** opens `PostponeInterviewDialog` (datetime + duration) calling PATCH `/interviews/:id` via `usePatchInterviewMutation` (Google Calendar sync already server-side). Only linked future interviews show postpone.
+**Edited:** `google-calendar-list-event.ts`, `google-calendar-service.ts`, `interview-routes.ts`, `google-calendar-feed.ts`, `fullscreen-calendar.tsx`, `postpone-interview-dialog.tsx`, `use-interviews.ts`, `interviews-calendar.tsx`, `cowork-log.md`
+
 ### [2026-05-10] - Move screening into Applicant Tracker
 **Prompt:** Move resume screening into tracker; add flow manual vs AI; analyze later for manual; tracker card shows unscreened; retire standalone screener nav/route.
 **Output:** Shared `resume-screening-service.ts` + `getResumePdfBytesFromR2`; applicant routes: `cvText` on `POST /`, `POST /analyze-draft`, `POST /with-resume`, `POST /with-screening`, `POST /:id/screen`; refactored `screener-routes` to use service. Tracker: zustand add-flow state, rebuilt `AddApplicantDialog` (pick → manual | AI review → confirm), candidates mutations + detail “วิเคราะห์ด้วย AI”. Board/table badges `ยังไม่วิเคราะห์ AI`. Sidebar removed `/screener`; `screener/page.tsx` redirects to `/candidates`. Jobs/resume copy tweaks.

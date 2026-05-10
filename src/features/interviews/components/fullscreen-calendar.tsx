@@ -20,6 +20,7 @@ import {
 import { th } from "date-fns/locale";
 import {
   BellIcon,
+  CalendarClockIcon,
   CalendarDaysIcon,
   CalendarX2Icon,
   ChevronLeftIcon,
@@ -54,10 +55,15 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useCopyToClipboard } from "usehooks-ts";
 
+import { PostponeInterviewDialog } from "@/features/interviews/components/postpone-interview-dialog";
+
 export type CalendarEventStatus = "confirmed" | "tentative" | "cancelled";
 
 export interface Event {
   id: string;
+  /** HR interview row id when this event is linked in our DB */
+  interviewId: string | null;
+  durationMinutes: number;
   name: string;
   time: string;
   datetime: string;
@@ -88,6 +94,13 @@ interface FullScreenCalendarProps {
   onCancelCalendarEvent?: (googleEventId: string) => Promise<void>;
   /** Disables confirm while cancel request is in flight. */
   cancelCalendarPending?: boolean;
+  /** Reschedule interview time (PATCH interview + Google Calendar). */
+  onPostponeInterview?: (input: {
+    interviewId: string;
+    scheduledAt: string;
+    durationMinutes: number;
+  }) => Promise<void>;
+  postponeInterviewPending?: boolean;
 }
 
 const colStartClasses = [
@@ -121,6 +134,12 @@ interface SelectedDayEventsPanelProps {
   isPastDay: boolean;
   onCancelCalendarEvent?: (googleEventId: string) => Promise<void>;
   cancelCalendarPending?: boolean;
+  onPostponeInterview?: (input: {
+    interviewId: string;
+    scheduledAt: string;
+    durationMinutes: number;
+  }) => Promise<void>;
+  postponeInterviewPending?: boolean;
 }
 
 function eventIsCancelled(event: Event): boolean {
@@ -140,10 +159,15 @@ function SelectedDayEventsPanel({
   isPastDay,
   onCancelCalendarEvent,
   cancelCalendarPending = false,
+  onPostponeInterview,
+  postponeInterviewPending = false,
 }: SelectedDayEventsPanelProps) {
   const [, copyToClipboard] = useCopyToClipboard();
   const title = format(selectedDay, "EEEE d MMMM yyyy", { locale: th });
   const [eventToCancel, setEventToCancel] = React.useState<Event | null>(null);
+  const [eventToPostpone, setEventToPostpone] = React.useState<Event | null>(
+    null,
+  );
 
   async function confirmCancelCalendarEvent() {
     if (!eventToCancel || !onCancelCalendarEvent) return;
@@ -171,6 +195,11 @@ function SelectedDayEventsPanel({
               const showCancelSlot =
                 Boolean(onCancelCalendarEvent) && !cancelled;
               const cancelDisabledPast = eventStartIsPast(event);
+              const canPostpone =
+                Boolean(onPostponeInterview) &&
+                Boolean(event.interviewId) &&
+                !cancelled &&
+                !cancelDisabledPast;
 
               return (
                 <div
@@ -292,27 +321,47 @@ function SelectedDayEventsPanel({
                         </div>
                       ) : null}
                     </div>
-                    {showCancelSlot ? (
-                      <div className="flex border-border pt-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          title={
-                            cancelDisabledPast
-                              ? "เริ่มไปแล้ว — ยกเลิกได้จาก Google Calendar"
-                              : undefined
-                          }
-                          disabled={cancelDisabledPast || cancelCalendarPending}
-                          className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive sm:w-auto"
-                          onClick={() => setEventToCancel(event)}
-                        >
-                          <CalendarX2Icon
-                            className="size-3.5 shrink-0"
-                            aria-hidden
-                          />
-                          ยกเลิกนัด
-                        </Button>
+                    {showCancelSlot || canPostpone ? (
+                      <div className="flex flex-wrap gap-2 border-border pt-3">
+                        {canPostpone ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={postponeInterviewPending}
+                            className="min-w-0 flex-1 gap-1.5 sm:flex-initial"
+                            onClick={() => setEventToPostpone(event)}
+                          >
+                            <CalendarClockIcon
+                              className="size-3.5 shrink-0"
+                              aria-hidden
+                            />
+                            เลื่อนเวลา
+                          </Button>
+                        ) : null}
+                        {showCancelSlot ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            title={
+                              cancelDisabledPast
+                                ? "เริ่มไปแล้ว — ยกเลิกได้จาก Google Calendar"
+                                : undefined
+                            }
+                            disabled={
+                              cancelDisabledPast || cancelCalendarPending
+                            }
+                            className="min-w-0 flex-1 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-initial"
+                            onClick={() => setEventToCancel(event)}
+                          >
+                            <CalendarX2Icon
+                              className="size-3.5 shrink-0"
+                              aria-hidden
+                            />
+                            ยกเลิกนัด
+                          </Button>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -384,6 +433,22 @@ function SelectedDayEventsPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PostponeInterviewDialog
+        open={eventToPostpone !== null}
+        onOpenChange={(open) => {
+          if (!open) setEventToPostpone(null);
+        }}
+        interviewId={eventToPostpone?.interviewId ?? null}
+        eventTitle={eventToPostpone?.name ?? ""}
+        pending={postponeInterviewPending}
+        eventStartIso={eventToPostpone?.datetime ?? ""}
+        durationMinutes={eventToPostpone?.durationMinutes ?? 60}
+        onPostpone={async (input) => {
+          if (!onPostponeInterview) return;
+          await onPostponeInterview(input);
+        }}
+      />
     </>
   );
 }
@@ -395,6 +460,8 @@ export function FullScreenCalendar({
   calendarLoading = false,
   onCancelCalendarEvent,
   cancelCalendarPending = false,
+  onPostponeInterview,
+  postponeInterviewPending = false,
 }: FullScreenCalendarProps) {
   const today = startOfToday();
   const [selectedDay, setSelectedDay] = React.useState(today);
@@ -811,6 +878,8 @@ export function FullScreenCalendar({
           isPastDay={selectedDayIsPast}
           onCancelCalendarEvent={onCancelCalendarEvent}
           cancelCalendarPending={cancelCalendarPending}
+          onPostponeInterview={onPostponeInterview}
+          postponeInterviewPending={postponeInterviewPending}
         />
       </Card>
     </div>

@@ -1,7 +1,7 @@
 import {
   type CalendarData,
   type Event,
-} from "@/components/ui/fullscreen-calendar";
+} from "@/features/interviews/components/fullscreen-calendar";
 import type { GoogleCalendarListEvent } from "@/types/google-calendar-list-event";
 import { format, parseISO, startOfDay } from "date-fns";
 import { th } from "date-fns/locale";
@@ -31,6 +31,8 @@ export function groupGoogleCalendarEventsToCalendarData(
     const isoKey = start.toISOString();
     const ev: Event = {
       id: row.googleEventId,
+      interviewId: row.interviewId,
+      durationMinutes: row.durationMinutes,
       name: row.title,
       time: format(start, "p", { locale: th }),
       datetime: isoKey,

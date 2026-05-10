@@ -7,10 +7,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import {
-  FullScreenCalendar,
-  type CalendarData,
-} from "@/components/ui/fullscreen-calendar";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -23,11 +19,16 @@ import {
   scheduleInterviewFormStateForDate,
 } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
 import {
-  useCancelCalendarEventMutation,
   useCalendarEventsQuery,
   useCalendarScheduleApplicantsQuery,
+  useCancelCalendarEventMutation,
+  usePatchInterviewMutation,
   useScheduleInterviewMutation,
 } from "@/features/interviews/api/use-interviews";
+import {
+  FullScreenCalendar,
+  type CalendarData,
+} from "@/features/interviews/components/fullscreen-calendar";
 import { groupGoogleCalendarEventsToCalendarData } from "@/features/interviews/lib/google-calendar-feed";
 import { useInterviewsCalendarStore } from "@/features/interviews/store/interviews-calendar-store";
 import { api } from "@/lib/api";
@@ -100,6 +101,7 @@ export function InterviewsCalendar() {
   const calendarQuery = useCalendarEventsQuery(fetchRange);
   const applicantsQuery = useCalendarScheduleApplicantsQuery();
   const cancelCalendarMut = useCancelCalendarEventMutation();
+  const patchInterviewMut = usePatchInterviewMutation();
   const scheduleInterviewMut = useScheduleInterviewMutation();
 
   const scheduleCandidates = useMemo(() => {
@@ -122,7 +124,12 @@ export function InterviewsCalendar() {
       setSelectedApplicantId(scheduleCandidates[0]?.id ?? "");
       setScheduleOpen(true);
     },
-    [scheduleCandidates, setScheduleForm, setSelectedApplicantId, setScheduleOpen],
+    [
+      scheduleCandidates,
+      setScheduleForm,
+      setSelectedApplicantId,
+      setScheduleOpen,
+    ],
   );
 
   const onScheduleDialogOpenChange = useCallback(
@@ -163,6 +170,10 @@ export function InterviewsCalendar() {
           await cancelCalendarMut.mutateAsync(googleEventId);
         }}
         cancelCalendarPending={cancelCalendarMut.isPending}
+        onPostponeInterview={async (input): Promise<void> => {
+          await patchInterviewMut.mutateAsync(input);
+        }}
+        postponeInterviewPending={patchInterviewMut.isPending}
       />
       <ApplicantScheduleInterviewDialog
         applicantId={effectiveSelectedApplicantId}

@@ -364,8 +364,16 @@ export async function listPrimaryCalendarEvents(opts: {
       continue;
     }
     const sidebar = sidebarFieldsFromListEvent(ev);
+    const startMs = new Date(win.startIso).getTime();
+    const endMs = new Date(win.endIso).getTime();
+    const rawMinutes = Math.round((endMs - startMs) / 60_000);
+    const durationMinutes = Number.isFinite(rawMinutes)
+      ? Math.min(480, Math.max(15, rawMinutes))
+      : 60;
     out.push({
       googleEventId: ev.id,
+      interviewId: null,
+      durationMinutes,
       title: ev.summary?.trim() ? ev.summary.trim() : "(ไม่มีหัวข้อ)",
       startIso: win.startIso,
       endIso: win.endIso,

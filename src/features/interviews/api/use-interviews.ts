@@ -19,6 +19,19 @@ function calendarCancelErrorMessage(err: unknown): string {
   return "ยกเลิกไม่สำเร็จ";
 }
 
+function patchInterviewErrorMessage(err: unknown): string {
+  if (
+    err &&
+    typeof err === "object" &&
+    "error" in err &&
+    typeof (err as { error: unknown }).error === "string"
+  ) {
+    return (err as { error: string }).error;
+  }
+  if (err instanceof Error) return err.message;
+  return "เลื่อนเวลาไม่สำเร็จ";
+}
+
 function scheduleInterviewErrorMessage(err: unknown): string {
   if (
     err &&
@@ -106,6 +119,42 @@ export function useScheduleInterviewMutation() {
     },
     onError: (err: unknown) => {
       toast.error(scheduleInterviewErrorMessage(err));
+    },
+  });
+}
+
+export function usePatchInterviewMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      interviewId: string;
+      scheduledAt: string;
+      durationMinutes: number;
+    }) => {
+      const { data, error } = await api.api
+        .interviews({ id: input.interviewId })
+        .patch(
+          {
+            scheduledAt: input.scheduledAt,
+            durationMinutes: input.durationMinutes,
+          },
+          { fetch: { credentials: "include" } },
+        );
+      if (error) throw error.value;
+      if (!data?.interview) {
+        throw new Error("ไม่มีข้อมูลนัด");
+      }
+      return data.interview;
+    },
+    onSuccess: () => {
+      toast.success("เลื่อนเวลานัดแล้ว");
+      void queryClient.invalidateQueries({
+        queryKey: ["interviews-calendar-events"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["applicants"] });
+    },
+    onError: (err: unknown) => {
+      toast.error(patchInterviewErrorMessage(err));
     },
   });
 }

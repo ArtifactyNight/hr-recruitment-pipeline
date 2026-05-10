@@ -163,12 +163,34 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         return { error: "from / to ไม่ถูกต้อง", events: [] };
       }
       try {
+        const dbUser = await ensureUserFromClerkId(userId);
         const events = await listPrimaryCalendarEvents({
           accessToken: gToken,
           timeMin,
           timeMax,
         });
-        return { events };
+        const googleIds = events.map((e) => e.googleEventId);
+        const interviewByGoogleId = new Map<string, string>();
+        if (googleIds.length > 0) {
+          const linked = await prisma.interview.findMany({
+            where: {
+              organizerUserId: dbUser.id,
+              googleEventId: { in: googleIds },
+              status: { not: "CANCELLED" },
+            },
+            select: { id: true, googleEventId: true },
+          });
+          for (const row of linked) {
+            if (row.googleEventId) {
+              interviewByGoogleId.set(row.googleEventId, row.id);
+            }
+          }
+        }
+        const enriched = events.map((e) => ({
+          ...e,
+          interviewId: interviewByGoogleId.get(e.googleEventId) ?? null,
+        }));
+        return { events: enriched };
       } catch (e) {
         set.status = 502;
         return {
