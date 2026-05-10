@@ -49,7 +49,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -485,8 +484,6 @@ export function FullScreenCalendar({
     const to = endOfWeek(endOfMonth(firstDayCurrentMonth), { locale: th });
     onVisibleRangeChange({ from, to });
   }, [firstDayCurrentMonth, onVisibleRangeChange]);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-
   const days = eachDayOfInterval({
     start: startOfWeek(firstDayCurrentMonth, { locale: th }),
     end: endOfWeek(endOfMonth(firstDayCurrentMonth), { locale: th }),
@@ -529,16 +526,16 @@ export function FullScreenCalendar({
   }
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-8">
       <Card
         className={cn(
           "flex min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden py-0",
           calendarLoading && "opacity-70",
         )}
       >
-        <div className="flex flex-col gap-y-4 border-b p-4 md:flex-row md:items-center md:justify-between md:gap-y-0 lg:flex-none">
-          <div className="flex flex-auto">
-            <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-5 border-b px-4 py-4 md:flex-row md:items-center md:justify-between md:gap-x-6 md:gap-y-0 md:px-5 md:py-4 lg:flex-none">
+          <div className="flex min-w-0 flex-auto">
+            <div className="flex items-start gap-4 sm:items-center">
               <div className="hidden w-20 flex-col items-center justify-center rounded-lg border bg-muted p-0.5 md:flex">
                 <h1 className="p-1 text-xs uppercase text-muted-foreground">
                   {format(today, "MMM", { locale: th })}
@@ -547,11 +544,11 @@ export function FullScreenCalendar({
                   <span>{format(today, "d")}</span>
                 </div>
               </div>
-              <div className="flex flex-col">
-                <h2 className="text-lg font-semibold text-foreground">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">
                   {format(firstDayCurrentMonth, "MMMM, yyyy", { locale: th })}
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm leading-snug text-muted-foreground">
                   {format(firstDayCurrentMonth, "MMM d, yyyy", { locale: th })}{" "}
                   -{" "}
                   {format(endOfMonth(firstDayCurrentMonth), "MMM d, yyyy", {
@@ -562,12 +559,12 @@ export function FullScreenCalendar({
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4 xl:flex-row md:gap-6">
+          <div className="flex w-full flex-col items-stretch gap-3 sm:items-center xl:flex-row xl:justify-end xl:gap-4">
             <Button variant="outline" size="icon" className="hidden lg:flex">
               <SearchIcon size={16} strokeWidth={2} aria-hidden="true" />
             </Button>
 
-            <div className="inline-flex w-full -space-x-px rounded-lg shadow-sm shadow-black/5 md:w-auto rtl:space-x-reverse">
+            <div className="inline-flex w-full -space-x-px overflow-hidden rounded-lg md:w-auto rtl:space-x-reverse">
               <Button
                 onClick={previousMonth}
                 className="rounded-none shadow-none first:rounded-s-lg last:rounded-e-lg focus-visible:z-10"
@@ -613,11 +610,14 @@ export function FullScreenCalendar({
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="lg:flex lg:flex-auto lg:flex-col">
-            <div className="grid grid-cols-7 border text-center text-xs font-semibold leading-6 lg:flex-none">
+            <div className="grid grid-cols-7 border bg-muted/30 text-center text-xs font-semibold leading-6 text-muted-foreground lg:flex-none">
               {weekdayLabels.map((label, i) => (
                 <div
                   key={`weekday-${i}`}
-                  className={cn("py-2.5", i < 6 && "border-r")}
+                  className={cn(
+                    "py-2.5 tracking-wide",
+                    i < 6 && "border-r border-border",
+                  )}
                 >
                   {label}
                 </div>
@@ -625,179 +625,114 @@ export function FullScreenCalendar({
             </div>
 
             <div className="flex text-xs leading-6 lg:flex-auto">
-              <div className="hidden w-full border-x lg:grid lg:grid-cols-7 lg:grid-rows-5">
-                {days.map((day, dayIdx) =>
-                  !isDesktop ? (
-                    <button
-                      onClick={() => {
-                        if (!isPastCalendarDay(day)) setSelectedDay(day);
-                      }}
-                      disabled={isPastCalendarDay(day)}
-                      key={dayIdx}
-                      type="button"
-                      className={cn(
-                        isEqual(day, selectedDay) && "text-primary-foreground",
-                        !isEqual(day, selectedDay) &&
-                          !isToday(day) &&
-                          isSameMonth(day, firstDayCurrentMonth) &&
-                          "text-foreground",
-                        !isEqual(day, selectedDay) &&
-                          !isToday(day) &&
-                          !isSameMonth(day, firstDayCurrentMonth) &&
-                          "text-muted-foreground",
-                        (isEqual(day, selectedDay) || isToday(day)) &&
-                          "font-semibold",
-                        isPastCalendarDay(day) &&
-                          "cursor-not-allowed opacity-50 hover:bg-transparent",
-                        "flex h-14 flex-col border-b border-r px-3 py-2 hover:bg-muted focus:z-10",
-                      )}
-                    >
-                      <time
-                        dateTime={format(day, "yyyy-MM-dd")}
+              <div className="hidden w-full border-x lg:grid lg:grid-cols-7 lg:auto-rows-[minmax(6.5rem,1fr)]">
+                {days.map((day, dayIdx) => (
+                  <div
+                    key={dayIdx}
+                    role="button"
+                    tabIndex={isPastCalendarDay(day) ? -1 : 0}
+                    aria-disabled={isPastCalendarDay(day)}
+                    onClick={() => {
+                      if (!isPastCalendarDay(day)) setSelectedDay(day);
+                    }}
+                    onKeyDown={(e) => {
+                      if (isPastCalendarDay(day)) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedDay(day);
+                      }
+                    }}
+                    className={cn(
+                      dayIdx === 0 && colStartClasses[getDay(day)],
+                      !isEqual(day, selectedDay) &&
+                        !isToday(day) &&
+                        !isSameMonth(day, firstDayCurrentMonth) &&
+                        "bg-accent/50 text-muted-foreground",
+                      "relative flex min-h-0 flex-col border-b border-r focus:z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      !isPastCalendarDay(day) && "hover:bg-muted",
+                      !isEqual(day, selectedDay) &&
+                        !isPastCalendarDay(day) &&
+                        "hover:bg-accent/75",
+                      isPastCalendarDay(day) &&
+                        "cursor-not-allowed opacity-60 hover:bg-transparent",
+                    )}
+                  >
+                    <header className="flex shrink-0 items-center justify-between p-2">
+                      <span
                         className={cn(
-                          "ml-auto flex size-6 items-center justify-center rounded-full",
+                          isEqual(day, selectedDay) &&
+                            "text-primary-foreground",
+                          !isEqual(day, selectedDay) &&
+                            !isToday(day) &&
+                            isSameMonth(day, firstDayCurrentMonth) &&
+                            "text-foreground",
+                          !isEqual(day, selectedDay) &&
+                            !isToday(day) &&
+                            !isSameMonth(day, firstDayCurrentMonth) &&
+                            "text-muted-foreground",
                           isEqual(day, selectedDay) &&
                             isToday(day) &&
-                            "bg-primary text-primary-foreground",
+                            "border-none bg-primary",
                           isEqual(day, selectedDay) &&
                             !isToday(day) &&
-                            "bg-primary text-primary-foreground",
+                            "bg-foreground",
+                          (isEqual(day, selectedDay) || isToday(day)) &&
+                            "font-semibold",
+                          !isPastCalendarDay(day) && "hover:border",
+                          "flex size-7 items-center justify-center rounded-full text-xs",
                         )}
                       >
-                        {format(day, "d")}
-                      </time>
-                      {data.filter((date) => isSameDay(date.day, day)).length >
-                        0 && (
-                        <div>
-                          {data
-                            .filter((date) => isSameDay(date.day, day))
-                            .map((date) => (
+                        <time dateTime={format(day, "yyyy-MM-dd")}>
+                          {format(day, "d")}
+                        </time>
+                      </span>
+                    </header>
+                    <div className="min-h-0 flex-1 p-2 pt-0">
+                      {data
+                        .filter((event) => isSameDay(event.day, day))
+                        .map((dayData) => (
+                          <div
+                            key={dayData.day.toString()}
+                            className="space-y-1.5"
+                          >
+                            {dayData.events.slice(0, 1).map((event) => (
                               <div
-                                key={date.day.toString()}
-                                className="-mx-0.5 mt-auto flex flex-wrap-reverse"
+                                key={event.id}
+                                className="flex flex-col items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs leading-tight"
                               >
-                                {date.events.map((event) => (
-                                  <span
-                                    key={`${event.id}-${event.datetime}`}
-                                    className={cn(
-                                      "mx-0.5 mt-1 size-1.5 rounded-full bg-muted-foreground",
-                                      eventIsCancelled(event) && "opacity-35",
-                                    )}
-                                  />
-                                ))}
+                                <p
+                                  className={cn(
+                                    "font-medium leading-none",
+                                    eventIsCancelled(event) &&
+                                      "text-muted-foreground line-through",
+                                  )}
+                                >
+                                  {event.name}
+                                </p>
+                                <p
+                                  className={cn(
+                                    "leading-none text-muted-foreground",
+                                    eventIsCancelled(event) &&
+                                      "line-through opacity-80",
+                                  )}
+                                >
+                                  {event.time}
+                                </p>
                               </div>
                             ))}
-                        </div>
-                      )}
-                    </button>
-                  ) : (
-                    <div
-                      key={dayIdx}
-                      role="button"
-                      tabIndex={isPastCalendarDay(day) ? -1 : 0}
-                      aria-disabled={isPastCalendarDay(day)}
-                      onClick={() => {
-                        if (!isPastCalendarDay(day)) setSelectedDay(day);
-                      }}
-                      onKeyDown={(e) => {
-                        if (isPastCalendarDay(day)) return;
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setSelectedDay(day);
-                        }
-                      }}
-                      className={cn(
-                        dayIdx === 0 && colStartClasses[getDay(day)],
-                        !isEqual(day, selectedDay) &&
-                          !isToday(day) &&
-                          !isSameMonth(day, firstDayCurrentMonth) &&
-                          "bg-accent/50 text-muted-foreground",
-                        "relative flex flex-col border-b border-r focus:z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        !isPastCalendarDay(day) && "hover:bg-muted",
-                        !isEqual(day, selectedDay) &&
-                          !isPastCalendarDay(day) &&
-                          "hover:bg-accent/75",
-                        isPastCalendarDay(day) &&
-                          "cursor-not-allowed opacity-60 hover:bg-transparent",
-                      )}
-                    >
-                      <header className="flex items-center justify-between p-2.5">
-                        <span
-                          className={cn(
-                            isEqual(day, selectedDay) &&
-                              "text-primary-foreground",
-                            !isEqual(day, selectedDay) &&
-                              !isToday(day) &&
-                              isSameMonth(day, firstDayCurrentMonth) &&
-                              "text-foreground",
-                            !isEqual(day, selectedDay) &&
-                              !isToday(day) &&
-                              !isSameMonth(day, firstDayCurrentMonth) &&
-                              "text-muted-foreground",
-                            isEqual(day, selectedDay) &&
-                              isToday(day) &&
-                              "border-none bg-primary",
-                            isEqual(day, selectedDay) &&
-                              !isToday(day) &&
-                              "bg-foreground",
-                            (isEqual(day, selectedDay) || isToday(day)) &&
-                              "font-semibold",
-                            !isPastCalendarDay(day) && "hover:border",
-                            "flex size-7 items-center justify-center rounded-full text-xs",
-                          )}
-                        >
-                          <time dateTime={format(day, "yyyy-MM-dd")}>
-                            {format(day, "d")}
-                          </time>
-                        </span>
-                      </header>
-                      <div className="flex-1 p-2.5">
-                        {data
-                          .filter((event) => isSameDay(event.day, day))
-                          .map((dayData) => (
-                            <div
-                              key={dayData.day.toString()}
-                              className="space-y-1.5"
-                            >
-                              {dayData.events.slice(0, 1).map((event) => (
-                                <div
-                                  key={event.id}
-                                  className="flex flex-col items-start gap-1 rounded-lg border bg-muted/50 p-2 text-xs leading-tight"
-                                >
-                                  <p
-                                    className={cn(
-                                      "font-medium leading-none",
-                                      eventIsCancelled(event) &&
-                                        "text-muted-foreground line-through",
-                                    )}
-                                  >
-                                    {event.name}
-                                  </p>
-                                  <p
-                                    className={cn(
-                                      "leading-none text-muted-foreground",
-                                      eventIsCancelled(event) &&
-                                        "line-through opacity-80",
-                                    )}
-                                  >
-                                    {event.time}
-                                  </p>
-                                </div>
-                              ))}
-                              {dayData.events.length > 1 && (
-                                <div className="text-xs text-muted-foreground">
-                                  + {dayData.events.length - 1} นัด
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                      </div>
+                            {dayData.events.length > 1 && (
+                              <div className="text-xs text-muted-foreground">
+                                + {dayData.events.length - 1} นัด
+                              </div>
+                            )}
+                          </div>
+                        ))}
                     </div>
-                  ),
-                )}
+                  </div>
+                ))}
               </div>
 
-              <div className="isolate grid w-full grid-cols-7 grid-rows-5 border-x lg:hidden">
+              <div className="isolate grid w-full grid-cols-7 auto-rows-auto border-x lg:hidden">
                 {days.map((day, dayIdx) => (
                   <button
                     onClick={() => {
@@ -868,7 +803,7 @@ export function FullScreenCalendar({
         </div>
       </Card>
 
-      <Card className="flex h-full w-full min-h-0 flex-col lg:max-w-2xl lg:shrink-0">
+      <Card className="flex h-full w-full min-h-0 flex-col lg:max-w-md xl:max-w-lg lg:shrink-0">
         <SelectedDayEventsPanel
           selectedDay={selectedDay}
           events={selectedDayEvents}

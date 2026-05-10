@@ -1,3 +1,8 @@
+### [2026-05-10] - /impeccable layout: calendar
+**Prompt:** /impeccable layout: calendar
+**Output:** Reflowed `FullScreenCalendar`: stronger split between grid and day panel (`gap-5` / `lg:gap-8`), header rhythm (`md:px-5`, title stack `gap-0.5`, controls `gap-3` / `xl:flex-row`), weekday strip `bg-muted/30`, flat month nav (removed shadow; `overflow-hidden` group). Desktop grid: dropped fixed `grid-rows-5` for `lg:auto-rows-[minmax(6.5rem,1fr)]` so six-week months lay out correctly; removed dead `useMediaQuery` branch (lg-only grid always used rich cell). Sidebar width stepped `lg:max-w-md` then `xl:max-w-lg`. Event chips `rounded-md` + `bg-muted/40`. Preflight: no PRODUCT/load-context in repo.
+**Edited:** `fullscreen-calendar.tsx`, `cowork-log.md`
+
 ### [2026-05-10] - Postpone interview time from calendar
 **Prompt:** add postpone appointment time feature
 **Output:** Calendar feed enriched with `interviewId` (Prisma match on `googleEventId`) + `durationMinutes` (Google window); sidebar **`เลื่อนเวลา`** opens `PostponeInterviewDialog` (datetime + duration) calling PATCH `/interviews/:id` via `usePatchInterviewMutation` (Google Calendar sync already server-side). Only linked future interviews show postpone.
