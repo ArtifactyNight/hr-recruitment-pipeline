@@ -385,6 +385,7 @@ export async function listPrimaryCalendarEvents(opts: {
       attendeeTotal: sidebar.attendeeTotal,
       attendeeAccepted: sidebar.attendeeAccepted,
       notesPlain: sidebar.notesPlain,
+      interviewDbStatus: "SCHEDULED",
     });
   }
   return out;
