@@ -22,6 +22,7 @@ import {
   BellIcon,
   CalendarClockIcon,
   CalendarDaysIcon,
+  CalendarPlusIcon,
   CalendarX2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -30,7 +31,6 @@ import {
   ExternalLinkIcon,
   FileTextIcon,
   MoreVerticalIcon,
-  PlusCircleIcon,
   SearchIcon,
   UserIcon,
   UsersIcon,
@@ -49,7 +49,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -382,7 +381,7 @@ function SelectedDayEventsPanel({
                 aria-hidden
               />
               <p className="mt-2 text-sm text-muted-foreground">
-                No events scheduled
+                ไม่มีนัดสัมภาษณ์
               </p>
               {onScheduleForDate && !isPastDay ? (
                 <Button
@@ -392,8 +391,8 @@ function SelectedDayEventsPanel({
                   className="mt-4 gap-2"
                   onClick={() => onScheduleForDate(selectedDay)}
                 >
-                  <PlusCircleIcon size={16} strokeWidth={2} aria-hidden />
-                  Schedule event
+                  <CalendarPlusIcon className="size-4" aria-hidden />
+                  เพิ่มนัดสัมภาษณ์
                 </Button>
               ) : null}
             </div>
@@ -563,12 +562,10 @@ export function FullScreenCalendar({
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4 md:flex-row md:gap-6">
+          <div className="flex flex-col items-center gap-4 xl:flex-row md:gap-6">
             <Button variant="outline" size="icon" className="hidden lg:flex">
               <SearchIcon size={16} strokeWidth={2} aria-hidden="true" />
             </Button>
-
-            <Separator orientation="vertical" className="hidden h-6 lg:block" />
 
             <div className="inline-flex w-full -space-x-px rounded-lg shadow-sm shadow-black/5 md:w-auto rtl:space-x-reverse">
               <Button
@@ -578,7 +575,7 @@ export function FullScreenCalendar({
                 size="icon"
                 aria-label="Navigate to previous month"
               >
-                <ChevronLeftIcon size={16} strokeWidth={2} aria-hidden="true" />
+                <ChevronLeftIcon className="size-4" aria-hidden />
               </Button>
               <Button
                 onClick={goToToday}
@@ -602,20 +599,14 @@ export function FullScreenCalendar({
               </Button>
             </div>
 
-            <Separator orientation="vertical" className="hidden h-6 md:block" />
-            <Separator
-              orientation="horizontal"
-              className="block w-full md:hidden"
-            />
-
             <Button
               type="button"
               className="w-full gap-2 md:w-auto"
               disabled={!canScheduleSelectedDay}
               onClick={scheduleSelectedDay}
             >
-              <PlusCircleIcon size={16} strokeWidth={2} aria-hidden="true" />
-              <span>เพิ่มนัด</span>
+              <CalendarPlusIcon className="size-4" aria-hidden />
+              <span>เพิ่มนัดสัมภาษณ์</span>
             </Button>
           </div>
         </div>
@@ -795,7 +786,7 @@ export function FullScreenCalendar({
                               ))}
                               {dayData.events.length > 1 && (
                                 <div className="text-xs text-muted-foreground">
-                                  + {dayData.events.length - 1} more
+                                  + {dayData.events.length - 1} นัด
                                 </div>
                               )}
                             </div>
