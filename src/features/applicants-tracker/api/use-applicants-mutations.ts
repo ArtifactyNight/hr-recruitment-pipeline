@@ -43,10 +43,25 @@ export function usePatchApplicantMutation(queryKey: readonly unknown[]) {
       id: string;
       stage?: ApplicantStage;
       notes?: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+      source?: TrackerApplicant["source"];
     }) => {
-      const body: { stage?: ApplicantStage; notes?: string } = {};
+      const body: {
+        stage?: ApplicantStage;
+        notes?: string;
+        name?: string;
+        email?: string;
+        phone?: string;
+        source?: TrackerApplicant["source"];
+      } = {};
       if (input.stage !== undefined) body.stage = input.stage;
       if (input.notes !== undefined) body.notes = input.notes;
+      if (input.name !== undefined) body.name = input.name;
+      if (input.email !== undefined) body.email = input.email;
+      if (input.phone !== undefined) body.phone = input.phone;
+      if (input.source !== undefined) body.source = input.source;
       const { data, error } = await api.api
         .applicants({ id: input.id })
         .patch(body, { fetch: { credentials: "include" } });
@@ -63,17 +78,16 @@ export function usePatchApplicantMutation(queryKey: readonly unknown[]) {
                 a.id === input.id
                   ? {
                       ...a,
-                      ...(input.stage !== undefined
-                        ? { stage: input.stage }
-                        : {}),
+                      ...(input.stage !== undefined ? { stage: input.stage } : {}),
                       ...(input.notes !== undefined
-                        ? {
-                            notes:
-                              input.notes.trim() === ""
-                                ? null
-                                : input.notes.trim(),
-                          }
+                        ? { notes: input.notes.trim() === "" ? null : input.notes.trim() }
                         : {}),
+                      ...(input.name !== undefined ? { name: input.name } : {}),
+                      ...(input.email !== undefined ? { email: input.email } : {}),
+                      ...(input.phone !== undefined
+                        ? { phone: input.phone.trim() || null }
+                        : {}),
+                      ...(input.source !== undefined ? { source: input.source } : {}),
                     }
                   : a,
               ),
@@ -254,18 +268,15 @@ export function useAiConfirmMutation() {
         throw new Error("ไม่มีผลวิเคราะห์");
       }
       const resumeTrim = state.addResumeText.trim();
-      const payload = JSON.stringify({
-        jobDescriptionId: state.addJobId,
-        name: state.addName.trim(),
-        email: state.addEmail.trim(),
-        phone: state.addPhone.trim() || undefined,
-        source: state.addSource,
-        report: state.addAiReport as FitReport,
-        resumeText: resumeTrim.length > 0 ? resumeTrim : undefined,
-      });
       const { data, error } = await api.api.applicants["with-screening"].post(
         {
-          payload,
+          jobDescriptionId: state.addJobId,
+          name: state.addName.trim(),
+          email: state.addEmail.trim(),
+          phone: state.addPhone.trim() || undefined,
+          source: state.addSource,
+          report: state.addAiReport as FitReport,
+          resumeText: resumeTrim.length > 0 ? resumeTrim : undefined,
           file: state.addResumeFile ?? undefined,
         },
         { fetch: { credentials: "include" } },

@@ -616,19 +616,12 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   .post(
     "/with-screening",
     async ({ body, set, user }) => {
-      let raw: unknown;
-      try {
-        raw = JSON.parse(body.payload) as unknown;
-      } catch {
-        set.status = 400;
-        return { error: "payload ไม่ใช่ JSON ที่อ่านได้" };
-      }
-      const parsed = withScreeningPayloadSchema.safeParse(raw);
+      const { file, ...payloadFields } = body;
+      const parsed = withScreeningPayloadSchema.safeParse(payloadFields);
       if (!parsed.success) {
         set.status = 400;
         return { error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() };
       }
-      const file = body.file;
       const hasFile = fileHasBytes(file);
       const resumeTrim = parsed.data.resumeText?.trim() ?? "";
       if (!hasFile && resumeTrim.length === 0) {
@@ -787,7 +780,13 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
     {
       body: t.Object({
-        payload: t.String({ minLength: 2 }),
+        jobDescriptionId: t.String({ minLength: 1 }),
+        name: t.String({ minLength: 1 }),
+        email: t.String(),
+        phone: t.Optional(t.String()),
+        source: t.Optional(sourceUnion),
+        report: t.Any(),
+        resumeText: t.Optional(t.String()),
         file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
       }),
       detail: {
@@ -934,9 +933,24 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           const cv = body.cvText.trim();
           data.cvText = cv.length > 0 ? cv : null;
         }
+        if (body.name !== undefined) {
+          const n = body.name.trim();
+          if (n.length > 0) data.name = n;
+        }
+        if (body.email !== undefined) {
+          const e = body.email.trim();
+          if (e.length > 0) data.email = e;
+        }
+        if (body.phone !== undefined) {
+          const p = body.phone.trim();
+          data.phone = p.length > 0 ? p : null;
+        }
+        if (body.source !== undefined) {
+          data.source = body.source;
+        }
         if (Object.keys(data).length === 0) {
           set.status = 400;
-          return { error: "ต้องส่ง stage, notes หรือ cvText อย่างน้อยหนึ่งค่า" };
+          return { error: "ต้องส่งข้อมูลที่ต้องการอัปเดตอย่างน้อยหนึ่งค่า" };
         }
         const updated = await prisma.applicant.update({
           where: { id: params.id },
@@ -999,6 +1013,10 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         stage: t.Optional(stageUnion),
         notes: t.Optional(t.String({ maxLength: 16_000 })),
         cvText: t.Optional(t.String({ maxLength: 100_000 })),
+        name: t.Optional(t.String({ minLength: 1, maxLength: 200 })),
+        email: t.Optional(t.String({ maxLength: 300 })),
+        phone: t.Optional(t.String({ maxLength: 50 })),
+        source: t.Optional(sourceUnion),
       }),
       detail: { tags: ["applicants"], summary: "อัปเดตผู้สมัคร" },
     },

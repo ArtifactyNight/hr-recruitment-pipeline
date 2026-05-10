@@ -311,6 +311,17 @@ export default function CandidatesPage() {
             },
           });
         }}
+        onPatchInfo={(patch) => {
+          if (!detail) return;
+          patchApplicantMut.mutate(
+            { id: detail.id, ...patch },
+            {
+              onSuccess: () => {
+                setDetail({ ...detail, ...patch });
+              },
+            },
+          );
+        }}
       />
 
       <DeleteApplicantAlert

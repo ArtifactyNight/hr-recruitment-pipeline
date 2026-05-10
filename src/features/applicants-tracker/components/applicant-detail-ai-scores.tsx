@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import { formatScoreOneDecimal } from "@/features/applicants-tracker/lib/tracker-display-helpers";
 import { RiSparklingFill } from "@remixicon/react";
-import { Loader2Icon, SparklesIcon } from "lucide-react";
+import { Loader2Icon, RefreshCwIcon, SparklesIcon } from "lucide-react";
 
 type ApplicantDetailAiScoresProps = {
   row: TrackerApplicant;
@@ -109,9 +109,28 @@ export function ApplicantDetailAiScores({
           </span>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            คะแนนความเหมาะสม (AI)
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              คะแนนความเหมาะสม (AI)
+            </p>
+            {onScreenWithAi ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground"
+                disabled={screenAiPending || !hasResumeEvidence}
+                onClick={onScreenWithAi}
+              >
+                {screenAiPending ? (
+                  <Loader2Icon className="size-3 animate-spin" />
+                ) : (
+                  <RefreshCwIcon className="size-3" />
+                )}
+                วิเคราะห์ใหม่
+              </Button>
+            ) : null}
+          </div>
           <div className="flex flex-wrap gap-x-8 gap-y-2">
             <div>
               <p className="text-lg font-bold tabular-nums leading-none">

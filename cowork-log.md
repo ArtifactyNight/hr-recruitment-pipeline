@@ -463,3 +463,15 @@
 - Removed `@clerk/nextjs` package and Clerk env vars
 
 **Edited:** src/middleware.ts (new), src/lib/auth-client.ts (new), src/server/lib/auth-plugin.ts (new), src/app/sign-in/page.tsx (new), src/server/routes/applicant-routes.ts, src/server/routes/interview-routes.ts, src/server/routes/dashboard-routes.ts, src/server/routes/job-routes.ts, src/server/routes/screener-routes.ts, src/lib/get-google-token.ts, src/lib/auth.ts, src/server/lib/interview-scheduling.ts, src/features/dashboard/components/app-sidebar.tsx, src/app/layout.tsx, .env
+
+### [2026-05-11 00:49] - Fix 4 applicant tracker features
+
+**Prompt:** Fix /with-screening add bug, add re-analyze AI button, inline edit applicant data, status badges in calendar/interview views
+
+**Output:**
+1. `/with-screening` bug — Eden Treaty sends multipart body; Elysia coerces JSON string `payload` field to object before TypeBox validation. Fixed by removing `JSON.stringify`/`JSON.parse` envelope — server body now accepts flat fields (`jobDescriptionId`, `name`, `email`, `source`, `report: t.Any()`, `file`), client sends raw object.
+2. Re-analyze AI — `ApplicantDetailAiScores` `hasData` branch had no button. Added "วิเคราะห์ใหม่" ghost button with `RefreshCwIcon` next to scores header row.
+3. Inline edit — Extended PATCH `/:id` server route to accept `name`/`email`/`phone`/`source`. Added `HeaderInlineEdit` (for name/email in dialog header) and `InlineEditRow`/`InlineSelectRow` for phone/source in detail grid. Save on blur/Enter, escape to cancel.
+4. Status badges — `interview-routes.ts` calendar-events endpoint now fetches `status` from DB (removed `CANCELLED` filter). Added `interviewDbStatus` to `GoogleCalendarListEvent` type, `Event` interface, and feed mapping. `InterviewDbStatusBadge` component computes OVERDUE (SCHEDULED + end past), shows CANCELLED/RESCHEDULED badges in `SelectedDayEventsPanel` and `InterviewMeetCard`. Grid cell events get colored left border.
+
+**Edited:** applicant-routes.ts, interview-routes.ts, use-applicants-mutations.ts, applicant-detail-ai-scores.tsx, applicant-detail-dialog.tsx, candidates/page.tsx, google-calendar-list-event.ts, google-calendar-feed.ts, fullscreen-calendar.tsx, applicant-detail-interview-section.tsx

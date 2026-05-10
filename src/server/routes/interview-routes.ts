@@ -146,26 +146,29 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
           timeMax,
         });
         const googleIds = events.map((e) => e.googleEventId);
-        const interviewByGoogleId = new Map<string, string>();
+        const interviewByGoogleId = new Map<string, { id: string; status: string }>();
         if (googleIds.length > 0) {
           const linked = await prisma.interview.findMany({
             where: {
               organizerUserId: user!.id,
               googleEventId: { in: googleIds },
-              status: { not: "CANCELLED" },
             },
-            select: { id: true, googleEventId: true },
+            select: { id: true, googleEventId: true, status: true },
           });
           for (const row of linked) {
             if (row.googleEventId) {
-              interviewByGoogleId.set(row.googleEventId, row.id);
+              interviewByGoogleId.set(row.googleEventId, { id: row.id, status: row.status });
             }
           }
         }
-        const enriched = events.map((e) => ({
-          ...e,
-          interviewId: interviewByGoogleId.get(e.googleEventId) ?? null,
-        }));
+        const enriched = events.map((e) => {
+          const interview = interviewByGoogleId.get(e.googleEventId);
+          return {
+            ...e,
+            interviewId: interview?.id ?? null,
+            interviewDbStatus: interview?.status ?? null,
+          };
+        });
         return { events: enriched };
       } catch (e) {
         set.status = 502;

@@ -63,12 +63,48 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PostponeInterviewDialog } from "@/features/interviews/components/postpone-interview-dialog";
 
+function eventEndIsPast(event: Event): boolean {
+  const ms = parseISO(event.datetime).getTime();
+  if (Number.isNaN(ms)) return true;
+  return ms + event.durationMinutes * 60_000 < Date.now();
+}
+
+function InterviewDbStatusBadge({ event }: { event: Event }) {
+  const isOverdue =
+    event.interviewDbStatus === "SCHEDULED" && eventEndIsPast(event);
+
+  if (isOverdue) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+        เกินกำหนด
+      </span>
+    );
+  }
+  if (event.interviewDbStatus === "CANCELLED") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        ยกเลิก
+      </span>
+    );
+  }
+  if (event.interviewDbStatus === "RESCHEDULED") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+        เลื่อนวัน
+      </span>
+    );
+  }
+  return null;
+}
+
 export type CalendarEventStatus = "confirmed" | "tentative" | "cancelled";
 
 export interface Event {
   id: string;
   /** HR interview row id when this event is linked in our DB */
   interviewId: string | null;
+  /** DB InterviewStatus when linked; null for plain Google Calendar events */
+  interviewDbStatus: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | null;
   durationMinutes: number;
   name: string;
   time: string;
@@ -237,6 +273,11 @@ function SelectedDayEventsPanel({
                           <ClockIcon className="size-3 shrink-0" aria-hidden />
                           <span>{event.time}</span>
                         </div>
+                        {!cancelled && (
+                          <div className="mt-1.5">
+                            <InterviewDbStatusBadge event={event} />
+                          </div>
+                        )}
                         <div
                           className={cn(
                             "mt-2 space-y-1.5 border-border pt-2 text-xs leading-snug",
@@ -695,31 +736,41 @@ export function FullScreenCalendar({
                             key={dayData.day.toString()}
                             className="space-y-1.5"
                           >
-                            {dayData.events.slice(0, 1).map((event) => (
-                              <div
-                                key={event.id}
-                                className="flex flex-col items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs leading-tight"
-                              >
-                                <p
+                            {dayData.events.slice(0, 1).map((event) => {
+                              const isOverdue =
+                                event.interviewDbStatus === "SCHEDULED" &&
+                                eventEndIsPast(event);
+                              return (
+                                <div
+                                  key={event.id}
                                   className={cn(
-                                    "font-medium leading-none",
-                                    eventIsCancelled(event) &&
-                                      "text-muted-foreground line-through",
+                                    "flex flex-col items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs leading-tight",
+                                    isOverdue && "border-l-2 border-l-destructive",
+                                    event.interviewDbStatus === "RESCHEDULED" &&
+                                      "border-l-2 border-l-yellow-500",
                                   )}
                                 >
-                                  {event.name}
-                                </p>
-                                <p
-                                  className={cn(
-                                    "leading-none text-muted-foreground",
-                                    eventIsCancelled(event) &&
-                                      "line-through opacity-80",
-                                  )}
-                                >
-                                  {event.time}
-                                </p>
-                              </div>
-                            ))}
+                                  <p
+                                    className={cn(
+                                      "font-medium leading-none",
+                                      eventIsCancelled(event) &&
+                                        "text-muted-foreground line-through",
+                                    )}
+                                  >
+                                    {event.name}
+                                  </p>
+                                  <p
+                                    className={cn(
+                                      "leading-none text-muted-foreground",
+                                      eventIsCancelled(event) &&
+                                        "line-through opacity-80",
+                                    )}
+                                  >
+                                    {event.time}
+                                  </p>
+                                </div>
+                              );
+                            })}
                             {dayData.events.length > 1 && (
                               <div className="text-xs text-muted-foreground">
                                 + {dayData.events.length - 1} นัด

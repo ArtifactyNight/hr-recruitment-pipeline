@@ -32,6 +32,7 @@ export function groupGoogleCalendarEventsToCalendarData(
     const ev: Event = {
       id: row.googleEventId,
       interviewId: row.interviewId,
+      interviewDbStatus: row.interviewDbStatus,
       durationMinutes: row.durationMinutes,
       name: row.title,
       time: format(start, "p", { locale: th }),

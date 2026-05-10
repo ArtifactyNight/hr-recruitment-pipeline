@@ -8,7 +8,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ApplicantDetailAiScores } from "@/features/applicants-tracker/components/applicant-detail-ai-scores";
+import { DetailRow } from "@/features/applicants-tracker/components/detail-row";
 import { ApplicantDetailInterviewSection } from "@/features/applicants-tracker/components/applicant-detail-interview-section";
 import { ApplicantDetailNotesSection } from "@/features/applicants-tracker/components/applicant-detail-notes-section";
 import { ApplicantDetailResumeSection } from "@/features/applicants-tracker/components/applicant-detail-resume-section";
@@ -19,7 +29,6 @@ import {
   type ScheduleInterviewFormState,
   type ScheduleInterviewSubmitInput,
 } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
-import { DetailRow } from "@/features/applicants-tracker/components/detail-row";
 import {
   initialsFromName,
   STAGE_ORDER,
@@ -34,11 +43,212 @@ import {
   CalendarIcon,
   CalendarPlusIcon,
   GlobeIcon,
+  PencilIcon,
+  PhoneIcon,
   Trash2Icon,
   UserIcon,
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { sourceLabel } from "../lib/tracker-display-helpers";
+
+function HeaderInlineEdit({
+  value,
+  onSave,
+  inputType = "text",
+  disabled = false,
+  className,
+}: {
+  value: string;
+  onSave: (v: string) => void;
+  inputType?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  function commit() {
+    const trimmed = draft.trim();
+    if (trimmed) onSave(trimmed);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <Input
+        autoFocus
+        type={inputType}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className={cn("h-7", className)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); commit(); }
+          if (e.key === "Escape") { setDraft(value); setEditing(false); }
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="group flex items-center gap-1.5">
+      <p className={cn("truncate", className)}>{value}</p>
+      {!disabled && (
+        <button
+          type="button"
+          className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+          onClick={() => { setDraft(value); setEditing(true); }}
+        >
+          <PencilIcon className="size-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+const SOURCE_OPTIONS: Array<{ value: TrackerApplicant["source"]; label: string }> = [
+  { value: "LINKEDIN", label: "LinkedIn" },
+  { value: "JOBSDB", label: "JobsDB" },
+  { value: "REFERRAL", label: "แนะนำ" },
+  { value: "OTHER", label: "อื่นๆ" },
+];
+
+function InlineEditRow({
+  icon,
+  label,
+  value,
+  onSave,
+  inputType = "text",
+  disabled = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  onSave: (v: string) => void;
+  inputType?: string;
+  disabled?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  function commit() {
+    const trimmed = draft.trim();
+    if (trimmed) onSave(trimmed);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <div className="flex gap-2 rounded-lg px-3 py-2">
+        <span className="mt-0.5 text-muted-foreground">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <Input
+            autoFocus
+            type={inputType}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            className="mt-0.5 h-7 text-sm"
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); commit(); }
+              if (e.key === "Escape") { setDraft(value); setEditing(false); }
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex gap-2 rounded-lg px-3 py-2">
+      <span className="mt-0.5 text-muted-foreground">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-sm font-medium">{value}</p>
+          {!disabled && (
+            <button
+              type="button"
+              className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+              onClick={() => { setDraft(value); setEditing(true); }}
+            >
+              <PencilIcon className="size-3" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InlineSelectRow({
+  icon,
+  label,
+  value,
+  onSave,
+  disabled = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: TrackerApplicant["source"];
+  onSave: (v: TrackerApplicant["source"]) => void;
+  disabled?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const currentLabel = SOURCE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
+  if (editing) {
+    return (
+      <div className="flex gap-2 rounded-lg px-3 py-2">
+        <span className="mt-0.5 text-muted-foreground">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <Select
+            defaultOpen
+            value={value}
+            onValueChange={(v) => { onSave(v as TrackerApplicant["source"]); setEditing(false); }}
+            onOpenChange={(open) => { if (!open) setEditing(false); }}
+          >
+            <SelectTrigger className="mt-0.5 h-7 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {SOURCE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex gap-2 rounded-lg px-3 py-2">
+      <span className="mt-0.5 text-muted-foreground">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-sm font-medium">{currentLabel}</p>
+          {!disabled && (
+            <button
+              type="button"
+              className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+              onClick={() => setEditing(true)}
+            >
+              <PencilIcon className="size-3" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type ApplicantDetailDialogProps = {
   applicant: TrackerApplicant | null;
@@ -58,6 +268,12 @@ type ApplicantDetailDialogProps = {
     cvFileKey: string | null;
     cvFileName: string | null;
   }) => void;
+  onPatchInfo: (patch: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    source?: TrackerApplicant["source"];
+  }) => void;
 };
 
 export function ApplicantDetailDialog({
@@ -74,6 +290,7 @@ export function ApplicantDetailDialog({
   onRequestDelete,
   onScreenWithAi,
   onCvPatch,
+  onPatchInfo,
 }: ApplicantDetailDialogProps) {
   const detailStage = applicant?.stage;
 
@@ -107,12 +324,20 @@ export function ApplicantDetailDialog({
                   {initialsFromName(applicant.name)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <DialogTitle className="text-left">
-                    {applicant.name}
-                  </DialogTitle>
-                  <p className="mt-1 truncate text-sm text-muted-foreground">
-                    {applicant.email}
-                  </p>
+                  <DialogTitle className="sr-only">{applicant.name}</DialogTitle>
+                  <HeaderInlineEdit
+                    value={applicant.name}
+                    onSave={(name) => onPatchInfo({ name })}
+                    disabled={patchPending}
+                    className="text-base font-semibold leading-none tracking-tight"
+                  />
+                  <HeaderInlineEdit
+                    value={applicant.email}
+                    onSave={(email) => onPatchInfo({ email })}
+                    inputType="email"
+                    disabled={patchPending}
+                    className="mt-1 text-sm text-muted-foreground"
+                  />
                 </div>
               </DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -121,10 +346,12 @@ export function ApplicantDetailDialog({
                   label="ตำแหน่ง"
                   value={applicant.positionTitle}
                 />
-                <DetailRow
+                <InlineSelectRow
                   icon={<GlobeIcon className="size-4" />}
                   label="แหล่งที่มา"
-                  value={sourceLabel(applicant.source)}
+                  value={applicant.source}
+                  onSave={(source) => onPatchInfo({ source })}
+                  disabled={patchPending}
                 />
                 <DetailRow
                   icon={<CalendarIcon className="size-4" />}
@@ -133,10 +360,13 @@ export function ApplicantDetailDialog({
                     locale: th,
                   })}
                 />
-                <DetailRow
-                  icon={<span className="text-xs font-medium">#</span>}
+                <InlineEditRow
+                  icon={<PhoneIcon className="size-4" />}
                   label="โทรศัพท์"
-                  value={applicant.phone?.trim() || "—"}
+                  value={applicant.phone?.trim() || ""}
+                  onSave={(phone) => onPatchInfo({ phone })}
+                  inputType="tel"
+                  disabled={patchPending}
                 />
               </div>
               <div>

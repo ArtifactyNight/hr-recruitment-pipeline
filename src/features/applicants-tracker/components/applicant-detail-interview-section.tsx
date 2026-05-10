@@ -8,6 +8,41 @@ import { addMinutes, format } from "date-fns";
 import { th } from "date-fns/locale";
 import { ExternalLinkIcon, VideoIcon } from "lucide-react";
 
+function InterviewStatusBadge({
+  interview,
+}: {
+  interview: TrackerApplicantInterview;
+}) {
+  const isOverdue =
+    interview.status === "SCHEDULED" &&
+    new Date(interview.scheduledAt).getTime() +
+      interview.durationMinutes * 60_000 <
+      Date.now();
+
+  if (isOverdue) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+        เกินกำหนด
+      </span>
+    );
+  }
+  if (interview.status === "CANCELLED") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        ยกเลิก
+      </span>
+    );
+  }
+  if (interview.status === "RESCHEDULED") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+        เลื่อนวัน
+      </span>
+    );
+  }
+  return null;
+}
+
 type ApplicantDetailInterviewSectionProps = {
   applicant: TrackerApplicant;
 };
@@ -64,9 +99,12 @@ function InterviewMeetCard({
           <VideoIcon className="size-4" />
         </span>
         <div className="min-w-0 flex flex-col gap-0.5">
-          <p className="font-semibold text-foreground">
-            สัมภาษณ์ — {applicantName}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold text-foreground">
+              สัมภาษณ์ — {applicantName}
+            </p>
+            <InterviewStatusBadge interview={interview} />
+          </div>
           <p className="text-sm text-muted-foreground">
             {metaBits.join(" · ")}
           </p>
