@@ -36,5 +36,5 @@ export function scoreBadgeClass(score: number | null): string {
 }
 
 export function formatScoreOneDecimal(value: number | null): string {
-  return value != null ? value.toFixed(1) : "—";
+  return value != null ? value.toFixed(1) : "-";
 }

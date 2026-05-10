@@ -60,7 +60,7 @@ export function ScreenerReportPanel({
               >
                 {Number.isFinite(report.overallScore)
                   ? report.overallScore.toFixed(1)
-                  : "—"}
+                  : "-"}
               </div>
               <div>
                 <p className="text-lg font-semibold">

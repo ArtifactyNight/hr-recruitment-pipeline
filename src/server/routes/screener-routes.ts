@@ -5,12 +5,12 @@ import {
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
+import { authPlugin } from "@/server/lib/auth-plugin";
 import {
   evaluateResumeAgainstJob,
   fileHasBytes,
   fitReportToScreeningScalars,
 } from "@/server/lib/resume-screening-service";
-import { authPlugin } from "@/server/lib/auth-plugin";
 import { randomUUID } from "node:crypto";
 
 import { Elysia, t } from "elysia";
@@ -108,7 +108,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       }),
       detail: {
         tags: ["screener"],
-        summary: "วิเคราะห์ CV — รองรับ PDF (ส่งเข้าโมเดล) หรือข้อความ",
+        summary: "วิเคราะห์ CV - รองรับ PDF (ส่งเข้าโมเดล) หรือข้อความ",
       },
     },
   )
@@ -199,7 +199,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       }),
       detail: {
         tags: ["screener"],
-        summary: "เพิ่มผู้สมัครและผล screener — รองรับแนบ PDF (multipart)",
+        summary: "เพิ่มผู้สมัครและผล screener - รองรับแนบ PDF (multipart)",
       },
     },
   );

@@ -74,7 +74,10 @@ export default function JobsPage() {
       return;
     }
     if (!editing) return;
-    updateMut.mutate({ id: editing.id, body: values }, { onSuccess: () => closeForm() });
+    updateMut.mutate(
+      { id: editing.id, body: values },
+      { onSuccess: () => closeForm() },
+    );
   }
 
   const formPending = createMut.isPending || updateMut.isPending;
@@ -140,7 +143,7 @@ export default function JobsPage() {
                   </span>
                   {deleteTarget.applicantCount > 0 ? (
                     <span className="mt-2 block text-destructive">
-                      มีผู้สมัคร {deleteTarget.applicantCount} คน —
+                      มีผู้สมัคร {deleteTarget.applicantCount} คน -
                       ระบบจะไม่อนุญาตให้ลบจนกว่าจะย้าย/ลบผู้สมัคร
                     </span>
                   ) : (

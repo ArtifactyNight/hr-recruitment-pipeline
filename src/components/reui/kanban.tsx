@@ -273,7 +273,7 @@ function Kanban<T>({
           overIndex = columns[container].length;
         }
 
-        // Unknown target — @dnd-kit treats negative `to` as offset from end; avoid bogus reorder loops.
+        // Unknown target - @dnd-kit treats negative `to` as offset from end; avoid bogus reorder loops.
         if (overIndex < 0) {
           return;
         }

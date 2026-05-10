@@ -2,10 +2,13 @@
 
 import { useCallback, useMemo, type ChangeEvent } from "react";
 
+import {
+  useAddToTrackerMutation,
+  useEvaluateMutation,
+} from "@/features/screener/api/use-screener";
+import { useScreenerJobsQuery } from "@/features/screener/api/use-screener-jobs";
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import { formatReportText } from "@/features/screener/lib/resume-screener-utils";
-import { useEvaluateMutation, useAddToTrackerMutation } from "@/features/screener/api/use-screener";
-import { useScreenerJobsQuery } from "@/features/screener/api/use-screener-jobs";
 import { useResumeScreenerStore } from "@/features/screener/store/resume-screener-store";
 import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
 import { toast } from "sonner";
@@ -181,8 +184,8 @@ export function ResumeScreener() {
   const onCopyReport = useCallback(async () => {
     if (!report) return;
     const text = formatReportText(
-      detectedName.trim() || "—",
-      detectedEmail.trim() || "—",
+      detectedName.trim() || "-",
+      detectedEmail.trim() || "-",
       report,
     );
     const ok = await copyToClipboard(text);
@@ -194,7 +197,13 @@ export function ResumeScreener() {
     setTrackerDraftName(detectedName.trim());
     setTrackerDraftEmail(detectedEmail.trim());
     setTrackerDialogOpen(true);
-  }, [detectedEmail, detectedName, setTrackerDraftEmail, setTrackerDraftName, setTrackerDialogOpen]);
+  }, [
+    detectedEmail,
+    detectedName,
+    setTrackerDraftEmail,
+    setTrackerDraftName,
+    setTrackerDialogOpen,
+  ]);
 
   const onSubmitTracker = useCallback(async () => {
     if (!report || !trackerJobId) {
@@ -250,9 +259,16 @@ export function ResumeScreener() {
       setDetectedName("");
       setDetectedEmail("");
       setReportDialogOpen(false);
-      toast.message(`ใช้ไฟล์ ${file.name} — กดวิเคราะห์เพื่อส่ง PDF เข้า AI`);
+      toast.message(`ใช้ไฟล์ ${file.name} - กดวิเคราะห์เพื่อส่ง PDF เข้า AI`);
     },
-    [setDetectedEmail, setDetectedName, setReport, setResumeText, setSelectedFile, setReportDialogOpen],
+    [
+      setDetectedEmail,
+      setDetectedName,
+      setReport,
+      setResumeText,
+      setSelectedFile,
+      setReportDialogOpen,
+    ],
   );
 
   const onRemoveFile = useCallback(() => {
@@ -268,7 +284,14 @@ export function ResumeScreener() {
       setDetectedEmail("");
       setReportDialogOpen(false);
     },
-    [setDetectedEmail, setDetectedName, setJobId, setReport, setTrackerJobId, setReportDialogOpen],
+    [
+      setDetectedEmail,
+      setDetectedName,
+      setJobId,
+      setReport,
+      setTrackerJobId,
+      setReportDialogOpen,
+    ],
   );
 
   const analyzePending = evaluateMutation.isPending;

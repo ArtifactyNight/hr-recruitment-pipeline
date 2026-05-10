@@ -107,7 +107,7 @@ export function ApplicantTrackerTable({
                     <span>
                       {row.overallScore != null
                         ? row.overallScore.toFixed(1)
-                        : "—"}
+                        : "-"}
                     </span>
                     {row.overallScore == null ? (
                       <Badge

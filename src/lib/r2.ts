@@ -102,7 +102,7 @@ export async function getResumePdfBytesFromR2(objectKey: string): Promise<{
 
 export async function getResumeSignedDownloadUrl(options: {
   objectKey: string;
-  /** seconds — default 15 minutes */
+  /** seconds - default 15 minutes */
   expiresIn?: number;
   filenameHint?: string;
 }): Promise<string> {

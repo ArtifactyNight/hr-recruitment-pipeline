@@ -14,16 +14,15 @@ import {
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
+import { authPlugin } from "@/server/lib/auth-plugin";
 import {
   evaluateResumeAgainstJob,
   fileHasBytes,
   fitReportToScreeningScalars,
 } from "@/server/lib/resume-screening-service";
-import { authPlugin } from "@/server/lib/auth-plugin";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-
 
 const stageUnion = t.Union([
   t.Literal("APPLIED"),
@@ -1045,7 +1044,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             set.status = 503;
             return {
               error:
-                "ยังไม่ได้ตั้งค่า Cloudflare R2 — ไม่สามารถอ่านไฟล์ PDF จากเซิร์ฟเวอร์ได้",
+                "ยังไม่ได้ตั้งค่า Cloudflare R2 - ไม่สามารถอ่านไฟล์ PDF จากเซิร์ฟเวอร์ได้",
             };
           }
           const { bytes, contentType } = await getResumePdfBytesFromR2(
@@ -1067,7 +1066,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           set.status = 400;
           return {
             error:
-              "ไม่มีข้อมูล resume — วางข้อความหรืออัปโหลด PDF ก่อนวิเคราะห์",
+              "ไม่มีข้อมูล resume - วางข้อความหรืออัปโหลด PDF ก่อนวิเคราะห์",
           };
         }
         const screeningData = fitReportToScreeningScalars(evalResult.report);

@@ -82,7 +82,7 @@ export function TrackerCard({
                   )}
                 >
                   <RiStarFill className="size-4" />
-                  {score != null ? score.toFixed(1) : "—"}
+                  {score != null ? score.toFixed(1) : "-"}
                 </Badge>
               </div>
             </div>

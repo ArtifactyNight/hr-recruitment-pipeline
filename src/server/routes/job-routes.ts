@@ -191,7 +191,7 @@ export const jobRoutes = new Elysia({ prefix: "/jobs" })
       if (row._count.applicants > 0) {
         set.status = 409;
         return {
-          error: `ลบไม่ได้ — มีผู้สมัครผูกกับตำแหน่งนี้ ${row._count.applicants} คน`,
+          error: `ลบไม่ได้ - มีผู้สมัครผูกกับตำแหน่งนี้ ${row._count.applicants} คน`,
         };
       }
       await prisma.jobDescription.delete({ where: { id: params.id } });

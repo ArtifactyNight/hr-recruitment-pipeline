@@ -146,7 +146,10 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
           timeMax,
         });
         const googleIds = events.map((e) => e.googleEventId);
-        const interviewByGoogleId = new Map<string, { id: string; status: string }>();
+        const interviewByGoogleId = new Map<
+          string,
+          { id: string; status: string }
+        >();
         if (googleIds.length > 0) {
           const linked = await prisma.interview.findMany({
             where: {
@@ -157,7 +160,10 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
           });
           for (const row of linked) {
             if (row.googleEventId) {
-              interviewByGoogleId.set(row.googleEventId, { id: row.id, status: row.status });
+              interviewByGoogleId.set(row.googleEventId, {
+                id: row.id,
+                status: row.status,
+              });
             }
           }
         }
@@ -200,7 +206,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         ) {
           set.status = 403;
           return {
-            error: "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google อีกครั้ง",
+            error: "ไม่มีโทเค็น Google - ลงชื่อเข้าด้วย Google อีกครั้ง",
           };
         }
         set.status = 502;
@@ -316,7 +322,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         ) {
           set.status = 403;
           return {
-            error: "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google อีกครั้ง",
+            error: "ไม่มีโทเค็น Google - ลงชื่อเข้าด้วย Google อีกครั้ง",
           };
         }
         throw e;
@@ -410,7 +416,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         ),
       );
 
-      const summary = `สัมภาษณ์ — ${applicant.name}`;
+      const summary = `สัมภาษณ์ - ${applicant.name}`;
 
       let google: { eventId: string; meetLink: string | null | undefined };
       try {
@@ -434,7 +440,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
           set.status = 403;
           return {
             error:
-              "โทเค็น Google ไม่มีสิทธิ์ที่ต้องการ — ลงชื่อเข้าด้วย Google ใหม่เพื่อให้สิทธิ์ปฏิทิน",
+              "โทเค็น Google ไม่มีสิทธิ์ที่ต้องการ - ลงชื่อเข้าด้วย Google ใหม่เพื่อให้สิทธิ์ปฏิทิน",
             code: "GOOGLE_INSUFFICIENT_SCOPES" as const,
           };
         }
@@ -525,7 +531,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       } catch {
         set.status = 403;
         return {
-          error: "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google อีกครั้ง",
+          error: "ไม่มีโทเค็น Google - ลงชื่อเข้าด้วย Google อีกครั้ง",
         };
       }
 
@@ -643,7 +649,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         ),
       );
       const slotEnd = new Date(nextStart.getTime() + nextDuration * 60_000);
-      const summary = `สัมภาษณ์ — ${existing.applicant.name}`;
+      const summary = `สัมภาษณ์ - ${existing.applicant.name}`;
 
       try {
         await patchEventDetails({
@@ -712,7 +718,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       } catch {
         set.status = 403;
         return {
-          error: "ไม่มีโทเค็น Google — ลงชื่อเข้าด้วย Google อีกครั้ง",
+          error: "ไม่มีโทเค็น Google - ลงชื่อเข้าด้วย Google อีกครั้ง",
         };
       }
 

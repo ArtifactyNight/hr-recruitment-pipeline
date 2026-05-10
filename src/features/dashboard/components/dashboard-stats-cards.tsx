@@ -101,7 +101,7 @@ export function DashboardStatsCards({
             <Skeleton className="mt-1 h-4 w-28" />
           ) : (
             <p className="mt-1 text-xs text-muted-foreground">
-              {aiScreened === 0 ? "—" : avgScore.toFixed(1)} คะแนนเฉลี่ย
+              {aiScreened === 0 ? "-" : avgScore.toFixed(1)} คะแนนเฉลี่ย
             </p>
           )}
         </CardContent>

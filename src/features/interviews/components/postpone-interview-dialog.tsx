@@ -109,7 +109,7 @@ export function PostponeInterviewDialog({
         </DialogHeader>
         <FieldGroup className="gap-4 py-1">
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{eventTitle}</span>—
+            <span className="font-medium text-foreground">{eventTitle}</span>-
             ผู้เข้าร่วมจะได้รับอีเมลอัปเดตจาก Google Calendar
           </p>
           <Field>

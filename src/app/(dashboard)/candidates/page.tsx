@@ -142,7 +142,7 @@ export default function CandidatesPage() {
     <Container className="flex flex-col gap-6">
       <HeaderSection
         title="Applicant Tracker"
-        description={`${total} คน — ลากการ์ดในบอร์ดเพื่อเปลี่ยนสเตจ หรือเลือกจากตาราง`}
+        description={`${total} คน - ลากการ์ดในบอร์ดเพื่อเปลี่ยนสเตจ หรือเลือกจากตาราง`}
       />
 
       <ApplicantTrackerControls
@@ -225,7 +225,7 @@ export default function CandidatesPage() {
               setAddName(detectedName.trim() || s.addName.trim() || "ผู้สมัคร");
               setAddEmail(detectedEmail.trim() || s.addEmail.trim());
               setAddFlowStep("ai_confirm");
-              toast.success("วิเคราะห์เสร็จแล้ว — ตรวจข้อมูลแล้วบันทึก");
+              toast.success("วิเคราะห์เสร็จแล้ว - ตรวจข้อมูลแล้วบันทึก");
             },
           })
         }

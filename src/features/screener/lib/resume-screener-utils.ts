@@ -30,7 +30,7 @@ export function formatReportText(
   const summary = report.panelSummary.trim();
   const status = getFitStatusLabel(report.fitStatus);
   const lines: Array<string> = [
-    `รายงานความเหมาะสม — ${name} (${email})`,
+    `รายงานความเหมาะสม - ${name} (${email})`,
     "",
     `คะแนนรวม: ${String(report.overallScore)}`,
     `สถานะ: ${status}`,
@@ -38,9 +38,9 @@ export function formatReportText(
     summary || "(ยังไม่มีสรุปจากโมเดล)",
     "",
     "มิติย่อย",
-    `- ทักษะ (${String(report.skillFit)}/10): ${report.skillReason.trim() || "—"}`,
-    `- ประสบการณ์ (${String(report.experienceFit)}/10): ${report.experienceReason.trim() || "—"}`,
-    `- วัฒนธรรม/สื่อสาร (${String(report.cultureFit)}/10): ${report.cultureReason.trim() || "—"}`,
+    `- ทักษะ (${String(report.skillFit)}/10): ${report.skillReason.trim() || "-"}`,
+    `- ประสบการณ์ (${String(report.experienceFit)}/10): ${report.experienceReason.trim() || "-"}`,
+    `- วัฒนธรรม/สื่อสาร (${String(report.cultureFit)}/10): ${report.cultureReason.trim() || "-"}`,
     "",
     "จุดแข็ง",
     ...(strengths.length > 0

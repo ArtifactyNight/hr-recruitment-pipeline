@@ -101,7 +101,7 @@ function InterviewMeetCard({
         <div className="min-w-0 flex flex-col gap-0.5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-foreground">
-              สัมภาษณ์ — {applicantName}
+              สัมภาษณ์ - {applicantName}
             </p>
             <InterviewStatusBadge interview={interview} />
           </div>

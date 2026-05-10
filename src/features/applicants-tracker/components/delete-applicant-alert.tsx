@@ -31,7 +31,7 @@ export function DeleteApplicantAlert({
           <AlertDialogTitle>ลบผู้สมัคร?</AlertDialogTitle>
           <AlertDialogDescription>
             การลบไม่สามารถย้อนกลับได้
-            {applicantName ? ` — ${applicantName}` : ""}
+            {applicantName ? ` - ${applicantName}` : ""}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

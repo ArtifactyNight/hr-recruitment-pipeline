@@ -104,7 +104,12 @@ export interface Event {
   /** HR interview row id when this event is linked in our DB */
   interviewId: string | null;
   /** DB InterviewStatus when linked; null for plain Google Calendar events */
-  interviewDbStatus: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | null;
+  interviewDbStatus:
+    | "SCHEDULED"
+    | "COMPLETED"
+    | "CANCELLED"
+    | "RESCHEDULED"
+    | null;
   durationMinutes: number;
   name: string;
   time: string;
@@ -128,7 +133,7 @@ interface FullScreenCalendarProps {
   data: Array<CalendarData>;
   /** Called from empty-state CTA when a date is selected (today or future). */
   onScheduleForDate?: (date: Date) => void;
-  /** Fired when the visible month (grid range) changes — use to refetch API data. */
+  /** Fired when the visible month (grid range) changes - use to refetch API data. */
   onVisibleRangeChange?: (range: { from: Date; to: Date }) => void;
   /** Shows a subdued grid while refetching. */
   calendarLoading?: boolean;
@@ -305,7 +310,7 @@ function SelectedDayEventsPanel({
                               <span className="font-medium text-muted-foreground">
                                 ผู้จัด ·{" "}
                               </span>
-                              {event.organizerEmail ?? "—"}
+                              {event.organizerEmail ?? "-"}
                             </span>
                           </div>
                           <div className="flex gap-2 text-muted-foreground">
@@ -745,7 +750,8 @@ export function FullScreenCalendar({
                                   key={event.id}
                                   className={cn(
                                     "flex flex-col items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs leading-tight",
-                                    isOverdue && "border-l-2 border-l-destructive",
+                                    isOverdue &&
+                                      "border-l-2 border-l-destructive",
                                     event.interviewDbStatus === "RESCHEDULED" &&
                                       "border-l-2 border-l-yellow-500",
                                   )}

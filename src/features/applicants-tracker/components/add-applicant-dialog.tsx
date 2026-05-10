@@ -242,7 +242,7 @@ export function AddApplicantDialog({
             <DialogTitle className="text-left">{dialogTitle}</DialogTitle>
             <p className="mt-1 text-left text-sm text-muted-foreground">
               {addFlowStep === "pick"
-                ? "เลือกวิธีเพิ่ม — ข้อมูลและการคัดกรองอยู่ใน Applicant Tracker"
+                ? "เลือกวิธีเพิ่ม - ข้อมูลและการคัดกรองอยู่ใน Applicant Tracker"
                 : null}
               {addFlowStep === "manual"
                 ? "ต้องมีข้อความ Resume หรือไฟล์ PDF อย่างใดอย่างหนึ่ง"
@@ -274,7 +274,7 @@ export function AddApplicantDialog({
 
                   <span className="font-semibold text-lg">กรอกข้อมูลเอง</span>
                   <span className="text-center text-xs font-normal text-muted-foreground">
-                    PDF หรือวางข้อความ — วิเคราะห์ AI ทีหลังได้
+                    PDF หรือวางข้อความ - วิเคราะห์ AI ทีหลังได้
                   </span>
                 </Button>
                 <Button
@@ -291,13 +291,13 @@ export function AddApplicantDialog({
                     วิเคราะห์ด้วย AI
                   </span>
                   <span className="text-center text-xs font-normal text-muted-foreground">
-                    เลือก JD แล้วส่ง resume เข้า AI ก่อนบันทึก
+                    วิเคราะห์ Resume ด้วย AI
                   </span>
                 </Button>
               </div>
               {jobs.length === 0 && !jobsLoading ? (
                 <p className="text-sm text-muted-foreground">
-                  ยังไม่มีตำแหน่งที่เปิดรับ — เพิ่ม JD ในเมนูตำแหน่งงานก่อน
+                  ยังไม่มีตำแหน่งที่เปิดรับ - เพิ่ม JD ในเมนูตำแหน่งงานก่อน
                 </p>
               ) : null}
             </div>
@@ -558,7 +558,7 @@ export function AddApplicantDialog({
                   >
                     {Number.isFinite(addAiReport.overallScore)
                       ? addAiReport.overallScore.toFixed(1)
-                      : "—"}
+                      : "-"}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-2">
                     <FitStatusBadge

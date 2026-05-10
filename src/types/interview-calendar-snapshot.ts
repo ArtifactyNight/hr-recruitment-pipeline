@@ -11,6 +11,6 @@ export type InterviewCalendarUiSnapshot = {
     tentative: number;
     needsAction: number;
   };
-  /** Event description HTML stripped on server — plain text for display */
+  /** Event description HTML stripped on server - plain text for display */
   calendarDescription: string | null;
 };
