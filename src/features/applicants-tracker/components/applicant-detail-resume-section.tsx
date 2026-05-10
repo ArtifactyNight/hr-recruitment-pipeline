@@ -50,7 +50,7 @@ export function ApplicantDetailResumeSection({
 }: ApplicantDetailResumeSectionProps) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const downloadMut = useMutation({
     mutationFn: async () => {

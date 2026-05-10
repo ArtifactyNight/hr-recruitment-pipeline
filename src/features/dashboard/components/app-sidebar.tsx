@@ -36,12 +36,12 @@ const mainNav: Array<{
     label: routeSegmentLabels.candidates,
     icon: UsersIcon,
   },
-  { href: "/jobs", label: routeSegmentLabels.jobs, icon: BriefcaseIcon },
   {
     href: "/interviews",
     label: routeSegmentLabels.interviews,
     icon: CalendarDaysIcon,
   },
+  { href: "/jobs", label: routeSegmentLabels.jobs, icon: BriefcaseIcon },
 ];
 
 export function AppSidebar({

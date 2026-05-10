@@ -37,7 +37,7 @@ export function DashboardStatsCards({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total Applicants
+            ผู้สมัครทั้งหมด
           </CardTitle>
           <UsersIcon className="size-4 text-muted-foreground" />
         </CardHeader>
@@ -51,7 +51,7 @@ export function DashboardStatsCards({
             <Skeleton className="mt-1 h-4 w-28" />
           ) : (
             <p className="mt-1 text-xs text-muted-foreground">
-              {inProgress} in progress
+              {inProgress} กำลังดำเนินการ
             </p>
           )}
         </CardContent>
@@ -60,7 +60,7 @@ export function DashboardStatsCards({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Upcoming Interviews
+            นัดสัมภาษณ์ที่จะมี
           </CardTitle>
           <CalendarIcon className="size-4 text-muted-foreground" />
         </CardHeader>
@@ -76,7 +76,10 @@ export function DashboardStatsCards({
             className="mt-1 h-auto p-0 text-xs"
             asChild
           >
-            <Link href="/interviews">View Schedule</Link>
+            <Link href="/interviews">
+              <CalendarIcon />
+              ดูปฏิทิน
+            </Link>
           </Button>
         </CardContent>
       </Card>
@@ -84,7 +87,7 @@ export function DashboardStatsCards({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            AI Screened
+            ตรวจสอบด้วย AI
           </CardTitle>
           <BrainCircuitIcon className="size-4 text-muted-foreground" />
         </CardHeader>
@@ -98,8 +101,7 @@ export function DashboardStatsCards({
             <Skeleton className="mt-1 h-4 w-28" />
           ) : (
             <p className="mt-1 text-xs text-muted-foreground">
-              Avg score:{" "}
-              {aiScreened === 0 ? "—" : avgScore.toFixed(1)}
+              {aiScreened === 0 ? "—" : avgScore.toFixed(1)} คะแนนเฉลี่ย
             </p>
           )}
         </CardContent>
@@ -108,7 +110,7 @@ export function DashboardStatsCards({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Hired
+            ถูกจ้างแล้ว
           </CardTitle>
           <CheckCircle2Icon className="size-4 text-muted-foreground" />
         </CardHeader>
@@ -122,7 +124,7 @@ export function DashboardStatsCards({
             <Skeleton className="mt-1 h-4 w-24" />
           ) : (
             <p className="mt-1 text-xs text-muted-foreground">
-              {rejected} rejected
+              {rejected} ถูกปฏิเสธ
             </p>
           )}
         </CardContent>

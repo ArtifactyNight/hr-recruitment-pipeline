@@ -78,7 +78,6 @@
   --color-info: var(--info);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
-  --font-heading: var(--font-sans);
 }
 
 :root {

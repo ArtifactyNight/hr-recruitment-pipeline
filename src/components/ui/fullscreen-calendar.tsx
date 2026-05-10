@@ -50,6 +50,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import { toast } from "sonner";
 import { useCopyToClipboard } from "usehooks-ts";
 
@@ -203,7 +204,7 @@ function SelectedDayEventsPanel({
                         </div>
                         <div
                           className={cn(
-                            "mt-2 space-y-1.5 border-border border-t pt-2 text-xs leading-snug",
+                            "mt-2 space-y-1.5 border-border pt-2 text-xs leading-snug",
                             cancelled && "opacity-90",
                           )}
                         >
@@ -264,42 +265,35 @@ function SelectedDayEventsPanel({
                       </div>
                       {showMeetActions ? (
                         <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-                          <Button variant="outline" size="sm" asChild>
-                            <a
+                          <Button size="sm" asChild>
+                            <Link
                               href={meetUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="gap-1.5"
                             >
-                              <ExternalLinkIcon
-                                className="size-3.5 shrink-0"
-                                aria-hidden
-                              />
+                              <ExternalLinkIcon />
                               เข้าประชุม
-                            </a>
+                            </Link>
                           </Button>
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="gap-1.5"
                             onClick={async () => {
                               const ok = await copyToClipboard(meetUrl);
                               if (ok) toast.success("คัดลอกลิงก์แล้ว");
                               else toast.error("คัดลอกไม่ได้");
                             }}
                           >
-                            <ClipboardCopyIcon
-                              className="size-3.5 shrink-0"
-                              aria-hidden
-                            />
+                            <ClipboardCopyIcon />
                             คัดลอกลิงก์
                           </Button>
                         </div>
                       ) : null}
                     </div>
                     {showCancelSlot ? (
-                      <div className="flex border-border border-t pt-3">
+                      <div className="flex border-border pt-3">
                         <Button
                           type="button"
                           variant="outline"
