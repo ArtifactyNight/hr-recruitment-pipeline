@@ -61,7 +61,7 @@ export function ApplicantDetailNotesSection({
         {!isEditing ? (
           <Button
             type="button"
-            size="sm"
+            size="xs"
             variant="ghost"
             className="gap-1.5"
             disabled={patchPending}
@@ -74,8 +74,8 @@ export function ApplicantDetailNotesSection({
           <div className="flex shrink-0 flex-wrap justify-end gap-2">
             <Button
               type="button"
-              size="sm"
-              variant="outline"
+              size="xs"
+              variant="ghost"
               disabled={notesSaving || patchPending}
               onClick={handleCancel}
             >
@@ -83,8 +83,7 @@ export function ApplicantDetailNotesSection({
             </Button>
             <Button
               type="button"
-              size="sm"
-              variant="secondary"
+              size="xs"
               className="gap-2"
               disabled={!dirty || patchPending}
               onClick={() => onSave(draft)}
