@@ -475,3 +475,11 @@
 4. Status badges — `interview-routes.ts` calendar-events endpoint now fetches `status` from DB (removed `CANCELLED` filter). Added `interviewDbStatus` to `GoogleCalendarListEvent` type, `Event` interface, and feed mapping. `InterviewDbStatusBadge` component computes OVERDUE (SCHEDULED + end past), shows CANCELLED/RESCHEDULED badges in `SelectedDayEventsPanel` and `InterviewMeetCard`. Grid cell events get colored left border.
 
 **Edited:** applicant-routes.ts, interview-routes.ts, use-applicants-mutations.ts, applicant-detail-ai-scores.tsx, applicant-detail-dialog.tsx, candidates/page.tsx, google-calendar-list-event.ts, google-calendar-feed.ts, fullscreen-calendar.tsx, applicant-detail-interview-section.tsx
+
+### [2026-05-11 01:05] - Update README + .env.example
+
+**Prompt:** Rewrite README in English: setup instructions + feature-based architecture explanation. Update .env.example to match.
+
+**Output:** Full README rewrite — stack table, prerequisites (Node ≥20/pnpm ≥9/PG ≥15), quick start steps, env vars table (all vars documented with required flag), Google OAuth setup section (what's needed + links), deep feature-based architecture section (why vs type-based, annotated directory tree, what goes in each subfolder, shared code map, API layer, pipeline stages). Updated .env.example: removed stale Clerk vars and unused GOOGLE_TOKEN_ENCRYPTION_KEY, added comments with setup links.
+
+**Edited:** README.md, .env.example
