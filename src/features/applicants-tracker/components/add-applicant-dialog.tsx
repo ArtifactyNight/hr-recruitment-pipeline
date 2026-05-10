@@ -248,7 +248,7 @@ export function AddApplicantDialog({
                 ? "ต้องมีข้อความ Resume หรือไฟล์ PDF อย่างใดอย่างหนึ่ง"
                 : null}
               {addFlowStep === "ai_review"
-                ? "เลือกตำแหน่งงาน แล้วแนบ resume เพื่อให้ AI สรุปคะแนน"
+                ? "ใช้ AI เพื่อวิเคราะห์ Resume และคัดกรองผู้สมัคร"
                 : null}
               {addFlowStep === "ai_confirm"
                 ? "ตรวจชื่อ อีเมล และคะแนนก่อนบันทึก (สเตจ SCREENING)"
@@ -472,8 +472,6 @@ export function AddApplicantDialog({
                   </>
                 ) : null}
 
-                <Separator />
-
                 <Field className="gap-2">
                   <div className="flex flex-col gap-2">
                     <FieldLabel className="w-auto">
@@ -566,7 +564,7 @@ export function AddApplicantDialog({
                       className="w-fit rounded-sm"
                     />
                     <p className="text-xs text-muted-foreground">
-                      ตรวจทานและแก้ชื่อ/อีเมลหาก AI อ่านจาก CV ไม่ตรง
+                      กรุณาตรวจสอบชื่อและอีเมลหาก AI อ่านจาก CV ไม่ตรง
                     </p>
                   </div>
                 </div>
