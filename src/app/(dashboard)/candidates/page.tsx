@@ -226,7 +226,7 @@ export default function CandidatesPage() {
               setAddAiReport(report);
               setAddName(detectedName.trim() || s.addName.trim() || "ผู้สมัคร");
               setAddEmail(detectedEmail.trim() || s.addEmail.trim());
-              setAddFlowStep("ai_confirm");
+              setAddFlowStep("ai_result");
               toast.success("วิเคราะห์เสร็จแล้ว - ตรวจข้อมูลแล้วบันทึก");
             },
           })

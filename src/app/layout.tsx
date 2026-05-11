@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Anuphan, Geist_Mono } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
@@ -13,7 +13,11 @@ const mono = Geist_Mono({
   weight: ["400", "500", "600", "700"],
 });
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const font = Anuphan({
+  subsets: ["latin", "thai"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "H+ | Recruitment Pipeline Tools",
@@ -31,10 +35,10 @@ export default function RootLayout({
       className={cn(
         "h-full",
         "antialiased",
-        inter.className,
+        font.className,
         mono.variable,
         "font-sans",
-        inter.variable,
+        font.variable,
       )}
     >
       <body className="min-h-full flex flex-col">

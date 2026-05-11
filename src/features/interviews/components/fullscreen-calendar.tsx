@@ -76,7 +76,7 @@ function InterviewDbStatusBadge({ event }: { event: Event }) {
   if (isOverdue) {
     return (
       <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-        เกินกำหนด
+        เกินกำหsนด
       </span>
     );
   }
@@ -718,14 +718,14 @@ export function FullScreenCalendar({
                             "text-muted-foreground",
                           isEqual(day, selectedDay) &&
                             isToday(day) &&
-                            "border-none bg-primary",
+                            "border-none bg-red-500 text-background",
                           isEqual(day, selectedDay) &&
                             !isToday(day) &&
-                            "bg-foreground",
+                            "bg-foreground text-background",
                           (isEqual(day, selectedDay) || isToday(day)) &&
                             "font-semibold",
                           !isPastCalendarDay(day) && "hover:border",
-                          "flex size-7 items-center justify-center rounded-full text-xs",
+                          "flex size-7 items-center justify-center rounded-md text-xs",
                         )}
                       >
                         <time dateTime={format(day, "yyyy-MM-dd")}>

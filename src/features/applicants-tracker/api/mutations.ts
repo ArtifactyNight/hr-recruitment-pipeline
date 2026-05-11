@@ -177,6 +177,7 @@ export const applicantMutations = {
             jobDescriptionId: state.addJobId,
             cvText: state.addResumeText.trim() || undefined,
             file: state.addResumeFile ?? undefined,
+            strictness: state.addAiStrictness,
           },
           { fetch: { credentials: "include" } },
         );

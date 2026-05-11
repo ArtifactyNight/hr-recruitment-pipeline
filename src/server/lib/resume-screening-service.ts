@@ -4,8 +4,9 @@ import {
   screeningEvaluateSchema,
 } from "@/features/screener/lib/fit-report-schemas";
 import {
+  buildScreenerSystemPrompt,
   jdPrompt,
-  SCREENER_SYSTEM_PROMPT,
+  type ScreeningStrictness,
 } from "@/features/screener/lib/screener-prompts";
 import type { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
@@ -22,6 +23,15 @@ const model = createFallback({
     google("gemini-2.5-pro-latest"),
   ],
 });
+
+const DEFAULT_SCREENING_STRICTNESS: ScreeningStrictness = 1;
+
+function normalizeStrictness(value: unknown): ScreeningStrictness {
+  if (value === 0 || value === 1 || value === 2) {
+    return value;
+  }
+  return DEFAULT_SCREENING_STRICTNESS;
+}
 
 export function fileHasBytes(file: unknown): file is File {
   return (
@@ -89,6 +99,7 @@ export async function evaluateResumeAgainstJob(input: {
   jobDescriptionId: string;
   cvText?: string;
   file?: File | null;
+  strictness?: number;
   /** PDF bytes when reading from storage (no File in scope) */
   pdfBuffer?: Uint8Array;
   pdfFilename?: string;
@@ -118,7 +129,8 @@ export async function evaluateResumeAgainstJob(input: {
     throw Object.assign(new Error("ไม่พบตำแหน่งนี้"), { statusCode: 404 });
   }
 
-  const systemScreener = SCREENER_SYSTEM_PROMPT;
+  const strictness = normalizeStrictness(input.strictness);
+  const systemScreener = buildScreenerSystemPrompt(strictness);
   const prompt = jdPrompt(job.title, job.description, job.requirements);
 
   try {

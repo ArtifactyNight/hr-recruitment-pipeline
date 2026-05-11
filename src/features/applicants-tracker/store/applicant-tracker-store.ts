@@ -12,7 +12,9 @@ export type AddApplicantFlowStep =
   | "pick"
   | "manual"
   | "ai_review"
-  | "ai_confirm";
+  | "ai_result";
+
+export type AddApplicantAiCvMode = "pdf" | "text" | "both";
 
 interface ApplicantTrackerState {
   view: ApplicantTrackerView;
@@ -40,6 +42,15 @@ interface ApplicantTrackerState {
   setAddResumeText: (v: string) => void;
   addResumeFile: File | null;
   setAddResumeFile: (v: File | null) => void;
+
+  addAiCvMode: AddApplicantAiCvMode;
+  setAddAiCvMode: (v: AddApplicantAiCvMode) => void;
+  addAiStrictness: number;
+  setAddAiStrictness: (v: number) => void;
+  addAiJdUrl: string;
+  setAddAiJdUrl: (v: string) => void;
+  addFetchingJdUrl: boolean;
+  setAddFetchingJdUrl: (v: boolean) => void;
 
   addAiReport: FitReport | null;
   setAddAiReport: (v: FitReport | null) => void;
@@ -89,6 +100,14 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
     setAddResumeText: (v) => set({ addResumeText: v }),
     addResumeFile: null,
     setAddResumeFile: (v) => set({ addResumeFile: v }),
+    addAiCvMode: "pdf",
+    setAddAiCvMode: (v) => set({ addAiCvMode: v }),
+    addAiStrictness: 1,
+    setAddAiStrictness: (v) => set({ addAiStrictness: v }),
+    addAiJdUrl: "",
+    setAddAiJdUrl: (v) => set({ addAiJdUrl: v }),
+    addFetchingJdUrl: false,
+    setAddFetchingJdUrl: (v) => set({ addFetchingJdUrl: v }),
 
     addAiReport: null,
     setAddAiReport: (v) => set({ addAiReport: v }),
@@ -120,6 +139,10 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
         addFlowStep: "pick",
         addResumeText: "",
         addResumeFile: null,
+        addAiCvMode: "pdf",
+        addAiStrictness: 1,
+        addAiJdUrl: "",
+        addFetchingJdUrl: false,
         addAiReport: null,
         addDetectedName: "",
         addDetectedEmail: "",

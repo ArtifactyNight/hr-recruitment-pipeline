@@ -54,6 +54,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       const file = body.file;
       const cvText = body.cvText?.trim() ?? "";
       const jobDescriptionId = body.jobDescriptionId.trim();
+      const strictness = body.strictness;
       if (!jobDescriptionId) {
         set.status = 400;
         return { error: "ต้องเลือกตำแหน่งงาน" };
@@ -64,6 +65,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
           jobDescriptionId,
           cvText: fileHasBytes(file) ? undefined : cvText || undefined,
           file: fileHasBytes(file) ? file : undefined,
+          strictness,
         });
 
         return {
@@ -105,6 +107,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
         jobDescriptionId: t.String({ minLength: 1 }),
         file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
         cvText: t.Optional(t.String()),
+        strictness: t.Optional(t.Number({ minimum: 0, maximum: 2 })),
       }),
       detail: {
         tags: ["screener"],

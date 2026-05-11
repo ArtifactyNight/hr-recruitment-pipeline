@@ -17,7 +17,7 @@ function InterviewStatusBadge({
     interview.status === "SCHEDULED" &&
     new Date(interview.scheduledAt).getTime() +
       interview.durationMinutes * 60_000 <
-      Date.now();
+      new Date().getTime();
 
   if (isOverdue) {
     return (

@@ -401,6 +401,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       const file = body.file;
       const cvText = body.cvText?.trim() ?? "";
       const jobDescriptionId = body.jobDescriptionId.trim();
+      const strictness = body.strictness;
       if (!jobDescriptionId) {
         set.status = 400;
         return { error: "ต้องเลือกตำแหน่งงาน" };
@@ -410,6 +411,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           jobDescriptionId,
           cvText: cvText || undefined,
           file: fileHasBytes(file) ? file : undefined,
+          strictness,
         });
         return {
           report: result.report,
@@ -429,6 +431,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         jobDescriptionId: t.String({ minLength: 1 }),
         file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
         cvText: t.Optional(t.String()),
+        strictness: t.Optional(t.Number({ minimum: 0, maximum: 2 })),
       }),
       detail: {
         tags: ["applicants"],

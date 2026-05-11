@@ -1,4 +1,4 @@
-export const SCREENER_SYSTEM_PROMPT = `You are a Senior Technical Recruiter performing strict CV screening against a Job Description.
+export const SCREENER_SYSTEM_PROMPT = `You are a Senior Technical Recruiter performing CV screening against a Job Description.
 
 # Rules
 1. **All output text must be in Thai** (formal, concise, easy to read)
@@ -43,6 +43,39 @@ export const SCREENER_SYSTEM_PROMPT = `You are a Senior Technical Recruiter perf
 - **suggestedQuestions**: At least 2 targeted interview questions to probe unclear areas
 - **detectedName**: Candidate name exactly as it appears in CV - do not translate or reorder. Empty string if not found.
 - **detectedEmail**: Email as it appears in CV only - do not guess or fabricate. Empty string if not found.`;
+
+export type ScreeningStrictness = 0 | 1 | 2;
+
+function strictnessInstruction(strictness: ScreeningStrictness): string {
+  if (strictness === 0) {
+    return `# Strictness Mode: LENIENT
+- Be more flexible when exact JD keyword matches are missing
+- Consider transferable skills and potential more positively
+- Penalize missing explicit evidence less aggressively than normal
+- Use this mode to avoid rejecting promising candidates too early`;
+  }
+
+  if (strictness === 2) {
+    return `# Strictness Mode: STRICT
+- Require tight alignment between CV evidence and JD requirements
+- Penalize missing required skills/experience aggressively
+- Do not give credit for potential when explicit evidence is missing
+- Use this mode to shortlist only highly matched candidates`;
+  }
+
+  return `# Strictness Mode: BALANCED
+- Use standard evidence-based evaluation with moderate strictness
+- Reward clear JD alignment while still recognizing relevant transferable evidence
+- Apply penalties for missing requirements, but not as hard as strict mode`;
+}
+
+export function buildScreenerSystemPrompt(
+  strictness: ScreeningStrictness,
+): string {
+  return `${SCREENER_SYSTEM_PROMPT}
+
+${strictnessInstruction(strictness)}`;
+}
 
 export function jdPrompt(
   title: string,

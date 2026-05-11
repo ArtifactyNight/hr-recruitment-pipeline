@@ -581,3 +581,17 @@
 **Output:** Created `queries.ts` and `mutations.ts` for 5 features (applicants-tracker, dashboard, interviews, jobs, screener). Updated 7 consumer files (candidates/page, jobs/page, dashboard/page, applicant-detail-resume-section, interviews-calendar, job-description-dialog, resume-screener) to use `useQuery(featureQueries.xxx())` and `useMutation(featureMutations.xxx(queryClient))` pattern. Mutations needing queryClient accept it as a parameter. Old `use-*.ts` files remain but are no longer imported.
 
 **Edited:** 16 files created/modified. Zero new TS errors in new files.
+
+### [2026-05-11 14:49] - Rework Add Applicant Dialog (Full New Fields)
+
+**Prompt:** Rework Add Applicant Dialog (Full New Fields)
+
+**Output:** Rebuilt add-applicant flow to `pick -> manual -> ai_review -> ai_result` with English UI copy and richer UX parity with the provided reference. Added new Zustand fields for AI mode (`addAiCvMode`, `addAiStrictness`, `addAiJdUrl`, `addFetchingJdUrl`) and reset wiring. Replaced dialog UI with mode cards, source chips, CV mode toggles, URL fetch simulation, strictness slider, and a full AI score-card result (recommendation badge, ring score, 3 fit dimensions + reasoning, strengths, suggested pre-screen questions, summary). Kept existing handler boundaries (`onManualSubmit`, `onAiAnalyze`, `onAiConfirmSubmit`) and updated candidates flow to transition to `ai_result` after analyze. Verified with ESLint + TypeScript checks.
+
+**Edited:** `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `src/app/(dashboard)/candidates/page.tsx`, `cowork-log.md`
+
+### [2026-05-11 15:50] - Implement AI strictness end-to-end
+
+**Prompt:** implement ai strictness feature to backend `src/server/lib/resume-screening-service.ts` and wire full stack
+**Output:** Added strictness-aware screener prompting with levels `0|1|2` (lenient/balanced/strict), normalization defaulting to balanced, and evaluator input support in `evaluateResumeAgainstJob`. Threaded optional `strictness` through both backend analyze endpoints (`/applicants/analyze-draft` and `/screener/evaluate`) with request schema validation (`0..2`). Wired frontend draft analyze mutation to send strictness from Zustand state, and aligned store default/reset strictness to `1` to match slider domain.
+**Edited:** `src/features/screener/lib/screener-prompts.ts`, `src/server/lib/resume-screening-service.ts`, `src/server/routes/applicant-routes.ts`, `src/server/routes/screener-routes.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `cowork-log.md`
