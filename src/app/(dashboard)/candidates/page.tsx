@@ -5,8 +5,8 @@ import { useCallback, useMemo } from "react";
 import { Container } from "@/components/layout/container";
 import { HeaderSection } from "@/components/layout/header-section";
 import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
-import { applicantKeys } from "@/features/applicants-tracker/api/query-keys";
 import { applicantQueries } from "@/features/applicants-tracker/api/queries";
+import { applicantKeys } from "@/features/applicants-tracker/api/query-keys";
 import { AddApplicantDialog } from "@/features/applicants-tracker/components/add-applicant-dialog";
 import { ApplicantDetailDialog } from "@/features/applicants-tracker/components/applicant-detail-dialog";
 import { ApplicantKanbanBoardView } from "@/features/applicants-tracker/components/applicant-kanban-board-view";
@@ -102,13 +102,23 @@ export default function CandidatesPage() {
     void queryClient.invalidateQueries({ queryKey: ["applicants"] });
   }, [queryClient]);
 
-  const patchApplicantMut = useMutation(applicantMutations.patch(applicantsQueryKey, queryClient));
-  const deleteMut = useMutation(applicantMutations.delete(applicantsQueryKey, queryClient));
-  const screenApplicantMut = useMutation(applicantMutations.screen(queryClient));
+  const patchApplicantMut = useMutation(
+    applicantMutations.patch(applicantsQueryKey, queryClient),
+  );
+  const deleteMut = useMutation(
+    applicantMutations.delete(applicantsQueryKey, queryClient),
+  );
+  const screenApplicantMut = useMutation(
+    applicantMutations.screen(queryClient),
+  );
   const analyzeDraftMut = useMutation(applicantMutations.analyzeDraft());
-  const manualCreateMut = useMutation(applicantMutations.create(applicantsQueryKey, queryClient, jobs));
+  const manualCreateMut = useMutation(
+    applicantMutations.create(applicantsQueryKey, queryClient, jobs),
+  );
   const aiConfirmMut = useMutation(applicantMutations.aiConfirm(queryClient));
-  const scheduleInterviewMut = useMutation(applicantMutations.scheduleInterview(queryClient));
+  const scheduleInterviewMut = useMutation(
+    applicantMutations.scheduleInterview(queryClient),
+  );
 
   const patchStage = useCallback(
     (input: { id: string; stage: ApplicantStage }) =>
@@ -292,7 +302,8 @@ export default function CandidatesPage() {
           if (!detail) return;
           screenApplicantMut.mutate(detail.id, {
             onSuccess: (data) => {
-              const applicant = (data as { applicant?: unknown } | null)?.applicant;
+              const applicant = (data as { applicant?: unknown } | null)
+                ?.applicant;
               if (
                 applicant &&
                 typeof applicant === "object" &&

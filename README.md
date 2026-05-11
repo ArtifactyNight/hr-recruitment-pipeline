@@ -17,18 +17,18 @@ This is an internal tool for HR teams, not a public-facing product. Prioritize c
 
 The stack is already decided. Do not introduce new dependencies without a clear reason.
 
-| Layer | Technology | Reason |
-|-------|-----------|--------|
-| Framework | Next.js 15 (App Router), React 19 | Full-stack, file-based routing, RSC support |
-| Styling | Tailwind CSS v4, shadcn/ui | Consistent UI with minimal custom CSS |
-| Backend API | Elysia 1.4 | REST endpoints with end-to-end type safety via Eden Treaty - no codegen, no manual API types |
-| Database | PostgreSQL + Prisma 7 | Relational data, type-safe queries, migration support |
-| Auth | Better Auth - Google OAuth | Full auth stack (sessions, token storage, refresh) self-hosted; Google token stored in your DB so Calendar API is a plain Prisma query |
-| Data fetching | TanStack Query v5 + Eden Treaty | Eden derives typed client from Elysia's type signature; TanStack Query handles caching, optimistic updates, background refetch |
-| State | Zustand v5 | Low-friction client UI state (dialogs, form steps, filters) - server state belongs in TanStack Query, not here |
-| AI screening | Google Generative AI (Gemini) via Vercel AI SDK | Structured output for fit scoring |
-| File storage | Cloudflare R2 | PDF resume uploads via presigned URLs |
-| Calendar | Google Calendar API + Google Meet | Interview scheduling, Meet link generation, conflict detection |
+| Layer         | Technology                                      | Reason                                                                                                                                 |
+| ------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework     | Next.js 15 (App Router), React 19               | Full-stack, file-based routing, RSC support                                                                                            |
+| Styling       | Tailwind CSS v4, shadcn/ui                      | Consistent UI with minimal custom CSS                                                                                                  |
+| Backend API   | Elysia 1.4                                      | REST endpoints with end-to-end type safety via Eden Treaty - no codegen, no manual API types                                           |
+| Database      | PostgreSQL + Prisma 7                           | Relational data, type-safe queries, migration support                                                                                  |
+| Auth          | Better Auth - Google OAuth                      | Full auth stack (sessions, token storage, refresh) self-hosted; Google token stored in your DB so Calendar API is a plain Prisma query |
+| Data fetching | TanStack Query v5 + Eden Treaty                 | Eden derives typed client from Elysia's type signature; TanStack Query handles caching, optimistic updates, background refetch         |
+| State         | Zustand v5                                      | Low-friction client UI state (dialogs, form steps, filters) - server state belongs in TanStack Query, not here                         |
+| AI screening  | Google Generative AI (Gemini) via Vercel AI SDK | Structured output for fit scoring                                                                                                      |
+| File storage  | Cloudflare R2                                   | PDF resume uploads via presigned URLs                                                                                                  |
+| Calendar      | Google Calendar API + Google Meet               | Interview scheduling, Meet link generation, conflict detection                                                                         |
 
 ---
 
@@ -64,20 +64,20 @@ Open [http://localhost:3000](http://localhost:3000) and sign in with Google.
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `BETTER_AUTH_SECRET` | ✅ | Random secret ≥ 32 chars - signs sessions |
-| `BETTER_AUTH_URL` | ✅ | Base URL of the app (e.g. `http://localhost:3000`) |
-| `NEXT_PUBLIC_APP_URL` | ✅ | Same as `BETTER_AUTH_URL`, exposed to the client |
-| `GOOGLE_CLIENT_ID` | ✅ | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | ✅ | Google OAuth client secret |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | ✅ | Gemini API key for AI resume screening |
-| `R2_ACCOUNT_ID` | ✅ | Cloudflare R2 account ID |
-| `R2_ACCESS_KEY_ID` | ✅ | R2 access key |
-| `R2_SECRET_ACCESS_KEY` | ✅ | R2 secret key |
-| `R2_BUCKET_NAME` | ✅ | R2 bucket name |
-| `R2_PUBLIC_URL` | ✅ | Public base URL of the R2 bucket |
+| Variable                       | Required | Description                                        |
+| ------------------------------ | -------- | -------------------------------------------------- |
+| `DATABASE_URL`                 | ✅       | PostgreSQL connection string                       |
+| `BETTER_AUTH_SECRET`           | ✅       | Random secret ≥ 32 chars - signs sessions          |
+| `BETTER_AUTH_URL`              | ✅       | Base URL of the app (e.g. `http://localhost:3000`) |
+| `NEXT_PUBLIC_APP_URL`          | ✅       | Same as `BETTER_AUTH_URL`, exposed to the client   |
+| `GOOGLE_CLIENT_ID`             | ✅       | Google OAuth client ID                             |
+| `GOOGLE_CLIENT_SECRET`         | ✅       | Google OAuth client secret                         |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | ✅       | Gemini API key for AI resume screening             |
+| `R2_ACCOUNT_ID`                | ✅       | Cloudflare R2 account ID                           |
+| `R2_ACCESS_KEY_ID`             | ✅       | R2 access key                                      |
+| `R2_SECRET_ACCESS_KEY`         | ✅       | R2 secret key                                      |
+| `R2_BUCKET_NAME`               | ✅       | R2 bucket name                                     |
+| `R2_PUBLIC_URL`                | ✅       | Public base URL of the R2 bucket                   |
 
 > **R2 note:** Required for PDF resume uploads. Without it the server returns `503` on upload. Text-only resumes still work - set placeholder values if you want to defer storage setup.
 
@@ -90,6 +90,7 @@ After any schema change: `pnpm prisma generate && pnpm prisma db push` (dev) or 
 Better Auth handles the full OAuth flow - sessions, token storage, and refresh rotation - without custom middleware. The Google OAuth access token is stored directly in your own `Account` table (Prisma), which means `src/lib/get-google-token.ts` retrieves it with a plain database query. No vendor SDK, no third-party token API, no security-critical token code to maintain yourself.
 
 What you need:
+
 - Google Cloud project with **Google Calendar API** enabled
 - OAuth 2.0 web client with authorized redirect URI: `{BETTER_AUTH_URL}/api/auth/callback/google`
 - Scopes: `email`, `profile`, `https://www.googleapis.com/auth/calendar`
@@ -134,6 +135,7 @@ src/features/
 ```
 
 **Rules:**
+
 - `api/` - TanStack Query hooks only. No direct fetch calls.
 - `lib/` - No React, no side effects. Pure functions only.
 - `store/` - UI state only. Server state belongs in TanStack Query.
@@ -189,3 +191,4 @@ bunx prisma studio        # Database browser
 bunx prisma db push       # Sync schema (dev)
 bunx prisma migrate dev   # Create migration (team/production)
 ``
+```

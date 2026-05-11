@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  stageLabel,
   stageDotClass,
+  stageLabel,
 } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";

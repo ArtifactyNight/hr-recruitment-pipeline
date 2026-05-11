@@ -17,59 +17,67 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .get(
     "/stats",
     async ({ user }) => {
-      const [stageGroups, screeningStats, upcomingInterviewRows, recentApplicantRows, openPositionRows] =
-        await Promise.all([
-          prisma.applicant.groupBy({
-            by: ["stage"],
-            _count: { id: true },
-          }),
-          prisma.screeningResult.aggregate({
-            _count: { id: true },
-            _avg: { overallScore: true },
-          }),
-          prisma.interview.findMany({
-            where: {
-              organizerUserId: user!.id,
-              status: "SCHEDULED",
-              scheduledAt: { gte: new Date() },
-            },
-            orderBy: { scheduledAt: "asc" },
-            take: 10,
-            select: {
-              id: true,
-              scheduledAt: true,
-              googleMeetLink: true,
-              applicant: { select: { name: true } },
-              _count: { select: { interviewers: true } },
-            },
-          }),
-          prisma.applicant.findMany({
-            orderBy: { appliedAt: "desc" },
-            take: 5,
-            select: {
-              id: true,
-              name: true,
-              stage: true,
-              appliedAt: true,
-              jobDescription: { select: { title: true } },
-            },
-          }),
-          prisma.jobDescription.findMany({
-            where: { isActive: true },
-            orderBy: { createdAt: "desc" },
-            select: {
-              id: true,
-              title: true,
-              _count: { select: { applicants: true } },
-            },
-          }),
-        ]);
+      const [
+        stageGroups,
+        screeningStats,
+        upcomingInterviewRows,
+        recentApplicantRows,
+        openPositionRows,
+      ] = await Promise.all([
+        prisma.applicant.groupBy({
+          by: ["stage"],
+          _count: { id: true },
+        }),
+        prisma.screeningResult.aggregate({
+          _count: { id: true },
+          _avg: { overallScore: true },
+        }),
+        prisma.interview.findMany({
+          where: {
+            organizerUserId: user!.id,
+            status: "SCHEDULED",
+            scheduledAt: { gte: new Date() },
+          },
+          orderBy: { scheduledAt: "asc" },
+          take: 10,
+          select: {
+            id: true,
+            scheduledAt: true,
+            googleMeetLink: true,
+            applicant: { select: { name: true } },
+            _count: { select: { interviewers: true } },
+          },
+        }),
+        prisma.applicant.findMany({
+          orderBy: { appliedAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            name: true,
+            stage: true,
+            appliedAt: true,
+            jobDescription: { select: { title: true } },
+          },
+        }),
+        prisma.jobDescription.findMany({
+          where: { isActive: true },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            title: true,
+            _count: { select: { applicants: true } },
+          },
+        }),
+      ]);
 
       const stageCountMap = new Map<ApplicantStage, number>(
         stageGroups.map((g) => [g.stage, g._count.id]),
       );
 
-      const totalApplicants = stageGroups.reduce((sum, g) => sum + g._count.id, 0);
+      const totalApplicants = stageGroups.reduce(
+        (sum, g) => sum + g._count.id,
+        0,
+      );
       const inProgress = stageGroups
         .filter((g) => g.stage !== "HIRED" && g.stage !== "REJECTED")
         .reduce((sum, g) => sum + g._count.id, 0);
@@ -82,7 +90,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }));
 
       const aiScreened = screeningStats._count.id;
-      const avgScore = Math.round((screeningStats._avg.overallScore ?? 0) * 10) / 10;
+      const avgScore =
+        Math.round((screeningStats._avg.overallScore ?? 0) * 10) / 10;
 
       const upcomingInterviewList = upcomingInterviewRows.map((row) => ({
         id: row.id,

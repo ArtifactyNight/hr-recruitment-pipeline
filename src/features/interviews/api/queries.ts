@@ -10,13 +10,15 @@ export const interviewQueries = {
         fetchRange.to.toISOString(),
       ),
       queryFn: async () => {
-        const { data, error } = await api.api.interviews["calendar-events"].get({
-          query: {
-            from: fetchRange.from.toISOString(),
-            to: fetchRange.to.toISOString(),
+        const { data, error } = await api.api.interviews["calendar-events"].get(
+          {
+            query: {
+              from: fetchRange.from.toISOString(),
+              to: fetchRange.to.toISOString(),
+            },
+            fetch: { credentials: "include" },
           },
-          fetch: { credentials: "include" },
-        });
+        );
         if (error) {
           const raw = error.value;
           if (
@@ -42,7 +44,9 @@ export const interviewQueries = {
           fetch: { credentials: "include" },
         });
         if (error) throw error.value;
-        return data as { applicants: import("@/features/applicants-tracker/lib/applicant-tracker-model").TrackerApplicant[] };
+        return data as {
+          applicants: import("@/features/applicants-tracker/lib/applicant-tracker-model").TrackerApplicant[];
+        };
       },
       staleTime: 60_000,
     }),

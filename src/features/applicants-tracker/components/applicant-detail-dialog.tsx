@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ApplicantDetailAiScores } from "@/features/applicants-tracker/components/applicant-detail-ai-scores";
-import { DetailRow } from "@/features/applicants-tracker/components/detail-row";
 import { ApplicantDetailInterviewSection } from "@/features/applicants-tracker/components/applicant-detail-interview-section";
 import { ApplicantDetailNotesSection } from "@/features/applicants-tracker/components/applicant-detail-notes-section";
 import { ApplicantDetailResumeSection } from "@/features/applicants-tracker/components/applicant-detail-resume-section";
@@ -29,6 +28,7 @@ import {
   type ScheduleInterviewFormState,
   type ScheduleInterviewSubmitInput,
 } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
+import { DetailRow } from "@/features/applicants-tracker/components/detail-row";
 import {
   initialsFromName,
   STAGE_ORDER,
@@ -49,7 +49,6 @@ import {
   UserIcon,
 } from "lucide-react";
 import { useCallback, useState } from "react";
-import { sourceLabel } from "../lib/tracker-display-helpers";
 
 function HeaderInlineEdit({
   value,
@@ -83,8 +82,14 @@ function HeaderInlineEdit({
         className={cn("h-7", className)}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); commit(); }
-          if (e.key === "Escape") { setDraft(value); setEditing(false); }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          }
+          if (e.key === "Escape") {
+            setDraft(value);
+            setEditing(false);
+          }
         }}
       />
     );
@@ -97,7 +102,10 @@ function HeaderInlineEdit({
         <button
           type="button"
           className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-          onClick={() => { setDraft(value); setEditing(true); }}
+          onClick={() => {
+            setDraft(value);
+            setEditing(true);
+          }}
         >
           <PencilIcon className="size-3" />
         </button>
@@ -106,7 +114,10 @@ function HeaderInlineEdit({
   );
 }
 
-const SOURCE_OPTIONS: Array<{ value: TrackerApplicant["source"]; label: string }> = [
+const SOURCE_OPTIONS: Array<{
+  value: TrackerApplicant["source"];
+  label: string;
+}> = [
   { value: "LINKEDIN", label: "LinkedIn" },
   { value: "JOBSDB", label: "JobsDB" },
   { value: "REFERRAL", label: "แนะนำ" },
@@ -151,8 +162,14 @@ function InlineEditRow({
             className="mt-0.5 h-7 text-sm"
             onBlur={commit}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); commit(); }
-              if (e.key === "Escape") { setDraft(value); setEditing(false); }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              }
+              if (e.key === "Escape") {
+                setDraft(value);
+                setEditing(false);
+              }
             }}
           />
         </div>
@@ -171,7 +188,10 @@ function InlineEditRow({
             <button
               type="button"
               className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-              onClick={() => { setDraft(value); setEditing(true); }}
+              onClick={() => {
+                setDraft(value);
+                setEditing(true);
+              }}
             >
               <PencilIcon className="size-3" />
             </button>
@@ -196,7 +216,8 @@ function InlineSelectRow({
   disabled?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const currentLabel = SOURCE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+  const currentLabel =
+    SOURCE_OPTIONS.find((o) => o.value === value)?.label ?? value;
 
   if (editing) {
     return (
@@ -207,8 +228,13 @@ function InlineSelectRow({
           <Select
             defaultOpen
             value={value}
-            onValueChange={(v) => { onSave(v as TrackerApplicant["source"]); setEditing(false); }}
-            onOpenChange={(open) => { if (!open) setEditing(false); }}
+            onValueChange={(v) => {
+              onSave(v as TrackerApplicant["source"]);
+              setEditing(false);
+            }}
+            onOpenChange={(open) => {
+              if (!open) setEditing(false);
+            }}
           >
             <SelectTrigger className="mt-0.5 h-7 text-sm">
               <SelectValue />
@@ -324,7 +350,9 @@ export function ApplicantDetailDialog({
                   {initialsFromName(applicant.name)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <DialogTitle className="sr-only">{applicant.name}</DialogTitle>
+                  <DialogTitle className="sr-only">
+                    {applicant.name}
+                  </DialogTitle>
                   <HeaderInlineEdit
                     value={applicant.name}
                     onSave={(name) => onPatchInfo({ name })}

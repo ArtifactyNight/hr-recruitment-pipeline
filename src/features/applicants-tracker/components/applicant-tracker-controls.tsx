@@ -11,12 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApplicantTrackerView } from "@/features/applicants-tracker/store/applicant-tracker-store";
-import {
-  LayoutGridIcon,
-  ListIcon,
-  PlusIcon,
-  SearchIcon,
-} from "lucide-react";
+import { LayoutGridIcon, ListIcon, PlusIcon, SearchIcon } from "lucide-react";
 
 type JobOption = { id: string; title: string };
 

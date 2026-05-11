@@ -5,7 +5,12 @@ export type GoogleCalendarListEvent = {
   /** Row in our DB when this Google event is an interview you organized; otherwise null. */
   interviewId: string | null;
   /** DB InterviewStatus when linked to our interview row; otherwise null. */
-  interviewDbStatus: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | null;
+  interviewDbStatus:
+    | "SCHEDULED"
+    | "COMPLETED"
+    | "CANCELLED"
+    | "RESCHEDULED"
+    | null;
   /** Duration from Google start/end, clamped 15–480 minutes. */
   durationMinutes: number;
   title: string;

@@ -12,7 +12,8 @@ export const jobQueries = {
         });
         if (error) throw error.value;
         const d = data as { jobs?: unknown[] } | null;
-        return (d?.jobs ?? []) as import("@/features/jobs/lib/job-description-schema").AdminJobRow[];
+        return (d?.jobs ??
+          []) as import("@/features/jobs/lib/job-description-schema").AdminJobRow[];
       },
     }),
 };

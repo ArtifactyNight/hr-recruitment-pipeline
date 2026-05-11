@@ -8,8 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
 import { screenerQueries } from "@/features/screener/api/queries";
+import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
 import { useQuery } from "@tanstack/react-query";
 import { FileTextIcon } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -18,7 +18,9 @@ type JobDescriptionDialogProps = {
   selectedJobId: string | null;
 };
 
-export function JobDescriptionDialog({ selectedJobId }: JobDescriptionDialogProps) {
+export function JobDescriptionDialog({
+  selectedJobId,
+}: JobDescriptionDialogProps) {
   const { jdDialogOpen, setJdDialogOpen } = useScreenerDialogStore(
     useShallow((s) => ({
       jdDialogOpen: s.jdDialogOpen,
@@ -26,7 +28,9 @@ export function JobDescriptionDialog({ selectedJobId }: JobDescriptionDialogProp
     })),
   );
 
-  const detailQuery = useQuery(screenerQueries.jobDetail(selectedJobId, jdDialogOpen));
+  const detailQuery = useQuery(
+    screenerQueries.jobDetail(selectedJobId, jdDialogOpen),
+  );
 
   const jdDetail = detailQuery.data ?? null;
   const jdLoading = detailQuery.isPending || detailQuery.isFetching;
@@ -75,7 +79,9 @@ type JobDescriptionOpenButtonProps = {
   disabled?: boolean;
 };
 
-export function JobDescriptionOpenButton({ disabled }: JobDescriptionOpenButtonProps) {
+export function JobDescriptionOpenButton({
+  disabled,
+}: JobDescriptionOpenButtonProps) {
   const setJdDialogOpen = useScreenerDialogStore((s) => s.setJdDialogOpen);
   return (
     <Button

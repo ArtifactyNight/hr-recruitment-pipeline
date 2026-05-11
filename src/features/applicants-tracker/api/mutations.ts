@@ -87,7 +87,9 @@ export const applicantMutations = {
                                   : input.notes.trim(),
                             }
                           : {}),
-                        ...(input.name !== undefined ? { name: input.name } : {}),
+                        ...(input.name !== undefined
+                          ? { name: input.name }
+                          : {}),
                         ...(input.email !== undefined
                           ? { email: input.email }
                           : {}),
@@ -105,7 +107,11 @@ export const applicantMutations = {
         );
         return { prev };
       },
-      onError: (_: unknown, __: unknown, ctx: { prev?: ListResponse } | undefined) => {
+      onError: (
+        _: unknown,
+        __: unknown,
+        ctx: { prev?: ListResponse } | undefined,
+      ) => {
         if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
         toast.error("บันทึกไม่สำเร็จ");
       },
@@ -131,7 +137,11 @@ export const applicantMutations = {
         );
         return { prev };
       },
-      onError: (e: Error, _: unknown, ctx: { prev?: ListResponse } | undefined) => {
+      onError: (
+        e: Error,
+        _: unknown,
+        ctx: { prev?: ListResponse } | undefined,
+      ) => {
         if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
         toast.error(e.message);
       },
@@ -252,7 +262,11 @@ export const applicantMutations = {
       onSuccess: () => {
         toast.success("เพิ่มผู้สมัครแล้ว");
       },
-      onError: (e: unknown, _: unknown, ctx: { prev?: ListResponse } | undefined) => {
+      onError: (
+        e: unknown,
+        _: unknown,
+        ctx: { prev?: ListResponse } | undefined,
+      ) => {
         if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
         toast.error(mutationErrorMessage(e));
       },

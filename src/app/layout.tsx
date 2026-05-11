@@ -1,8 +1,9 @@
 import { QueryProvider } from "@/components/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
-import { Geist_Mono, Google_Sans } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
@@ -12,11 +13,7 @@ const mono = Geist_Mono({
   weight: ["400", "500", "600", "700"],
 });
 
-const font = Google_Sans({
-  variable: "--font-sans",
-  subsets: ["latin", "thai"],
-  weight: ["400", "500", "600", "700"],
-});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "H+ | Recruitment Pipeline Tools",
@@ -31,7 +28,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${font.className} ${mono.variable} h-full antialiased`}
+      className={cn(
+        "h-full",
+        "antialiased",
+        inter.className,
+        mono.variable,
+        "font-sans",
+        inter.variable,
+      )}
     >
       <body className="min-h-full flex flex-col">
         <QueryProvider>

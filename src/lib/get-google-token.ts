@@ -43,7 +43,10 @@ export async function getGoogleTokenForUserId(
     throw new Error(NO_GOOGLE_OAUTH_TOKEN);
   }
 
-  const data = (await res.json()) as { access_token: string; expires_in: number };
+  const data = (await res.json()) as {
+    access_token: string;
+    expires_in: number;
+  };
   const newExpiry = new Date(now.getTime() + data.expires_in * 1000);
 
   await prisma.account.update({

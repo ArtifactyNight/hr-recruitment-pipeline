@@ -2,12 +2,12 @@
 
 import { Container } from "@/components/layout/container";
 import { dashboardQueries } from "@/features/dashboard/api/queries";
-import { useQuery } from "@tanstack/react-query";
 import { DashboardOpenPositions } from "@/features/dashboard/components/dashboard-open-positions";
 import { DashboardPipelineOverview } from "@/features/dashboard/components/dashboard-pipeline-overview";
 import { DashboardRecentApplicants } from "@/features/dashboard/components/dashboard-recent-applicants";
 import { DashboardStatsCards } from "@/features/dashboard/components/dashboard-stats-cards";
 import { DashboardUpcomingInterviews } from "@/features/dashboard/components/dashboard-upcoming-interviews";
+import { useQuery } from "@tanstack/react-query";
 
 export default function DashboardPage() {
   const statsQuery = useQuery(dashboardQueries.stats());

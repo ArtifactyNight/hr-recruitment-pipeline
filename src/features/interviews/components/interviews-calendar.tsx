@@ -20,13 +20,13 @@ import {
 } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
 import { interviewMutations } from "@/features/interviews/api/mutations";
 import { interviewQueries } from "@/features/interviews/api/queries";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FullScreenCalendar,
   type CalendarData,
 } from "@/features/interviews/components/fullscreen-calendar";
 import { groupGoogleCalendarEventsToCalendarData } from "@/features/interviews/lib/google-calendar-feed";
 import { useInterviewsCalendarStore } from "@/features/interviews/store/interviews-calendar-store";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
@@ -93,10 +93,16 @@ export function InterviewsCalendar() {
 
   const queryClient = useQueryClient();
   const calendarQuery = useQuery(interviewQueries.calendarEvents(fetchRange));
-  const applicantsQuery = useQuery(interviewQueries.calendarScheduleApplicants());
-  const cancelCalendarMut = useMutation(interviewMutations.cancelCalendarEvent(queryClient));
+  const applicantsQuery = useQuery(
+    interviewQueries.calendarScheduleApplicants(),
+  );
+  const cancelCalendarMut = useMutation(
+    interviewMutations.cancelCalendarEvent(queryClient),
+  );
   const patchInterviewMut = useMutation(interviewMutations.patch(queryClient));
-  const scheduleInterviewMut = useMutation(interviewMutations.schedule(queryClient));
+  const scheduleInterviewMut = useMutation(
+    interviewMutations.schedule(queryClient),
+  );
 
   const scheduleCandidates = useMemo(() => {
     return (applicantsQuery.data?.applicants ?? []).filter(
@@ -139,7 +145,9 @@ export function InterviewsCalendar() {
   const calendarData: Array<CalendarData> = useMemo(() => {
     const events = calendarQuery.data?.events;
     if (!events?.length) return [];
-    return groupGoogleCalendarEventsToCalendarData(events as Parameters<typeof groupGoogleCalendarEventsToCalendarData>[0]);
+    return groupGoogleCalendarEventsToCalendarData(
+      events as Parameters<typeof groupGoogleCalendarEventsToCalendarData>[0],
+    );
   }, [calendarQuery.data?.events]);
 
   const apiError = calendarQuery.isError

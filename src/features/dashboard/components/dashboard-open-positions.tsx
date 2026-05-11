@@ -34,49 +34,49 @@ export function DashboardOpenPositions({
         </Button>
       </CardHeader>
       <CardContent className="p-0">
-        {loading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between px-6 py-3 border-b last:border-0"
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between px-6 py-3 border-b last:border-0"
+            >
+              <div className="flex items-center gap-2">
+                <Skeleton className="size-4 rounded" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <Skeleton className="h-5 w-12" />
+            </div>
+          ))
+        ) : openPositions.length === 0 ? (
+          <div className="px-6 py-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              No open positions yet.{" "}
+              <Link
+                href="/jobs"
+                className="text-primary underline-offset-4 hover:underline"
               >
-                <div className="flex items-center gap-2">
-                  <Skeleton className="size-4 rounded" />
-                  <Skeleton className="h-4 w-40" />
-                </div>
-                <Skeleton className="h-5 w-12" />
+                Add the first one
+              </Link>
+            </p>
+          </div>
+        ) : (
+          openPositions.map((position) => (
+            <div
+              key={position.id}
+              className="flex items-center justify-between px-6 py-3 border-b last:border-0"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <BriefcaseIcon className="size-4 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium truncate">
+                  {position.title}
+                </span>
               </div>
-            ))
-          : openPositions.length === 0
-            ? (
-              <div className="px-6 py-8 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No open positions yet.{" "}
-                  <Link
-                    href="/jobs"
-                    className="text-primary underline-offset-4 hover:underline"
-                  >
-                    Add the first one
-                  </Link>
-                </p>
-              </div>
-            )
-            : openPositions.map((position) => (
-              <div
-                key={position.id}
-                className="flex items-center justify-between px-6 py-3 border-b last:border-0"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <BriefcaseIcon className="size-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm font-medium truncate">
-                    {position.title}
-                  </span>
-                </div>
-                <Badge variant="secondary" className="shrink-0 ml-2">
-                  {position.applicantCount}
-                </Badge>
-              </div>
-            ))}
+              <Badge variant="secondary" className="shrink-0 ml-2">
+                {position.applicantCount}
+              </Badge>
+            </div>
+          ))
+        )}
       </CardContent>
     </Card>
   );

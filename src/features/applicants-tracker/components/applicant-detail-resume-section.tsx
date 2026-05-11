@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronsUpDownIcon,
   DownloadIcon,
@@ -45,10 +45,30 @@ export function ApplicantDetailResumeSection({
   const [textDraft, setTextDraft] = useState(applicant.cvText ?? "");
 
   const queryClient = useQueryClient();
-  const downloadMut = useMutation(applicantMutations.downloadResume(applicant.id));
-  const uploadMut = useMutation(applicantMutations.uploadResume(applicant.id, applicantsQueryKey, queryClient));
-  const deleteMut = useMutation(applicantMutations.deleteResume(applicant.id, applicantsQueryKey, queryClient));
-  const saveTextMut = useMutation(applicantMutations.saveCvText(applicant.id, applicantsQueryKey, queryClient));
+  const downloadMut = useMutation(
+    applicantMutations.downloadResume(applicant.id),
+  );
+  const uploadMut = useMutation(
+    applicantMutations.uploadResume(
+      applicant.id,
+      applicantsQueryKey,
+      queryClient,
+    ),
+  );
+  const deleteMut = useMutation(
+    applicantMutations.deleteResume(
+      applicant.id,
+      applicantsQueryKey,
+      queryClient,
+    ),
+  );
+  const saveTextMut = useMutation(
+    applicantMutations.saveCvText(
+      applicant.id,
+      applicantsQueryKey,
+      queryClient,
+    ),
+  );
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -200,7 +220,9 @@ export function ApplicantDetailResumeSection({
                       saveTextMut.mutate(textDraft, {
                         onSuccess: (data) => {
                           const updated =
-                            data && typeof data === "object" && "applicant" in data
+                            data &&
+                            typeof data === "object" &&
+                            "applicant" in data
                               ? (data.applicant as {
                                   cvText?: string | null;
                                 } | null)
