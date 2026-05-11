@@ -303,6 +303,7 @@ export function AddApplicantDialog({
     addAiReport,
     addDetectedName,
     addName,
+    addEmail,
     addJobId,
     setAddAiCvMode,
     addAiCvMode,
@@ -325,6 +326,7 @@ export function AddApplicantDialog({
       addAiReport: s.addAiReport,
       addDetectedName: s.addDetectedName,
       addName: s.addName,
+      addEmail: s.addEmail,
       addJobId: s.addJobId,
       setAddAiCvMode: s.setAddAiCvMode,
       addAiCvMode: s.addAiCvMode,
@@ -627,8 +629,16 @@ export function AddApplicantDialog({
   const aiResumeReady =
     (!aiNeedsFile || hasResumeFiles) && (!aiNeedsText || hasResumeText);
   const canAnalyze =
-    formValid && aiResumeReady && !jobsLoading && jobs.length > 0;
-  const canAiConfirmSave = formValid && addAiReport !== null;
+    addJobId.trim().length > 0 &&
+    aiResumeReady &&
+    !jobsLoading &&
+    jobs.length > 0;
+  const canAiConfirmSave =
+    addAiReport !== null &&
+    addJobId.trim().length > 0 &&
+    addApplicantFormSchema
+      .pick({ name: true, email: true })
+      .safeParse({ name: addName.trim(), email: addEmail.trim() }).success;
 
   const strictnessLabel =
     addAiStrictness == 0
@@ -1277,7 +1287,7 @@ export function AddApplicantDialog({
                 render={({ field, fieldState }) => (
                   <Field data-invalid={shouldShowFieldError(fieldState)}>
                     <FieldLabel htmlFor="add-applicant-ai-job">
-                      Target Role / JD{" "}
+                      Role
                       <span className="text-destructive">*</span>
                     </FieldLabel>
                     <FieldContent>
@@ -1456,7 +1466,11 @@ export function AddApplicantDialog({
                   disabled={!canAnalyze || isAnalyzing}
                   onClick={() => onAiAnalyze()}
                 >
-                  {isAnalyzing ? <Loader2Icon /> : <SparklesIcon />}
+                  {isAnalyzing ? (
+                    <Loader2Icon className="size-4 animate-spin" />
+                  ) : (
+                    <SparklesIcon className="size-4" />
+                  )}
                   Analyze with AI
                 </Button>
               </div>
@@ -1488,9 +1502,7 @@ export function AddApplicantDialog({
               <div className="flex items-center gap-4 rounded-xl border border-border bg-secondary p-4">
                 <div className="relative shrink-0">
                   <ScoreRing score={addAiReport.overallScore} size={72} />
-                  <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-foreground rotate-90">
-                    {formatOneDecimal(addAiReport.overallScore)}
-                  </span>
+                  <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-foreground"></span>
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

@@ -1,3 +1,11 @@
+### [2026-05-11 22:10] - AI Resume Screener: Analyze button gated on full form
+
+**Prompt:** AI Resume Screener — cannot click Analyze after role, strictness, CV upload.
+
+**Output:** `canAnalyze` incorrectly required `formState.isValid` (name, email, skills, etc.) while the AI sheet only collects job + CV. Switched to `addJobId` + `aiResumeReady` + jobs loading. `canAiConfirmSave` now validates name/email from the zustand store (what `aiConfirm` uses) via `addApplicantFormSchema.pick({ name, email })`, since post-analyze updates only touched the store, not RHF.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-11 21:35] - Quick Fill with AI card UI (link / raw text)
 
 **Prompt:** Replace profile import UI with provided card + segmented Link / Raw Text controls.

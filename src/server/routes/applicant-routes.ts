@@ -698,7 +698,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         jobDescriptionId: t.String({ minLength: 1 }),
         file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
         cvText: t.Optional(t.String()),
-        strictness: t.Optional(t.Number({ minimum: 0, maximum: 2 })),
+        strictness: t.Optional(t.Numeric({ minimum: 0, maximum: 2 })),
       }),
       detail: {
         tags: ["applicants"],
