@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import {
   ArrowLeftIcon,
   CheckCircle2Icon,
@@ -26,14 +43,17 @@ import {
   Link2Icon,
   Loader2Icon,
   MessageSquareQuoteIcon,
+  PlusIcon,
   SparklesIcon,
   StarIcon,
+  Trash2Icon,
   UploadIcon,
   UserRoundIcon,
   XIcon,
 } from "lucide-react";
 import {
   Controller,
+  useFieldArray,
   useForm,
   type ControllerFieldState,
 } from "react-hook-form";
@@ -42,8 +62,18 @@ import { z } from "zod";
 import { useShallow } from "zustand/react/shallow";
 
 type JobOption = { id: string; title: string };
-type ManualCvMode = "pdf" | "text";
 type Recommendation = "Strong Hire" | "Hire" | "Consider" | "Reject";
+
+const experienceItemSchema = z.object({
+  company: z.string().trim(),
+  role: z.string().trim(),
+  description: z.string(),
+});
+
+const educationItemSchema = z.object({
+  school: z.string().trim(),
+  degree: z.string().trim(),
+});
 
 const addApplicantFormSchema = z.object({
   jobId: z.string().min(1, "Select role"),
@@ -51,6 +81,46 @@ const addApplicantFormSchema = z.object({
   email: z.string().trim().min(1, "Enter email").email("Invalid email format"),
   phone: z.string(),
   source: z.enum(["LINKEDIN", "JOBSDB", "REFERRAL", "OTHER"]),
+  jobPostingUrl: z
+    .string()
+    .trim()
+    .superRefine((val, ctx) => {
+      if (val.length === 0) return;
+      if (!URL.canParse(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid URL",
+        });
+      }
+    }),
+  latestRole: z.string().trim(),
+  skills: z.array(z.string().trim().min(1)),
+  experiences: z
+    .array(experienceItemSchema)
+    .refine(
+      (rows) =>
+        rows.every(
+          (r) =>
+            (r.company.length === 0 && r.role.length === 0) ||
+            (r.company.length > 0 && r.role.length > 0),
+        ),
+      {
+        message: "Each experience needs company and role, or leave both empty",
+      },
+    ),
+  educations: z
+    .array(educationItemSchema)
+    .refine(
+      (rows) =>
+        rows.every(
+          (r) =>
+            (r.school.length === 0 && r.degree.length === 0) ||
+            (r.school.length > 0 && r.degree.length > 0),
+        ),
+      {
+        message: "Each education needs school and degree, or leave both empty",
+      },
+    ),
   resumeText: z.string(),
 });
 
@@ -86,6 +156,89 @@ function getRecommendation(score: number): Recommendation {
 
 function formatOneDecimal(value: number): string {
   return value.toFixed(1);
+}
+
+type SkillsTagInputProps = {
+  value: Array<string>;
+  onChange: (next: Array<string>) => void;
+  inputId?: string;
+};
+
+function SkillsTagInput({ value, onChange, inputId }: SkillsTagInputProps) {
+  const [draft, setDraft] = useState("");
+
+  function commitDraft() {
+    const trimmed = draft.trim();
+    if (trimmed.length === 0) return;
+    if (value.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+      setDraft("");
+      return;
+    }
+    onChange([...value, trimmed]);
+    setDraft("");
+  }
+
+  function removeAt(index: number) {
+    onChange(value.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2">
+        <Input
+          id={inputId}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === ",") {
+              event.preventDefault();
+              commitDraft();
+            } else if (
+              event.key === "Backspace" &&
+              draft.length === 0 &&
+              value.length > 0
+            ) {
+              event.preventDefault();
+              removeAt(value.length - 1);
+            }
+          }}
+          placeholder="Type a skill and press Enter"
+          className="flex-1"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={commitDraft}
+          disabled={draft.trim().length === 0}
+          className="shrink-0"
+        >
+          <PlusIcon className="size-4" />
+          Add
+        </Button>
+      </div>
+      {value.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {value.map((skill, index) => (
+            <Badge
+              key={`${skill}-${index}`}
+              variant="secondary"
+              className="gap-1 px-2 py-1 text-xs"
+            >
+              {skill}
+              <button
+                type="button"
+                onClick={() => removeAt(index)}
+                className="rounded-full hover:bg-muted-foreground/10"
+                aria-label={`Remove ${skill}`}
+              >
+                <XIcon className="size-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
@@ -143,7 +296,7 @@ export function AddApplicantDialog({
 }: AddApplicantDialogProps) {
   const manualFileInputRef = useRef<HTMLInputElement>(null);
   const aiFileInputRef = useRef<HTMLInputElement>(null);
-  const [manualCvMode, setManualCvMode] = useState<ManualCvMode>("pdf");
+  const prevFlowStepRef = useRef<string | null>(null);
   const [manualDragOver, setManualDragOver] = useState(false);
   const [aiDragOver, setAiDragOver] = useState(false);
 
@@ -151,140 +304,275 @@ export function AddApplicantDialog({
     addFlowStep,
     setAddFlowStep,
     addResumeText,
-    setAddResumeText,
-    addResumeFile,
-    setAddResumeFile,
+    addResumeFiles,
+    appendAddResumeFiles,
+    removeAddResumeFileAt,
+    setAddResumeFiles,
     addAiReport,
     addDetectedName,
     addName,
-    setAddName,
-    addEmail,
-    setAddEmail,
-    addPhone,
-    setAddPhone,
     addJobId,
-    setAddJobId,
-    addSource,
-    setAddSource,
-    addAiCvMode,
     setAddAiCvMode,
+    addAiCvMode,
     addAiStrictness,
     setAddAiStrictness,
-    addAiJdUrl,
-    setAddAiJdUrl,
-    addFetchingJdUrl,
-    setAddFetchingJdUrl,
+    setAddExperiences,
+    setAddEducations,
+    setAddLatestRole,
+    setAddSkills,
     resetAddDialog,
   } = useApplicantTrackerStore(
     useShallow((s) => ({
       addFlowStep: s.addFlowStep,
       setAddFlowStep: s.setAddFlowStep,
       addResumeText: s.addResumeText,
-      setAddResumeText: s.setAddResumeText,
-      addResumeFile: s.addResumeFile,
-      setAddResumeFile: s.setAddResumeFile,
+      addResumeFiles: s.addResumeFiles,
+      appendAddResumeFiles: s.appendAddResumeFiles,
+      removeAddResumeFileAt: s.removeAddResumeFileAt,
+      setAddResumeFiles: s.setAddResumeFiles,
       addAiReport: s.addAiReport,
       addDetectedName: s.addDetectedName,
       addName: s.addName,
-      setAddName: s.setAddName,
-      addEmail: s.addEmail,
-      setAddEmail: s.setAddEmail,
-      addPhone: s.addPhone,
-      setAddPhone: s.setAddPhone,
       addJobId: s.addJobId,
-      setAddJobId: s.setAddJobId,
-      addSource: s.addSource,
-      setAddSource: s.setAddSource,
-      addAiCvMode: s.addAiCvMode,
       setAddAiCvMode: s.setAddAiCvMode,
+      addAiCvMode: s.addAiCvMode,
       addAiStrictness: s.addAiStrictness,
       setAddAiStrictness: s.setAddAiStrictness,
-      addAiJdUrl: s.addAiJdUrl,
-      setAddAiJdUrl: s.setAddAiJdUrl,
-      addFetchingJdUrl: s.addFetchingJdUrl,
-      setAddFetchingJdUrl: s.setAddFetchingJdUrl,
+      setAddExperiences: s.setAddExperiences,
+      setAddEducations: s.setAddEducations,
+      setAddLatestRole: s.setAddLatestRole,
+      setAddSkills: s.setAddSkills,
       resetAddDialog: s.resetAddDialog,
     })),
   );
 
+  const scrapeJobUrlMut = useMutation(applicantMutations.scrapeJobUrl());
+
   const addApplicantForm = useForm<AddApplicantFormValues>({
     resolver: zodResolver(addApplicantFormSchema),
     mode: "onChange",
-    values: {
-      jobId: addJobId,
-      name: addName,
-      email: addEmail,
-      phone: addPhone,
-      source: addSource,
-      resumeText: addResumeText,
+    defaultValues: {
+      jobId: "",
+      name: "",
+      email: "",
+      phone: "",
+      source: "OTHER",
+      jobPostingUrl: "",
+      latestRole: "",
+      skills: [],
+      experiences: [],
+      educations: [],
+      resumeText: "",
     },
   });
+
+  const { control, handleSubmit, watch, setValue, getValues } =
+    addApplicantForm;
+
+  const experienceFA = useFieldArray({ control, name: "experiences" });
+  const educationFA = useFieldArray({ control, name: "educations" });
+
+  useEffect(() => {
+    if (addFlowStep !== "manual" && addFlowStep !== "ai_review") {
+      prevFlowStepRef.current = addFlowStep;
+      return;
+    }
+    const prev = prevFlowStepRef.current;
+    prevFlowStepRef.current = addFlowStep;
+    if (prev !== "pick" && prev !== null) {
+      return;
+    }
+    const s = useApplicantTrackerStore.getState();
+    addApplicantForm.reset({
+      jobId: s.addJobId,
+      name: s.addName,
+      email: s.addEmail,
+      phone: s.addPhone,
+      source: s.addSource,
+      jobPostingUrl: s.addJobPostingUrl,
+      latestRole: s.addLatestRole,
+      skills: s.addSkills,
+      resumeText: s.addResumeText,
+      experiences: addFlowStep === "manual" ? [] : [],
+      educations: addFlowStep === "manual" ? [] : [],
+    });
+  }, [addFlowStep, addApplicantForm]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch syncs draft fields to the tracker store for mutations
+    const subscription = watch((value) => {
+      const s = useApplicantTrackerStore.getState();
+      if (value.jobId !== undefined) {
+        s.setAddJobId(value.jobId);
+      }
+      if (value.name !== undefined) {
+        s.setAddName(value.name);
+      }
+      if (value.email !== undefined) {
+        s.setAddEmail(value.email);
+      }
+      if (value.phone !== undefined) {
+        s.setAddPhone(value.phone);
+      }
+      if (value.source !== undefined) {
+        s.setAddSource(value.source);
+      }
+      if (value.resumeText !== undefined) {
+        s.setAddResumeText(value.resumeText);
+      }
+      if (value.jobPostingUrl !== undefined) {
+        s.setAddJobPostingUrl(value.jobPostingUrl);
+      }
+      if (value.latestRole !== undefined) {
+        s.setAddLatestRole(value.latestRole);
+      }
+      if (value.skills !== undefined) {
+        s.setAddSkills(
+          value.skills.filter((x): x is string => typeof x === "string"),
+        );
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
 
   function handleOpenChange(next: boolean) {
     if (!next) {
       resetAddDialog();
-      setManualCvMode("pdf");
+      prevFlowStepRef.current = null;
       addApplicantForm.reset();
     }
     onOpenChange(next);
   }
 
-  function onPdfSelected(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+  function filterPdfFiles(fileList: FileList | null): Array<File> {
+    if (!fileList?.length) {
+      return [];
+    }
+    const out: Array<File> = [];
+    for (const file of fileList) {
+      const isPdf =
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf");
+      if (!isPdf) {
+        toast.error(`Skipped non-PDF: ${file.name}`);
+        continue;
+      }
+      out.push(file);
+    }
+    return out;
+  }
+
+  function onManualPdfInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const picked = filterPdfFiles(event.target.files);
     event.target.value = "";
-    if (!file) return;
-
-    const isPdf =
-      file.type === "application/pdf" ||
-      file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      toast.error("Please upload a PDF file");
+    if (picked.length === 0) {
       return;
     }
-
-    setAddResumeFile(file);
-    toast.success(`Selected: ${file.name}`);
+    appendAddResumeFiles(picked);
+    for (const f of picked) {
+      toast.success(`Added: ${f.name}`);
+    }
   }
 
-  function onDropResumeFile(event: React.DragEvent<HTMLDivElement>) {
+  function onManualDropResumeFiles(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
-    const file = event.dataTransfer.files[0];
-    if (!file) return;
-    const isPdf =
-      file.type === "application/pdf" ||
-      file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      toast.error("Please upload a PDF file");
+    const picked = filterPdfFiles(event.dataTransfer.files);
+    if (picked.length === 0) {
       return;
     }
-    setAddResumeFile(file);
-    toast.success(`Selected: ${file.name}`);
+    appendAddResumeFiles(picked);
+    for (const f of picked) {
+      toast.success(`Added: ${f.name}`);
+    }
   }
 
-  function handleJdFetch() {
-    if (!addAiJdUrl.trim()) return;
-    setAddFetchingJdUrl(true);
-    setTimeout(() => {
-      setAddFetchingJdUrl(false);
-      toast.success("Job URL fetched");
-    }, 1200);
+  function onAiPdfSelected(event: ChangeEvent<HTMLInputElement>) {
+    const picked = filterPdfFiles(event.target.files);
+    event.target.value = "";
+    if (picked.length === 0) {
+      return;
+    }
+    setAddResumeFiles([picked[0]!]);
+    toast.success(`Selected: ${picked[0]!.name}`);
+  }
+
+  function onAiDropResumeFile(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const picked = filterPdfFiles(event.dataTransfer.files);
+    if (picked.length === 0) {
+      return;
+    }
+    setAddResumeFiles([picked[0]!]);
+    toast.success(`Selected: ${picked[0]!.name}`);
   }
 
   function goPick() {
     setAddFlowStep("pick");
   }
 
+  function flushManualListsToStore(data: AddApplicantFormValues) {
+    setAddExperiences(
+      data.experiences
+        .filter((r) => r.company.trim() && r.role.trim())
+        .map((r) => ({
+          company: r.company.trim(),
+          role: r.role.trim(),
+          ...(r.description && r.description.trim().length > 0
+            ? { description: r.description.trim() }
+            : {}),
+        })),
+    );
+    setAddEducations(
+      data.educations
+        .filter((r) => r.school.trim() && r.degree.trim())
+        .map((r) => ({ school: r.school.trim(), degree: r.degree.trim() })),
+    );
+    setAddLatestRole(data.latestRole.trim());
+    setAddSkills(data.skills.map((s) => s.trim()).filter(Boolean));
+  }
+
+  async function handleScrapeJobUrl() {
+    const url = (getValues("jobPostingUrl") ?? "").trim();
+    if (!url) {
+      toast.error("Enter a job posting URL first");
+      return;
+    }
+    if (!URL.canParse(url)) {
+      toast.error("Invalid URL");
+      return;
+    }
+    try {
+      const result = await scrapeJobUrlMut.mutateAsync(url);
+      if (result.latestRole && !getValues("latestRole").trim()) {
+        setValue("latestRole", result.latestRole, { shouldDirty: true });
+      }
+      if (result.skills.length > 0) {
+        const current = getValues("skills");
+        const merged = Array.from(
+          new Set(
+            [...current, ...result.skills].map((s) => s.trim()).filter(Boolean),
+          ),
+        );
+        setValue("skills", merged, { shouldDirty: true });
+      }
+      toast.success(
+        result.title ? `Fetched: ${result.title}` : "Fetched job posting page",
+      );
+    } catch {
+      // toast already fired in mutation onError
+    }
+  }
+
   const resumeTextTrim = addResumeText.trim();
-  const hasResumeFile = addResumeFile !== null;
+  const hasResumeFiles = addResumeFiles.length > 0;
   const hasResumeText = resumeTextTrim.length > 0;
-  const hasResumeEvidence = hasResumeFile || hasResumeText;
   const formValid = addApplicantForm.formState.isValid;
-  const canManualSave = formValid && hasResumeEvidence;
+  const canManualSave = formValid && hasResumeFiles;
 
   const aiNeedsFile = addAiCvMode === "pdf" || addAiCvMode === "both";
   const aiNeedsText = addAiCvMode === "text" || addAiCvMode === "both";
   const aiResumeReady =
-    (!aiNeedsFile || hasResumeFile) && (!aiNeedsText || hasResumeText);
+    (!aiNeedsFile || hasResumeFiles) && (!aiNeedsText || hasResumeText);
   const canAnalyze =
     formValid && aiResumeReady && !jobsLoading && jobs.length > 0;
   const canAiConfirmSave = formValid && addAiReport !== null;
@@ -312,12 +600,7 @@ export function AddApplicantDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className={cn(
-          "overflow-hidden p-0 gap-0",
-          addFlowStep === "ai_result" ? "sm:max-w-2xl" : "sm:max-w-xl",
-        )}
-      >
+      <DialogContent className={cn("overflow-hidden p-0 gap-0 sm:max-w-3xl")}>
         <DialogHeader className="border-b px-5 pb-4 pt-5">
           <div className="flex items-center gap-2">
             {addFlowStep !== "pick" ? (
@@ -395,244 +678,459 @@ export function AddApplicantDialog({
 
           {addFlowStep === "manual" ? (
             <form
-              className="space-y-4"
-              onSubmit={addApplicantForm.handleSubmit(() => onManualSubmit())}
+              className="flex flex-col gap-4"
+              onSubmit={handleSubmit((data) => {
+                flushManualListsToStore(data);
+                onManualSubmit();
+              })}
             >
-              <Controller
-                name="jobId"
-                control={addApplicantForm.control}
-                render={({ field, fieldState }) => (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="add-applicant-job">
-                      Target Role <span className="text-destructive">*</span>
-                    </Label>
-                    <select
-                      id="add-applicant-job"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      value={field.value}
-                      onChange={(event) => {
-                        field.onChange(event);
-                        setAddJobId(event.target.value);
-                      }}
-                      disabled={jobsLoading || jobs.length === 0}
-                    >
-                      <option value="">Select role</option>
-                      {jobs.map((job) => (
-                        <option key={job.id} value={job.id}>
-                          {job.title}
-                        </option>
-                      ))}
-                    </select>
-                    {shouldShowFieldError(fieldState) ? (
-                      <p className="text-xs text-destructive">
-                        {fieldState.error?.message}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
+              <FieldGroup>
                 <Controller
-                  name="name"
-                  control={addApplicantForm.control}
+                  name="jobPostingUrl"
+                  control={control}
                   render={({ field, fieldState }) => (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="add-applicant-name">
-                        Full Name <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        {...field}
-                        id="add-applicant-name"
-                        placeholder="e.g. Thanawat Srisuk"
-                        onChange={(event) => {
-                          field.onChange(event);
-                          setAddName(event.target.value);
-                        }}
-                      />
-                      {shouldShowFieldError(fieldState) ? (
-                        <p className="text-xs text-destructive">
-                          {fieldState.error?.message}
-                        </p>
-                      ) : null}
-                    </div>
-                  )}
-                />
-                <Controller
-                  name="email"
-                  control={addApplicantForm.control}
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="add-applicant-email">
-                        Email <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        {...field}
-                        id="add-applicant-email"
-                        type="email"
-                        placeholder="email@example.com"
-                        onChange={(event) => {
-                          field.onChange(event);
-                          setAddEmail(event.target.value);
-                        }}
-                      />
-                      {shouldShowFieldError(fieldState) ? (
-                        <p className="text-xs text-destructive">
-                          {fieldState.error?.message}
-                        </p>
-                      ) : null}
-                    </div>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Controller
-                  name="phone"
-                  control={addApplicantForm.control}
-                  render={({ field }) => (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="add-applicant-phone">Phone</Label>
-                      <Input
-                        {...field}
-                        id="add-applicant-phone"
-                        placeholder="+66 81 234 5678"
-                        onChange={(event) => {
-                          field.onChange(event);
-                          setAddPhone(event.target.value);
-                        }}
-                      />
-                    </div>
-                  )}
-                />
-
-                <Controller
-                  name="source"
-                  control={addApplicantForm.control}
-                  render={({ field }) => (
-                    <div className="space-y-1.5">
-                      <Label>Source</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {sourceOptions.map((source) => (
-                          <button
-                            key={source.value}
+                    <Field data-invalid={shouldShowFieldError(fieldState)}>
+                      <FieldLabel htmlFor="add-applicant-job-url">
+                        Job posting URL
+                      </FieldLabel>
+                      <FieldContent>
+                        <div className="flex gap-2">
+                          <Input
+                            {...field}
+                            id="add-applicant-job-url"
+                            placeholder="https://jobs.example.com/posting/123"
+                            aria-invalid={shouldShowFieldError(fieldState)}
+                            className="flex-1"
+                          />
+                          <Button
                             type="button"
-                            onClick={() => {
-                              field.onChange(source.value);
-                              setAddSource(source.value);
-                            }}
-                            className={cn(
-                              "rounded-full border px-3 py-1 text-xs transition-all",
-                              field.value === source.value
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border text-muted-foreground hover:border-primary hover:text-foreground",
-                            )}
+                            variant="outline"
+                            onClick={handleScrapeJobUrl}
+                            disabled={
+                              scrapeJobUrlMut.isPending ||
+                              !field.value ||
+                              fieldState.invalid
+                            }
+                            className="shrink-0"
                           >
-                            {source.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                            {scrapeJobUrlMut.isPending ? (
+                              <Loader2Icon className="size-4 animate-spin" />
+                            ) : (
+                              <Link2Icon className="size-4" />
+                            )}
+                            {scrapeJobUrlMut.isPending
+                              ? "Fetching..."
+                              : "Fetch"}
+                          </Button>
+                        </div>
+                        {shouldShowFieldError(fieldState) ? (
+                          <FieldError>{fieldState.error?.message}</FieldError>
+                        ) : null}
+                      </FieldContent>
+                    </Field>
                   )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <Label>CV / Resume</Label>
-                <div className="flex w-fit gap-1 rounded-lg bg-secondary p-0.5">
-                  {(["pdf", "text"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setManualCvMode(mode)}
-                      className={cn(
-                        "rounded-md px-3 py-1 text-xs font-medium transition-all",
-                        manualCvMode === mode
-                          ? "bg-background text-foreground"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {mode === "pdf" ? "Upload PDF" : "Plain Text"}
-                    </button>
-                  ))}
-                </div>
-
-                {manualCvMode === "pdf" ? (
-                  <div
-                    className={cn(
-                      "cursor-pointer rounded-lg border-2 border-dashed p-5 text-center transition-all",
-                      manualDragOver
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50 hover:bg-accent/30",
-                      hasResumeFile && "border-emerald-400 bg-emerald-50",
-                    )}
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      setManualDragOver(true);
-                    }}
-                    onDragLeave={() => setManualDragOver(false)}
-                    onDrop={(event) => {
-                      setManualDragOver(false);
-                      onDropResumeFile(event);
-                    }}
-                    onClick={() => manualFileInputRef.current?.click()}
-                  >
-                    <input
-                      ref={manualFileInputRef}
-                      type="file"
-                      accept=".pdf,application/pdf"
-                      className="hidden"
-                      onChange={onPdfSelected}
-                    />
-                    {hasResumeFile ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <FileTextIcon className="size-4 text-emerald-600" />
-                        <span className="max-w-[200px] truncate text-sm font-medium text-emerald-700">
-                          {addResumeFile?.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setAddResumeFile(null);
-                          }}
+                <Controller
+                  name="jobId"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={shouldShowFieldError(fieldState)}>
+                      <FieldLabel htmlFor="add-applicant-job">
+                        Target Role <span className="text-destructive">*</span>
+                      </FieldLabel>
+                      <FieldContent>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                          disabled={jobsLoading || jobs.length === 0}
                         >
-                          <XIcon className="size-4 text-muted-foreground hover:text-foreground" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <UploadIcon className="mx-auto mb-1.5 size-5 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-medium text-primary">
-                            Click to upload
-                          </span>{" "}
-                          or drag & drop
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          PDF only
-                        </p>
-                      </>
-                    )}
-                  </div>
-                ) : (
+                          <SelectTrigger
+                            id="add-applicant-job"
+                            className="w-full"
+                            aria-invalid={shouldShowFieldError(fieldState)}
+                          >
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent position="popper">
+                            <SelectGroup>
+                              {jobs.map((job) => (
+                                <SelectItem key={job.id} value={job.id}>
+                                  {job.title}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        {shouldShowFieldError(fieldState) ? (
+                          <FieldError>{fieldState.error?.message}</FieldError>
+                        ) : null}
+                      </FieldContent>
+                    </Field>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-3">
                   <Controller
-                    name="resumeText"
-                    control={addApplicantForm.control}
-                    render={({ field }) => (
-                      <Textarea
-                        {...field}
-                        className="min-h-[120px] resize-none text-sm"
-                        placeholder="Paste candidate CV text..."
-                        onChange={(event) => {
-                          field.onChange(event);
-                          setAddResumeText(event.target.value);
-                        }}
-                      />
+                    name="name"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={shouldShowFieldError(fieldState)}>
+                        <FieldLabel htmlFor="add-applicant-name">
+                          Full Name <span className="text-destructive">*</span>
+                        </FieldLabel>
+                        <FieldContent>
+                          <Input
+                            {...field}
+                            id="add-applicant-name"
+                            placeholder="e.g. Thanawat Srisuk"
+                            aria-invalid={shouldShowFieldError(fieldState)}
+                          />
+                          {shouldShowFieldError(fieldState) ? (
+                            <FieldError>{fieldState.error?.message}</FieldError>
+                          ) : null}
+                        </FieldContent>
+                      </Field>
                     )}
                   />
-                )}
-              </div>
+                  <Controller
+                    name="email"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={shouldShowFieldError(fieldState)}>
+                        <FieldLabel htmlFor="add-applicant-email">
+                          Email <span className="text-destructive">*</span>
+                        </FieldLabel>
+                        <FieldContent>
+                          <Input
+                            {...field}
+                            id="add-applicant-email"
+                            type="email"
+                            placeholder="email@example.com"
+                            aria-invalid={shouldShowFieldError(fieldState)}
+                          />
+                          {shouldShowFieldError(fieldState) ? (
+                            <FieldError>{fieldState.error?.message}</FieldError>
+                          ) : null}
+                        </FieldContent>
+                      </Field>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Controller
+                    name="phone"
+                    control={control}
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="add-applicant-phone">
+                          Phone
+                        </FieldLabel>
+                        <FieldContent>
+                          <Input
+                            {...field}
+                            id="add-applicant-phone"
+                            placeholder="+66 81 234 5678"
+                          />
+                        </FieldContent>
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name="source"
+                    control={control}
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel>Source</FieldLabel>
+                        <FieldContent>
+                          <div className="flex flex-wrap gap-2">
+                            {sourceOptions.map((source) => (
+                              <button
+                                key={source.value}
+                                type="button"
+                                onClick={() => {
+                                  field.onChange(source.value);
+                                }}
+                                className={cn(
+                                  "rounded-full border px-3 py-1 text-xs transition-all",
+                                  field.value === source.value
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border text-muted-foreground hover:border-primary hover:text-foreground",
+                                )}
+                              >
+                                {source.label}
+                              </button>
+                            ))}
+                          </div>
+                        </FieldContent>
+                      </Field>
+                    )}
+                  />
+                </div>
+
+                <Controller
+                  name="latestRole"
+                  control={control}
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor="add-applicant-latest-role">
+                        Latest job role
+                      </FieldLabel>
+                      <FieldContent>
+                        <Input
+                          {...field}
+                          id="add-applicant-latest-role"
+                          placeholder="e.g. Senior Frontend Engineer"
+                        />
+                      </FieldContent>
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name="skills"
+                  control={control}
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor="add-applicant-skills">
+                        Skills
+                      </FieldLabel>
+                      <FieldContent>
+                        <SkillsTagInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          inputId="add-applicant-skills"
+                        />
+                      </FieldContent>
+                    </Field>
+                  )}
+                />
+
+                <Field>
+                  <FieldLabel>CV / Resume (PDF)</FieldLabel>
+                  <FieldContent className="flex flex-col gap-2">
+                    <div
+                      className={cn(
+                        "cursor-pointer rounded-lg border-2 border-dashed p-5 text-center transition-all",
+                        manualDragOver
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50 hover:bg-accent/30",
+                        hasResumeFiles && "border-emerald-400 bg-emerald-50",
+                      )}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        setManualDragOver(true);
+                      }}
+                      onDragLeave={() => setManualDragOver(false)}
+                      onDrop={(event) => {
+                        setManualDragOver(false);
+                        onManualDropResumeFiles(event);
+                      }}
+                      onClick={() => manualFileInputRef.current?.click()}
+                    >
+                      <input
+                        ref={manualFileInputRef}
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        multiple
+                        className="hidden"
+                        onChange={onManualPdfInputChange}
+                      />
+                      {hasResumeFiles ? (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-primary">
+                            Add more
+                          </span>{" "}
+                          — click or drop PDFs
+                        </p>
+                      ) : (
+                        <>
+                          <UploadIcon className="mx-auto mb-1.5 size-5 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-medium text-primary">
+                              Click to upload
+                            </span>{" "}
+                            or drag & drop
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            PDF only — multiple files allowed
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    {addResumeFiles.length > 0 ? (
+                      <ul className="flex flex-col gap-1.5">
+                        {addResumeFiles.map((file, index) => (
+                          <li
+                            key={`${file.name}-${file.size}-${index}`}
+                            className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5 text-sm"
+                          >
+                            <FileTextIcon className="size-4 shrink-0 text-emerald-600" />
+                            <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                              {file.name}
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0"
+                              onClick={() => removeAddResumeFileAt(index)}
+                            >
+                              <XIcon className="size-4" />
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </FieldContent>
+                </Field>
+
+                <div className="flex flex-col gap-2 p-2 rounded-md border border-border">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      Experience
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() =>
+                        experienceFA.append({
+                          company: "",
+                          role: "",
+                          description: "",
+                        })
+                      }
+                    >
+                      <PlusIcon className="size-4" />
+                      Add
+                    </Button>
+                  </div>
+                  {experienceFA.fields.map((row, index) => (
+                    <div key={row.id} className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                        <Controller
+                          name={`experiences.${index}.company`}
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              placeholder="Company"
+                              className="min-w-0 flex-1"
+                            />
+                          )}
+                        />
+                        <Controller
+                          name={`experiences.${index}.role`}
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              placeholder="Role"
+                              className="min-w-0 flex-1"
+                            />
+                          )}
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => experienceFA.remove(index)}
+                        >
+                          <Trash2Icon className="size-4" />
+                        </Button>
+                      </div>
+                      <Controller
+                        name={`experiences.${index}.description`}
+                        control={control}
+                        render={({ field }) => (
+                          <Textarea
+                            {...field}
+                            placeholder="Description (optional)"
+                            rows={2}
+                            className="resize-none text-sm"
+                          />
+                        )}
+                      />
+                    </div>
+                  ))}
+                  {addApplicantForm.formState.errors.experiences?.message ? (
+                    <FieldError>
+                      {addApplicantForm.formState.errors.experiences.message}
+                    </FieldError>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-col gap-2 p-2 rounded-md border border-border">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      Education
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() =>
+                        educationFA.append({ school: "", degree: "" })
+                      }
+                    >
+                      <PlusIcon className="size-4" />
+                      Add
+                    </Button>
+                  </div>
+                  {educationFA.fields.map((row, index) => (
+                    <div
+                      key={row.id}
+                      className="flex flex-wrap items-center gap-2 sm:flex-nowrap"
+                    >
+                      <Controller
+                        name={`educations.${index}.school`}
+                        control={control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            placeholder="School"
+                            className="min-w-0 flex-1"
+                          />
+                        )}
+                      />
+                      <Controller
+                        name={`educations.${index}.degree`}
+                        control={control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            placeholder="Degree"
+                            className="min-w-0 flex-1"
+                          />
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => educationFA.remove(index)}
+                      >
+                        <Trash2Icon className="size-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {addApplicantForm.formState.errors.educations?.message ? (
+                    <FieldError>
+                      {addApplicantForm.formState.errors.educations.message}
+                    </FieldError>
+                  ) : null}
+                </div>
+              </FieldGroup>
 
               <div className="flex gap-2 pt-1">
                 <Button
@@ -660,7 +1158,7 @@ export function AddApplicantDialog({
           ) : null}
 
           {addFlowStep === "ai_review" ? (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               <div className="flex gap-2.5 rounded-lg border border-border bg-secondary p-3">
                 <SparklesIcon className="mt-0.5 size-4 shrink-0 text-primary" />
                 <p className="text-xs leading-relaxed text-muted-foreground">
@@ -669,65 +1167,47 @@ export function AddApplicantDialog({
                 </p>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Job Posting URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="https://jobs.example.com/posting/123"
-                    value={addAiJdUrl}
-                    onChange={(event) => setAddAiJdUrl(event.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleJdFetch}
-                    disabled={addFetchingJdUrl || !addAiJdUrl.trim()}
-                  >
-                    {addFetchingJdUrl ? (
-                      <Loader2Icon className="size-4 animate-spin" />
-                    ) : (
-                      <Link2Icon className="size-4" />
-                    )}
-                    {addFetchingJdUrl ? "Fetching..." : "Fetch"}
-                  </Button>
-                </div>
-              </div>
-
               <Controller
                 name="jobId"
-                control={addApplicantForm.control}
+                control={control}
                 render={({ field, fieldState }) => (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="add-applicant-ai-job">
+                  <Field data-invalid={shouldShowFieldError(fieldState)}>
+                    <FieldLabel htmlFor="add-applicant-ai-job">
                       Target Role / JD{" "}
                       <span className="text-destructive">*</span>
-                    </Label>
-                    <select
-                      id="add-applicant-ai-job"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      value={field.value}
-                      onChange={(event) => {
-                        field.onChange(event);
-                        setAddJobId(event.target.value);
-                      }}
-                    >
-                      <option value="">Select role</option>
-                      {jobs.map((job) => (
-                        <option key={job.id} value={job.id}>
-                          {job.title}
-                        </option>
-                      ))}
-                    </select>
-                    {shouldShowFieldError(fieldState) ? (
-                      <p className="text-xs text-destructive">
-                        {fieldState.error?.message}
-                      </p>
-                    ) : null}
-                  </div>
+                    </FieldLabel>
+                    <FieldContent>
+                      <Select
+                        value={field.value || undefined}
+                        onValueChange={field.onChange}
+                        disabled={jobsLoading || jobs.length === 0}
+                      >
+                        <SelectTrigger
+                          id="add-applicant-ai-job"
+                          className="w-full"
+                          aria-invalid={shouldShowFieldError(fieldState)}
+                        >
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent position="popper">
+                          <SelectGroup>
+                            {jobs.map((job) => (
+                              <SelectItem key={job.id} value={job.id}>
+                                {job.title}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      {shouldShowFieldError(fieldState) ? (
+                        <FieldError>{fieldState.error?.message}</FieldError>
+                      ) : null}
+                    </FieldContent>
+                  </Field>
                 )}
               />
 
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <Label>ระดับความเข้มงวด</Label>
                   <span
@@ -755,7 +1235,7 @@ export function AddApplicantDialog({
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label>CV / Resume</Label>
                 <div className="flex w-fit gap-1 rounded-lg bg-secondary p-0.5">
                   {(["pdf", "text", "both"] as const).map((mode) => (
@@ -786,7 +1266,7 @@ export function AddApplicantDialog({
                       aiDragOver
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50 hover:bg-accent/30",
-                      hasResumeFile && "border-emerald-400 bg-emerald-50",
+                      hasResumeFiles && "border-emerald-400 bg-emerald-50",
                     )}
                     onDragOver={(event) => {
                       event.preventDefault();
@@ -795,7 +1275,7 @@ export function AddApplicantDialog({
                     onDragLeave={() => setAiDragOver(false)}
                     onDrop={(event) => {
                       setAiDragOver(false);
-                      onDropResumeFile(event);
+                      onAiDropResumeFile(event);
                     }}
                     onClick={() => aiFileInputRef.current?.click()}
                   >
@@ -804,19 +1284,19 @@ export function AddApplicantDialog({
                       type="file"
                       accept=".pdf,application/pdf"
                       className="hidden"
-                      onChange={onPdfSelected}
+                      onChange={onAiPdfSelected}
                     />
-                    {hasResumeFile ? (
+                    {hasResumeFiles ? (
                       <div className="flex items-center justify-center gap-2">
                         <FileTextIcon className="size-4 text-emerald-600" />
                         <span className="max-w-[200px] truncate text-sm font-medium text-emerald-700">
-                          {addResumeFile?.name}
+                          {addResumeFiles[0]?.name}
                         </span>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            setAddResumeFile(null);
+                            setAddResumeFiles([]);
                           }}
                         >
                           <XIcon className="size-4 text-muted-foreground hover:text-foreground" />
@@ -842,15 +1322,14 @@ export function AddApplicantDialog({
                 {(addAiCvMode === "text" || addAiCvMode === "both") && (
                   <Controller
                     name="resumeText"
-                    control={addApplicantForm.control}
+                    control={control}
                     render={({ field }) => (
                       <Textarea
                         {...field}
                         className="min-h-[120px] resize-none text-sm"
                         placeholder="Paste candidate CV text..."
                         onChange={(event) => {
-                          field.onChange(event);
-                          setAddResumeText(event.target.value);
+                          field.onChange(event.target.value);
                         }}
                       />
                     )}
@@ -873,11 +1352,7 @@ export function AddApplicantDialog({
                   disabled={!canAnalyze || isAnalyzing}
                   onClick={() => onAiAnalyze()}
                 >
-                  {isAnalyzing ? (
-                    <Loader2Icon className="size-4 animate-spin" />
-                  ) : (
-                    <SparklesIcon className="size-4" />
-                  )}
+                  {isAnalyzing ? <Loader2Icon /> : <SparklesIcon />}
                   Analyze with AI
                 </Button>
               </div>

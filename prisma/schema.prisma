@@ -12,6 +12,10 @@ datasource db {
   provider = "postgresql"
 }
 
+generator json {
+  provider = "prisma-json-types-generator"
+}
+
 model User {
   id                 String              @id
   name               String
@@ -101,23 +105,44 @@ model JobDescription {
 }
 
 model Applicant {
-  id               String           @id @default(cuid())
+  id               String            @id @default(cuid())
   name             String
   email            String
   phone            String?
-  appliedAt        DateTime         @default(now())
-  source           ApplicantSource  @default(OTHER)
-  stage            ApplicantStage   @default(APPLIED)
+  appliedAt        DateTime          @default(now())
+  source           ApplicantSource   @default(OTHER)
+  stage            ApplicantStage    @default(APPLIED)
   notes            String?
   cvText           String?
   cvFileKey        String?
   cvFileName       String?
+  jobPostingUrl    String?
+  latestRole       String?
+  skills           String[]          @default([])
+  /// [ApplicantExperience]
+  experiences      Json[]            @default([])
+  /// [ApplicantEducation]
+  educations       Json[]            @default([])
   jobDescriptionId String
-  jobDescription   JobDescription   @relation(fields: [jobDescriptionId], references: [id])
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  jobDescription   JobDescription    @relation(fields: [jobDescriptionId], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   screeningResult  ScreeningResult?
   interviews       Interview[]
+  resumes          ApplicantResume[]
+}
+
+model ApplicantResume {
+  id          String    @id @default(cuid())
+  applicantId String
+  applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  fileKey     String
+  fileName    String
+  size        Int?
+  mimeType    String?
+  createdAt   DateTime  @default(now())
+
+  @@index([applicantId])
 }
 
 enum ApplicantSource {

@@ -162,6 +162,17 @@ const applicantSourceSchema = z.enum([
   "OTHER",
 ]);
 
+const experienceItemSchema = z.object({
+  company: z.string().trim().min(1),
+  role: z.string().trim().min(1),
+  description: z.string().trim().optional(),
+});
+
+const educationItemSchema = z.object({
+  school: z.string().trim().min(1),
+  degree: z.string().trim().min(1),
+});
+
 const withResumePayloadSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
@@ -169,6 +180,23 @@ const withResumePayloadSchema = z.object({
   jobDescriptionId: z.string().min(1),
   source: applicantSourceSchema.optional(),
   cvText: z.string().optional(),
+  jobPostingUrl: z
+    .string()
+    .trim()
+    .optional()
+    .superRefine((val, ctx) => {
+      if (val === undefined || val.length === 0) return;
+      if (!URL.canParse(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid URL",
+        });
+      }
+    }),
+  latestRole: z.string().trim().optional(),
+  skills: z.array(z.string().trim().min(1)).optional().default([]),
+  experiences: z.array(experienceItemSchema).optional().default([]),
+  educations: z.array(educationItemSchema).optional().default([]),
 });
 
 const withScreeningPayloadSchema = z.object({
@@ -180,6 +208,157 @@ const withScreeningPayloadSchema = z.object({
   report: fitReportSchema,
   resumeText: z.string().optional(),
 });
+
+function collectResumeUploadFiles(body: {
+  file?: File | null;
+  files?: File | Array<File> | null;
+}): Array<File> {
+  const out: Array<File> = [];
+  const multi = body.files;
+  if (Array.isArray(multi)) {
+    for (const f of multi) {
+      if (fileHasBytes(f)) {
+        out.push(f);
+      }
+    }
+  } else if (fileHasBytes(multi)) {
+    out.push(multi);
+  }
+  if (fileHasBytes(body.file)) {
+    out.push(body.file);
+  }
+  return out;
+}
+
+function isPdfResumeFile(file: File): boolean {
+  return (
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  );
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&nbsp;/gi, " ");
+}
+
+function extractScrapedTitle(html: string): string {
+  const ogTitle =
+    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>/i.exec(
+      html,
+    );
+  if (ogTitle?.[1]) {
+    return decodeHtmlEntities(ogTitle[1]).trim();
+  }
+  const titleTag = /<title[^>]*>([^<]+)<\/title>/i.exec(html);
+  if (titleTag?.[1]) {
+    return decodeHtmlEntities(titleTag[1]).trim();
+  }
+  return "";
+}
+
+function extractScrapedMeta(html: string, name: string): string {
+  const safe = name.replace(/[^a-z0-9:_-]/gi, "");
+  const ogPattern = new RegExp(
+    `<meta[^>]+property=["']og:${safe}["'][^>]+content=["']([^"']+)["'][^>]*>`,
+    "i",
+  );
+  const og = ogPattern.exec(html);
+  if (og?.[1]) {
+    return decodeHtmlEntities(og[1]).trim();
+  }
+  const namePattern = new RegExp(
+    `<meta[^>]+name=["']${safe}["'][^>]+content=["']([^"']+)["'][^>]*>`,
+    "i",
+  );
+  const m = namePattern.exec(html);
+  if (m?.[1]) {
+    return decodeHtmlEntities(m[1]).trim();
+  }
+  return "";
+}
+
+const KNOWN_SKILL_KEYWORDS: ReadonlyArray<string> = [
+  "TypeScript",
+  "JavaScript",
+  "Node.js",
+  "Node",
+  "React",
+  "Next.js",
+  "Vue",
+  "Nuxt",
+  "Svelte",
+  "Angular",
+  "Python",
+  "Django",
+  "FastAPI",
+  "Flask",
+  "Go",
+  "Golang",
+  "Rust",
+  "Java",
+  "Kotlin",
+  "Swift",
+  "PHP",
+  "Laravel",
+  "Ruby",
+  "Rails",
+  "C#",
+  ".NET",
+  "C++",
+  "PostgreSQL",
+  "MySQL",
+  "MongoDB",
+  "Redis",
+  "SQL",
+  "GraphQL",
+  "REST",
+  "gRPC",
+  "Docker",
+  "Kubernetes",
+  "AWS",
+  "GCP",
+  "Azure",
+  "Terraform",
+  "Linux",
+  "Git",
+  "TailwindCSS",
+  "Tailwind",
+  "Figma",
+  "Photoshop",
+  "Illustrator",
+];
+
+function extractSkillsFromText(text: string): Array<string> {
+  const lower = text.toLowerCase();
+  const out: Array<string> = [];
+  const seen = new Set<string>();
+  for (const skill of KNOWN_SKILL_KEYWORDS) {
+    const key = skill.toLowerCase();
+    if (seen.has(key)) continue;
+    if (lower.includes(key)) {
+      seen.add(key);
+      out.push(skill);
+    }
+    if (out.length >= 12) break;
+  }
+  return out;
+}
 
 function screeningErrorResponse(error: unknown): {
   status: number;
@@ -396,6 +575,58 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
   )
   .post(
+    "/scrape-job-url",
+    async ({ body, set }) => {
+      const url = body.url.trim();
+      if (!URL.canParse(url)) {
+        set.status = 400;
+        return { error: "URL ไม่ถูกต้อง" };
+      }
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(url, {
+          method: "GET",
+          redirect: "follow",
+          signal: controller.signal,
+          headers: {
+            "user-agent":
+              "Mozilla/5.0 (compatible; HR-Recruit-Bot/1.0; +https://example.com/bot)",
+            accept: "text/html,application/xhtml+xml",
+          },
+        }).finally(() => clearTimeout(timeout));
+        if (!res.ok) {
+          set.status = res.status === 404 ? 404 : 502;
+          return { error: `ดึงหน้าเว็บไม่สำเร็จ (${res.status})` };
+        }
+        const html = await res.text();
+        const title = extractScrapedTitle(html);
+        const description = extractScrapedMeta(html, "description");
+        const text = stripHtml(html);
+        const skills = extractSkillsFromText(`${description}\n${text}`);
+        return {
+          url,
+          title,
+          description,
+          latestRole: title,
+          skills,
+        };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "ดึงข้อมูลไม่สำเร็จ";
+        set.status = 502;
+        return { error: message };
+      }
+    },
+    {
+      body: t.Object({ url: t.String({ minLength: 1 }) }),
+      detail: {
+        tags: ["applicants"],
+        summary: "ดึงข้อมูลจาก Job Posting URL",
+      },
+    },
+  )
+  .post(
     "/analyze-draft",
     async ({ body, set }) => {
       const file = body.file;
@@ -454,14 +685,19 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         set.status = 400;
         return { error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() };
       }
-      const file = body.file;
-      const hasFile = fileHasBytes(file);
+      const uploadFiles = collectResumeUploadFiles(body);
       const cvTrim = parsed.data.cvText?.trim() ?? "";
-      if (!hasFile && cvTrim.length === 0) {
+      if (uploadFiles.length === 0 && cvTrim.length === 0) {
         set.status = 400;
         return { error: "ต้องแนบ PDF หรือวางข้อความ resume" };
       }
-      if (hasFile && !isR2Configured()) {
+      for (const f of uploadFiles) {
+        if (!isPdfResumeFile(f)) {
+          set.status = 400;
+          return { error: "อนุญาตเฉพาะไฟล์ PDF" };
+        }
+      }
+      if (uploadFiles.length > 0 && !isR2Configured()) {
         set.status = 503;
         return {
           error: "ยังไม่ได้ตั้งค่า Cloudflare R2 (จำเป็นสำหรับอัปโหลด PDF)",
@@ -474,6 +710,24 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         set.status = 404;
         return { error: "ไม่พบตำแหน่งนี้" };
       }
+      const jobPostingTrim = parsed.data.jobPostingUrl?.trim() ?? "";
+      const latestRoleTrim = parsed.data.latestRole?.trim() ?? "";
+      const skills = parsed.data.skills
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      const experiencesJson: Array<PrismaJson.ApplicantExperience> =
+        parsed.data.experiences.map((e) => ({
+          company: e.company.trim(),
+          role: e.role.trim(),
+          ...(e.description && e.description.trim().length > 0
+            ? { description: e.description.trim() }
+            : {}),
+        }));
+      const educationsJson: Array<PrismaJson.ApplicantEducation> =
+        parsed.data.educations.map((e) => ({
+          school: e.school.trim(),
+          degree: e.degree.trim(),
+        }));
       try {
         const applicant = await prisma.applicant.create({
           data: {
@@ -484,6 +738,15 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             source: parsed.data.source ?? "OTHER",
             stage: "APPLIED",
             ...(cvTrim.length > 0 ? { cvText: cvTrim } : {}),
+            ...(jobPostingTrim.length > 0
+              ? { jobPostingUrl: jobPostingTrim }
+              : {}),
+            ...(latestRoleTrim.length > 0
+              ? { latestRole: latestRoleTrim }
+              : {}),
+            skills,
+            experiences: experiencesJson,
+            educations: educationsJson,
           },
           select: {
             id: true,
@@ -510,22 +773,41 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             interviews: applicantInterviewSubset(user!.id),
           },
         });
-        if (hasFile) {
-          const bytes = await file!.arrayBuffer();
-          const objectKey = resumeObjectKeyForApplicant(
-            applicant.id,
-            randomUUID(),
-          );
-          await putResumePdfToR2({
-            objectKey,
-            body: new Uint8Array(bytes),
-            contentType: file.type || "application/pdf",
-          });
-          const updated = await prisma.applicant.update({
+
+        let current = applicant;
+        if (uploadFiles.length > 0) {
+          let primaryKey: string | null = null;
+          let primaryName: string | null = null;
+          for (const file of uploadFiles) {
+            const bytes = await file.arrayBuffer();
+            const objectKey = resumeObjectKeyForApplicant(
+              applicant.id,
+              randomUUID(),
+            );
+            await putResumePdfToR2({
+              objectKey,
+              body: new Uint8Array(bytes),
+              contentType: file.type || "application/pdf",
+            });
+            await prisma.applicantResume.create({
+              data: {
+                applicantId: applicant.id,
+                fileKey: objectKey,
+                fileName: file.name?.trim() || "resume.pdf",
+                size: bytes.byteLength,
+                mimeType: file.type || "application/pdf",
+              },
+            });
+            if (!primaryKey) {
+              primaryKey = objectKey;
+              primaryName = file.name?.trim() || "resume.pdf";
+            }
+          }
+          current = await prisma.applicant.update({
             where: { id: applicant.id },
             data: {
-              cvFileKey: objectKey,
-              cvFileName: file.name?.trim() || "resume.pdf",
+              cvFileKey: primaryKey!,
+              cvFileName: primaryName!,
             },
             select: {
               id: true,
@@ -552,47 +834,26 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
               interviews: applicantInterviewSubset(user!.id),
             },
           });
-          const fromScreening = applicantListFields(updated.screeningResult);
-          return {
-            applicant: {
-              id: updated.id,
-              name: updated.name,
-              email: updated.email,
-              phone: updated.phone,
-              notes: updated.notes,
-              cvText: updated.cvText,
-              cvFileKey: updated.cvFileKey,
-              cvFileName: updated.cvFileName,
-              appliedAt: updated.appliedAt.toISOString(),
-              source: updated.source,
-              stage: updated.stage,
-              jobDescriptionId: updated.jobDescription.id,
-              positionTitle: updated.jobDescription.title,
-              interview: mapApplicantInterview(
-                updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
-              ),
-              ...fromScreening,
-            },
-          };
         }
-        const fromScreening = applicantListFields(applicant.screeningResult);
+
+        const fromScreening = applicantListFields(current.screeningResult);
         return {
           applicant: {
-            id: applicant.id,
-            name: applicant.name,
-            email: applicant.email,
-            phone: applicant.phone,
-            notes: applicant.notes,
-            cvText: applicant.cvText,
-            cvFileKey: applicant.cvFileKey,
-            cvFileName: applicant.cvFileName,
-            appliedAt: applicant.appliedAt.toISOString(),
-            source: applicant.source,
-            stage: applicant.stage,
-            jobDescriptionId: applicant.jobDescription.id,
-            positionTitle: applicant.jobDescription.title,
+            id: current.id,
+            name: current.name,
+            email: current.email,
+            phone: current.phone,
+            notes: current.notes,
+            cvText: current.cvText,
+            cvFileKey: current.cvFileKey,
+            cvFileName: current.cvFileName,
+            appliedAt: current.appliedAt.toISOString(),
+            source: current.source,
+            stage: current.stage,
+            jobDescriptionId: current.jobDescription.id,
+            positionTitle: current.jobDescription.title,
             interview: mapApplicantInterview(
-              applicant.interviews as unknown as Array<ApplicantInterviewMapRow>,
+              current.interviews as unknown as Array<ApplicantInterviewMapRow>,
             ),
             ...fromScreening,
           },
@@ -608,6 +869,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       body: t.Object({
         payload: t.String({ minLength: 2 }),
         file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
+        files: t.Optional(t.Array(t.File({ maxSize: 8 * 1024 * 1024 }))),
       }),
       detail: {
         tags: ["applicants"],

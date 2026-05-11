@@ -16,6 +16,13 @@ export type AddApplicantFlowStep =
 
 export type AddApplicantAiCvMode = "pdf" | "text" | "both";
 
+export type AddExperienceDraft = {
+  company: string;
+  role: string;
+  description?: string;
+};
+export type AddEducationDraft = { school: string; degree: string };
+
 interface ApplicantTrackerState {
   view: ApplicantTrackerView;
   setView: (v: ApplicantTrackerView) => void;
@@ -40,17 +47,29 @@ interface ApplicantTrackerState {
 
   addResumeText: string;
   setAddResumeText: (v: string) => void;
-  addResumeFile: File | null;
-  setAddResumeFile: (v: File | null) => void;
+  addResumeFiles: Array<File>;
+  setAddResumeFiles: (v: Array<File>) => void;
+  appendAddResumeFiles: (files: Array<File>) => void;
+  removeAddResumeFileAt: (index: number) => void;
 
   addAiCvMode: AddApplicantAiCvMode;
   setAddAiCvMode: (v: AddApplicantAiCvMode) => void;
   addAiStrictness: number;
   setAddAiStrictness: (v: number) => void;
-  addAiJdUrl: string;
-  setAddAiJdUrl: (v: string) => void;
-  addFetchingJdUrl: boolean;
-  setAddFetchingJdUrl: (v: boolean) => void;
+
+  addJobPostingUrl: string;
+  setAddJobPostingUrl: (v: string) => void;
+
+  addLatestRole: string;
+  setAddLatestRole: (v: string) => void;
+
+  addSkills: Array<string>;
+  setAddSkills: (v: Array<string>) => void;
+
+  addExperiences: Array<AddExperienceDraft>;
+  setAddExperiences: (v: Array<AddExperienceDraft>) => void;
+  addEducations: Array<AddEducationDraft>;
+  setAddEducations: (v: Array<AddEducationDraft>) => void;
 
   addAiReport: FitReport | null;
   setAddAiReport: (v: FitReport | null) => void;
@@ -98,16 +117,33 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
 
     addResumeText: "",
     setAddResumeText: (v) => set({ addResumeText: v }),
-    addResumeFile: null,
-    setAddResumeFile: (v) => set({ addResumeFile: v }),
+    addResumeFiles: [],
+    setAddResumeFiles: (v) => set({ addResumeFiles: v }),
+    appendAddResumeFiles: (files) =>
+      set((s) => ({ addResumeFiles: [...s.addResumeFiles, ...files] })),
+    removeAddResumeFileAt: (index) =>
+      set((s) => ({
+        addResumeFiles: s.addResumeFiles.filter((_, i) => i !== index),
+      })),
+
     addAiCvMode: "pdf",
     setAddAiCvMode: (v) => set({ addAiCvMode: v }),
     addAiStrictness: 1,
     setAddAiStrictness: (v) => set({ addAiStrictness: v }),
-    addAiJdUrl: "",
-    setAddAiJdUrl: (v) => set({ addAiJdUrl: v }),
-    addFetchingJdUrl: false,
-    setAddFetchingJdUrl: (v) => set({ addFetchingJdUrl: v }),
+
+    addJobPostingUrl: "",
+    setAddJobPostingUrl: (v) => set({ addJobPostingUrl: v }),
+
+    addLatestRole: "",
+    setAddLatestRole: (v) => set({ addLatestRole: v }),
+
+    addSkills: [],
+    setAddSkills: (v) => set({ addSkills: v }),
+
+    addExperiences: [],
+    setAddExperiences: (v) => set({ addExperiences: v }),
+    addEducations: [],
+    setAddEducations: (v) => set({ addEducations: v }),
 
     addAiReport: null,
     setAddAiReport: (v) => set({ addAiReport: v }),
@@ -138,11 +174,14 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
       set({
         addFlowStep: "pick",
         addResumeText: "",
-        addResumeFile: null,
+        addResumeFiles: [],
         addAiCvMode: "pdf",
         addAiStrictness: 1,
-        addAiJdUrl: "",
-        addFetchingJdUrl: false,
+        addJobPostingUrl: "",
+        addLatestRole: "",
+        addSkills: [],
+        addExperiences: [],
+        addEducations: [],
         addAiReport: null,
         addDetectedName: "",
         addDetectedEmail: "",

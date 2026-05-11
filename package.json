@@ -51,6 +51,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "prisma": "^7.8.0",
+    "prisma-json-types-generator": "^5.0.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.6",
     "react-aria-components": "^1.17.0",

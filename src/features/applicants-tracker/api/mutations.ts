@@ -168,15 +168,37 @@ export const applicantMutations = {
       },
     }),
 
+  scrapeJobUrl: () =>
+    mutationOptions({
+      mutationFn: async (url: string) => {
+        const { data, error } = await api.api.applicants["scrape-job-url"].post(
+          { url },
+          { fetch: { credentials: "include" } },
+        );
+        if (error) throw error.value;
+        return data as {
+          url: string;
+          title: string;
+          description: string;
+          latestRole: string;
+          skills: Array<string>;
+        };
+      },
+      onError: (e: unknown) => {
+        toast.error(mutationErrorMessage(e));
+      },
+    }),
+
   analyzeDraft: () =>
     mutationOptions({
       mutationFn: async () => {
         const state = useApplicantTrackerStore.getState();
+        const firstResume = state.addResumeFiles[0];
         const { data, error } = await api.api.applicants["analyze-draft"].post(
           {
             jobDescriptionId: state.addJobId,
             cvText: state.addResumeText.trim() || undefined,
-            file: state.addResumeFile ?? undefined,
+            file: firstResume,
             strictness: state.addAiStrictness,
           },
           { fetch: { credentials: "include" } },
@@ -197,9 +219,9 @@ export const applicantMutations = {
     mutationOptions({
       mutationFn: async () => {
         const state = useApplicantTrackerStore.getState();
-        const file = state.addResumeFile;
+        const files = state.addResumeFiles;
         const cvTrim = state.addResumeText.trim();
-        if (file) {
+        if (files.length > 0) {
           const payload = JSON.stringify({
             name: state.addName.trim(),
             email: state.addEmail.trim(),
@@ -207,9 +229,14 @@ export const applicantMutations = {
             jobDescriptionId: state.addJobId,
             source: state.addSource,
             cvText: cvTrim.length > 0 ? cvTrim : undefined,
+            jobPostingUrl: state.addJobPostingUrl.trim() || undefined,
+            latestRole: state.addLatestRole.trim() || undefined,
+            skills: state.addSkills,
+            experiences: state.addExperiences,
+            educations: state.addEducations,
           });
           const { data, error } = await api.api.applicants["with-resume"].post(
-            { payload, file },
+            { payload, files },
             { fetch: { credentials: "include" } },
           );
           if (error) throw error.value;
@@ -251,7 +278,7 @@ export const applicantMutations = {
           notes: null,
           cvText: state.addResumeText.trim() || null,
           cvFileKey: null,
-          cvFileName: state.addResumeFile?.name ?? null,
+          cvFileName: state.addResumeFiles[0]?.name ?? null,
           tags: [],
           interview: null,
         };
@@ -284,6 +311,7 @@ export const applicantMutations = {
           throw new Error("ไม่มีผลวิเคราะห์");
         }
         const resumeTrim = state.addResumeText.trim();
+        const firstResume = state.addResumeFiles[0];
         const { data, error } = await api.api.applicants["with-screening"].post(
           {
             jobDescriptionId: state.addJobId,
@@ -293,7 +321,7 @@ export const applicantMutations = {
             source: state.addSource,
             report: state.addAiReport as FitReport,
             resumeText: resumeTrim.length > 0 ? resumeTrim : undefined,
-            file: state.addResumeFile ?? undefined,
+            file: firstResume,
           },
           { fetch: { credentials: "include" } },
         );

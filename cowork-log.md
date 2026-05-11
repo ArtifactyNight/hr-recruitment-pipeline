@@ -1,3 +1,9 @@
+### [2026-05-11] - Add applicant: manual JD URL, lists, multi-PDF
+
+**Prompt:** Implement plan: move job posting URL to manual; experience/education/certificate dynamic lists; remove plain-text CV in manual; multi-file dropzone; Prisma Applicant fields + ApplicantResume; shadcn Field + RHF.
+**Output:** Schema `jobPostingUrl`, `experiences`/`educations`/`certificates` Json[], `ApplicantResume`; migration applied. Store: `addResumeFiles[]`, `addJobPostingUrl`, list flush setters; removed AI JD fetch state. `POST /with-resume` accepts `files[]` + extended JSON payload, uploads each PDF to R2 + resume rows, primary `cvFileKey` = first file. Dialog: FieldGroup manual form, `useFieldArray` for three lists, multi-PDF manual dropzone, job URL in manual only; AI step JD URL removed; AI PDF stays single-file via `setAddResumeFiles([file])`. Mutations + analyze/confirm use first file from array.
+**Edited:** `prisma/schema.prisma`, migration, `applicant-tracker-store.ts`, `add-applicant-dialog.tsx`, `mutations.ts`, `applicant-routes.ts`, `cowork-log.md`
+
 ### [2026-05-10] - /impeccable layout: calendar
 
 **Prompt:** /impeccable layout: calendar
@@ -595,3 +601,19 @@
 **Prompt:** implement ai strictness feature to backend `src/server/lib/resume-screening-service.ts` and wire full stack
 **Output:** Added strictness-aware screener prompting with levels `0|1|2` (lenient/balanced/strict), normalization defaulting to balanced, and evaluator input support in `evaluateResumeAgainstJob`. Threaded optional `strictness` through both backend analyze endpoints (`/applicants/analyze-draft` and `/screener/evaluate`) with request schema validation (`0..2`). Wired frontend draft analyze mutation to send strictness from Zustand state, and aligned store default/reset strictness to `1` to match slider domain.
 **Edited:** `src/features/screener/lib/screener-prompts.ts`, `src/server/lib/resume-screening-service.ts`, `src/server/routes/applicant-routes.ts`, `src/server/routes/screener-routes.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `cowork-log.md`
+
+### [2026-05-11 16:39] - Add Applicant Dialog v2 — Job URL fetch, skills/latestRole, drop certificates, typed JSON
+
+**Prompt:** Move job posting URL to top with fetch button (scrape data into form), add optional description to experience rows, remove certificates, add latest job role + skills fields, wire prisma-json-types-generator into schema + `src/types/types.ts`.
+
+**Output:** Schema: dropped `certificates Json[]`, added `latestRole String?` + `skills String[]`, and annotated `experiences`/`educations` with `/// [ApplicantExperience]` / `/// [ApplicantEducation]` for typed JSON output via `prisma-json-types-generator`. Migration `applicant_skills_latest_role_drop_certificates` applied. `src/types/types.ts` declares the matching `PrismaJson.ApplicantExperience` (with optional `description`) and `PrismaJson.ApplicantEducation` types. Store dropped all certificate state, added `addLatestRole` + `addSkills`, and widened experience draft with optional `description`. Backend `/applicants/with-resume` payload now persists `latestRole`/`skills`/experience description and no longer expects certificates. Added new `POST /applicants/scrape-job-url` route that fetches the URL, extracts `<title>` / `og:*` / `meta description`, and runs a keyword-based skill extractor — returns `{title, description, latestRole, skills}`. Dialog reflowed: Job Posting URL is now the first field with a Fetch button (calls scrape mutation, prefills latest role + merges skills), Experience rows gained a description textarea, Certificates section removed, new Latest Role input + Skills chip input (Enter/Comma to add, Backspace to remove last). Verified with `tsc --noEmit` + `eslint`.
+
+**Edited:** `prisma/schema.prisma`, `prisma/migrations/20260511094033_applicant_skills_latest_role_drop_certificates/migration.sql`, `src/types/types.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `src/features/applicants-tracker/api/mutations.ts`, `src/server/routes/applicant-routes.ts`, `cowork-log.md`
+
+### [2026-05-11] - Add Applicant: shadcn Select for Target Role
+
+**Prompt:** Use shadcn Select component for target role.
+
+**Output:** Replaced native `<select>` with `Select` / `SelectTrigger` / `SelectValue` / `SelectContent` / `SelectGroup` / `SelectItem` from `@/components/ui/select` for both manual flow and AI review `jobId` field. Empty selection uses `value={field.value || undefined}` + `SelectValue placeholder="Select role"`. Full-width trigger (`className="w-full"`), `position="popper"` on content, `aria-invalid` + `FieldError` unchanged. AI review block now uses `Field` + `FieldLabel` + `FieldContent` instead of raw `Label` + `<p>` for errors.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
