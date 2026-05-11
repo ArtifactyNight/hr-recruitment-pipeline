@@ -1,3 +1,19 @@
+### [2026-05-11 18:03] - Applicant detail: edit experience and education
+
+**Prompt:** make it can edit and display experience, education
+
+**Output:** Added editable Experience/Education sections in `ApplicantDetailDialog` with add/remove row controls, inline inputs, sanitization (trim + drop empty rows), and save/cancel actions. Extended applicant patch mutation payload/types to support `experiences` and `educations`, including optimistic cache updates. Extended `PATCH /api/applicants/:id` request schema + server normalization logic to persist `Applicant.experiences` and `Applicant.educations` JSON arrays safely.
+
+**Edited:** `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `src/features/applicants-tracker/api/mutations.ts`, `src/server/routes/applicant-routes.ts`, `cowork-log.md`
+
+### [2026-05-11 17:58] - Applicant detail: multi-resume preview + richer profile
+
+**Prompt:** Display more applicant info from schema in detail dialog, use react-pdf for inline preview (no forced download), and make Resume/CV section show all files instead of one.
+
+**Output:** Expanded applicant DTO/API payload to include schema fields (`jobPostingUrl`, `latestRole`, `skills`, `experiences`, `educations`) and `resumes[]`. Updated `/api/applicants` list mapping to return those fields, and added `GET /api/applicants/:id/resumes-url` that returns signed URLs for every resume entry. Updated resume upload flow to append `ApplicantResume` rows (instead of replacing history) while keeping `cvFileKey/cvFileName` as primary. Refactored detail UI: added latest role/skills/history/job-posting display in `applicant-detail-dialog.tsx`; rebuilt `ApplicantDetailResumeSection` with multi-file list, primary marker, and inline `react-pdf` preview (`Document`/`Page`) for selected resume.
+
+**Edited:** `src/server/routes/applicant-routes.ts`, `src/features/applicants-tracker/lib/applicant-tracker-model.ts`, `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `src/features/applicants-tracker/components/applicant-detail-resume-section.tsx`, `src/features/applicants-tracker/api/mutations.ts`, `cowork-log.md`
+
 ### [2026-05-11 17:46] - Remove `file` body from `/applicants/with-resume`
 
 **Prompt:** Remove `file` from `/applicants/with-resume`; single upload must use `files` array.

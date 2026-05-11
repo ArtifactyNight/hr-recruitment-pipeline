@@ -40,9 +40,11 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import {
+  BriefcaseBusinessIcon,
   CalendarIcon,
   CalendarPlusIcon,
   GlobeIcon,
+  LinkIcon,
   PencilIcon,
   PhoneIcon,
   Trash2Icon,
@@ -299,8 +301,323 @@ type ApplicantDetailDialogProps = {
     email?: string;
     phone?: string;
     source?: TrackerApplicant["source"];
+    experiences?: Array<PrismaJson.ApplicantExperience>;
+    educations?: Array<PrismaJson.ApplicantEducation>;
   }) => void;
 };
+
+function ApplicantBackgroundSection({
+  applicant,
+  patchPending,
+  onPatchInfo,
+}: {
+  applicant: TrackerApplicant;
+  patchPending: boolean;
+  onPatchInfo: ApplicantDetailDialogProps["onPatchInfo"];
+}) {
+  const [editingExp, setEditingExp] = useState(false);
+  const [editingEdu, setEditingEdu] = useState(false);
+  const [expDraft, setExpDraft] = useState<
+    Array<PrismaJson.ApplicantExperience>
+  >(applicant.experiences);
+  const [eduDraft, setEduDraft] = useState<
+    Array<PrismaJson.ApplicantEducation>
+  >(applicant.educations);
+
+  function cleanExperiences(
+    items: Array<PrismaJson.ApplicantExperience>,
+  ): Array<PrismaJson.ApplicantExperience> {
+    const normalized: Array<PrismaJson.ApplicantExperience> = [];
+    for (const item of items) {
+      const company = item.company.trim();
+      const role = item.role.trim();
+      const description = item.description?.trim() ?? "";
+      if (company.length === 0 || role.length === 0) continue;
+      normalized.push({
+        company,
+        role,
+        ...(description.length > 0 ? { description } : {}),
+      });
+    }
+    return normalized;
+  }
+
+  function cleanEducations(
+    items: Array<PrismaJson.ApplicantEducation>,
+  ): Array<PrismaJson.ApplicantEducation> {
+    const normalized: Array<PrismaJson.ApplicantEducation> = [];
+    for (const item of items) {
+      const school = item.school.trim();
+      const degree = item.degree.trim();
+      if (school.length === 0 || degree.length === 0) continue;
+      normalized.push({ school, degree });
+    }
+    return normalized;
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="rounded-lg border border-border/80 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Experience</p>
+          {editingExp ? (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={patchPending}
+                onClick={() => {
+                  setExpDraft(applicant.experiences);
+                  setEditingExp(false);
+                }}
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={patchPending}
+                onClick={() => {
+                  onPatchInfo({ experiences: cleanExperiences(expDraft) });
+                  setEditingExp(false);
+                }}
+              >
+                บันทึก
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={patchPending}
+              onClick={() => {
+                setExpDraft(applicant.experiences);
+                setEditingExp(true);
+              }}
+            >
+              แก้ไข
+            </Button>
+          )}
+        </div>
+        {editingExp ? (
+          <div className="space-y-2">
+            {expDraft.map((item, index) => (
+              <div
+                key={`${index}-${item.company}-${item.role}`}
+                className="space-y-2"
+              >
+                <Input
+                  value={item.company}
+                  placeholder="Company"
+                  onChange={(event) =>
+                    setExpDraft((prev) =>
+                      prev.map((exp, i) =>
+                        i === index
+                          ? { ...exp, company: event.target.value }
+                          : exp,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  value={item.role}
+                  placeholder="Role"
+                  onChange={(event) =>
+                    setExpDraft((prev) =>
+                      prev.map((exp, i) =>
+                        i === index
+                          ? { ...exp, role: event.target.value }
+                          : exp,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  value={item.description ?? ""}
+                  placeholder="Description (optional)"
+                  onChange={(event) =>
+                    setExpDraft((prev) =>
+                      prev.map((exp, i) =>
+                        i === index
+                          ? { ...exp, description: event.target.value }
+                          : exp,
+                      ),
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() =>
+                    setExpDraft((prev) => prev.filter((_, i) => i !== index))
+                  }
+                >
+                  ลบรายการนี้
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() =>
+                setExpDraft((prev) => [
+                  ...prev,
+                  { company: "", role: "", description: "" },
+                ])
+              }
+            >
+              เพิ่ม Experience
+            </Button>
+          </div>
+        ) : applicant.experiences.length > 0 ? (
+          <div className="space-y-2">
+            {applicant.experiences.map((item, index) => (
+              <div
+                key={`${index}-${item.company}-${item.role}`}
+                className="rounded-md bg-muted/40 p-2"
+              >
+                <p className="text-sm font-medium">{item.role}</p>
+                <p className="text-xs text-muted-foreground">{item.company}</p>
+                {item.description ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {item.description}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">ไม่มีข้อมูลประสบการณ์</p>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-border/80 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Education</p>
+          {editingEdu ? (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={patchPending}
+                onClick={() => {
+                  setEduDraft(applicant.educations);
+                  setEditingEdu(false);
+                }}
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={patchPending}
+                onClick={() => {
+                  onPatchInfo({ educations: cleanEducations(eduDraft) });
+                  setEditingEdu(false);
+                }}
+              >
+                บันทึก
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={patchPending}
+              onClick={() => {
+                setEduDraft(applicant.educations);
+                setEditingEdu(true);
+              }}
+            >
+              แก้ไข
+            </Button>
+          )}
+        </div>
+        {editingEdu ? (
+          <div className="space-y-2">
+            {eduDraft.map((item, index) => (
+              <div
+                key={`${index}-${item.school}-${item.degree}`}
+                className="space-y-2"
+              >
+                <Input
+                  value={item.school}
+                  placeholder="School"
+                  onChange={(event) =>
+                    setEduDraft((prev) =>
+                      prev.map((edu, i) =>
+                        i === index
+                          ? { ...edu, school: event.target.value }
+                          : edu,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  value={item.degree}
+                  placeholder="Degree"
+                  onChange={(event) =>
+                    setEduDraft((prev) =>
+                      prev.map((edu, i) =>
+                        i === index
+                          ? { ...edu, degree: event.target.value }
+                          : edu,
+                      ),
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() =>
+                    setEduDraft((prev) => prev.filter((_, i) => i !== index))
+                  }
+                >
+                  ลบรายการนี้
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() =>
+                setEduDraft((prev) => [...prev, { school: "", degree: "" }])
+              }
+            >
+              เพิ่ม Education
+            </Button>
+          </div>
+        ) : applicant.educations.length > 0 ? (
+          <div className="space-y-2">
+            {applicant.educations.map((item, index) => (
+              <div
+                key={`${index}-${item.school}-${item.degree}`}
+                className="rounded-md bg-muted/40 p-2"
+              >
+                <p className="text-sm font-medium">{item.degree}</p>
+                <p className="text-xs text-muted-foreground">{item.school}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">ไม่มีข้อมูลการศึกษา</p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function ApplicantDetailDialog({
   applicant,
@@ -396,7 +713,37 @@ export function ApplicantDetailDialog({
                   inputType="tel"
                   disabled={patchPending}
                 />
+                <DetailRow
+                  icon={<BriefcaseBusinessIcon className="size-4" />}
+                  label="ตำแหน่งล่าสุด"
+                  value={applicant.latestRole?.trim() || "-"}
+                />
+                <DetailRow
+                  icon={<UserIcon className="size-4" />}
+                  label="ทักษะ"
+                  value={
+                    applicant.skills.length > 0
+                      ? applicant.skills.join(", ")
+                      : "-"
+                  }
+                />
+                <DetailRow
+                  icon={<CalendarIcon className="size-4" />}
+                  label="ประวัติ"
+                  value={`${applicant.experiences.length} experiences, ${applicant.educations.length} educations`}
+                />
               </div>
+              {applicant.jobPostingUrl ? (
+                <a
+                  href={applicant.jobPostingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  <LinkIcon className="size-4" />
+                  Job posting URL
+                </a>
+              ) : null}
               <div>
                 <p className="mb-2 text-sm font-medium">Pipeline Stages</p>
                 <div className="flex flex-wrap gap-1">
@@ -425,6 +772,11 @@ export function ApplicantDetailDialog({
                 row={applicant}
                 screenAiPending={screenAiPending}
                 onScreenWithAi={onScreenWithAi}
+              />
+              <ApplicantBackgroundSection
+                applicant={applicant}
+                patchPending={patchPending}
+                onPatchInfo={onPatchInfo}
               />
               <ApplicantDetailResumeSection
                 applicant={applicant}

@@ -45,6 +45,8 @@ export const applicantMutations = {
         email?: string;
         phone?: string;
         source?: TrackerApplicant["source"];
+        experiences?: Array<PrismaJson.ApplicantExperience>;
+        educations?: Array<PrismaJson.ApplicantEducation>;
       }) => {
         const body: {
           stage?: ApplicantStage;
@@ -53,6 +55,8 @@ export const applicantMutations = {
           email?: string;
           phone?: string;
           source?: TrackerApplicant["source"];
+          experiences?: Array<PrismaJson.ApplicantExperience>;
+          educations?: Array<PrismaJson.ApplicantEducation>;
         } = {};
         if (input.stage !== undefined) body.stage = input.stage;
         if (input.notes !== undefined) body.notes = input.notes;
@@ -60,6 +64,9 @@ export const applicantMutations = {
         if (input.email !== undefined) body.email = input.email;
         if (input.phone !== undefined) body.phone = input.phone;
         if (input.source !== undefined) body.source = input.source;
+        if (input.experiences !== undefined)
+          body.experiences = input.experiences;
+        if (input.educations !== undefined) body.educations = input.educations;
         const { data, error } = await api.api
           .applicants({ id: input.id })
           .patch(body, { fetch: { credentials: "include" } });
@@ -98,6 +105,12 @@ export const applicantMutations = {
                           : {}),
                         ...(input.source !== undefined
                           ? { source: input.source }
+                          : {}),
+                        ...(input.experiences !== undefined
+                          ? { experiences: input.experiences }
+                          : {}),
+                        ...(input.educations !== undefined
+                          ? { educations: input.educations }
                           : {}),
                       }
                     : a,
@@ -279,6 +292,12 @@ export const applicantMutations = {
           cvText: state.addResumeText.trim() || null,
           cvFileKey: null,
           cvFileName: state.addResumeFiles[0]?.name ?? null,
+          jobPostingUrl: state.addJobPostingUrl.trim() || null,
+          latestRole: state.addLatestRole.trim() || null,
+          skills: state.addSkills,
+          experiences: state.addExperiences,
+          educations: state.addEducations,
+          resumes: [],
           tags: [],
           interview: null,
         };

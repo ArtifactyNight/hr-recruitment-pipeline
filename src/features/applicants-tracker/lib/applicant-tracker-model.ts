@@ -39,6 +39,19 @@ export type TrackerApplicant = {
   cvText: string | null;
   cvFileKey: string | null;
   cvFileName: string | null;
+  jobPostingUrl: string | null;
+  latestRole: string | null;
+  skills: Array<string>;
+  experiences: Array<PrismaJson.ApplicantExperience>;
+  educations: Array<PrismaJson.ApplicantEducation>;
+  resumes: Array<{
+    id: string;
+    fileKey: string;
+    fileName: string;
+    size: number | null;
+    mimeType: string | null;
+    createdAt: string;
+  }>;
   tags: Array<string>;
   interview: TrackerApplicantInterview | null;
 };

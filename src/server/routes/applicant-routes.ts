@@ -413,9 +413,25 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           cvText: true,
           cvFileKey: true,
           cvFileName: true,
+          jobPostingUrl: true,
+          latestRole: true,
+          skills: true,
+          experiences: true,
+          educations: true,
           appliedAt: true,
           source: true,
           stage: true,
+          resumes: {
+            select: {
+              id: true,
+              fileKey: true,
+              fileName: true,
+              size: true,
+              mimeType: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: "desc" },
+          },
           jobDescription: { select: { id: true, title: true } },
           screeningResult: {
             select: {
@@ -442,6 +458,19 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           cvText: row.cvText,
           cvFileKey: row.cvFileKey,
           cvFileName: row.cvFileName,
+          jobPostingUrl: row.jobPostingUrl,
+          latestRole: row.latestRole,
+          skills: row.skills,
+          experiences: row.experiences as Array<PrismaJson.ApplicantExperience>,
+          educations: row.educations as Array<PrismaJson.ApplicantEducation>,
+          resumes: row.resumes.map((resume) => ({
+            id: resume.id,
+            fileKey: resume.fileKey,
+            fileName: resume.fileName,
+            size: resume.size ?? null,
+            mimeType: resume.mimeType ?? null,
+            createdAt: resume.createdAt.toISOString(),
+          })),
           appliedAt: row.appliedAt.toISOString(),
           source: row.source,
           stage: row.stage,
@@ -1125,6 +1154,62 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       },
     },
   )
+  .get(
+    "/:id/resumes-url",
+    async ({ params, set }) => {
+      if (!isR2Configured()) {
+        set.status = 503;
+        return { error: "ยังไม่ได้ตั้งค่า Cloudflare R2" };
+      }
+      const applicant = await prisma.applicant.findFirst({
+        where: { id: params.id },
+        select: {
+          cvFileKey: true,
+          resumes: {
+            select: {
+              id: true,
+              fileKey: true,
+              fileName: true,
+              size: true,
+              mimeType: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      });
+      if (!applicant) {
+        set.status = 404;
+        return { error: "ไม่พบผู้สมัคร" };
+      }
+      const resumes = await Promise.all(
+        applicant.resumes.map(async (resume) => {
+          const url = await getResumeSignedDownloadUrl({
+            objectKey: resume.fileKey,
+            filenameHint: resume.fileName || "resume.pdf",
+          });
+          return {
+            id: resume.id,
+            fileKey: resume.fileKey,
+            fileName: resume.fileName,
+            size: resume.size ?? null,
+            mimeType: resume.mimeType ?? null,
+            createdAt: resume.createdAt.toISOString(),
+            isPrimary: resume.fileKey === applicant.cvFileKey,
+            url,
+          };
+        }),
+      );
+      return { resumes };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      detail: {
+        tags: ["applicants"],
+        summary: "ลิงก์ preview/download ของ resume ทั้งหมด (signed URLs)",
+      },
+    },
+  )
   .post(
     "/:id/resume",
     async ({ params, body, set }) => {
@@ -1164,18 +1249,22 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         set.status = 502;
         return { error: "อัปโหลดไฟล์ไม่สำเร็จ" };
       }
-      if (existing.cvFileKey) {
-        try {
-          await deleteResumeFromR2(existing.cvFileKey);
-        } catch {
-          /* ignore */
-        }
-      }
       const displayName = file.name?.trim() || "resume.pdf";
-      await prisma.applicant.update({
-        where: { id: existing.id },
-        data: { cvFileKey: objectKey, cvFileName: displayName },
-      });
+      await prisma.$transaction([
+        prisma.applicantResume.create({
+          data: {
+            applicantId: existing.id,
+            fileKey: objectKey,
+            fileName: displayName,
+            size: bytes.byteLength,
+            mimeType: file.type || "application/pdf",
+          },
+        }),
+        prisma.applicant.update({
+          where: { id: existing.id },
+          data: { cvFileKey: objectKey, cvFileName: displayName },
+        }),
+      ]);
       return {
         cvFileKey: objectKey,
         cvFileName: displayName,
@@ -1249,6 +1338,31 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         if (body.source !== undefined) {
           data.source = body.source;
         }
+        if (body.experiences !== undefined) {
+          const experiences: Array<PrismaJson.ApplicantExperience> = [];
+          for (const item of body.experiences) {
+            const company = item.company.trim();
+            const role = item.role.trim();
+            const description = item.description?.trim() ?? "";
+            if (company.length === 0 || role.length === 0) continue;
+            experiences.push({
+              company,
+              role,
+              ...(description.length > 0 ? { description } : {}),
+            });
+          }
+          data.experiences = experiences;
+        }
+        if (body.educations !== undefined) {
+          const educations: Array<PrismaJson.ApplicantEducation> = [];
+          for (const item of body.educations) {
+            const school = item.school.trim();
+            const degree = item.degree.trim();
+            if (school.length === 0 || degree.length === 0) continue;
+            educations.push({ school, degree });
+          }
+          data.educations = educations;
+        }
         if (Object.keys(data).length === 0) {
           set.status = 400;
           return { error: "ต้องส่งข้อมูลที่ต้องการอัปเดตอย่างน้อยหนึ่งค่า" };
@@ -1318,6 +1432,23 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         email: t.Optional(t.String({ maxLength: 300 })),
         phone: t.Optional(t.String({ maxLength: 50 })),
         source: t.Optional(sourceUnion),
+        experiences: t.Optional(
+          t.Array(
+            t.Object({
+              company: t.String({ maxLength: 200 }),
+              role: t.String({ maxLength: 200 }),
+              description: t.Optional(t.String({ maxLength: 4_000 })),
+            }),
+          ),
+        ),
+        educations: t.Optional(
+          t.Array(
+            t.Object({
+              school: t.String({ maxLength: 200 }),
+              degree: t.String({ maxLength: 200 }),
+            }),
+          ),
+        ),
       }),
       detail: { tags: ["applicants"], summary: "อัปเดตผู้สมัคร" },
     },

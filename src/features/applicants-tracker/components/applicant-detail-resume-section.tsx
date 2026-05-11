@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { api } from "@/lib/api";
+import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronsUpDownIcon,
   DownloadIcon,
@@ -22,7 +23,15 @@ import {
   UploadIcon,
   XIcon,
 } from "lucide-react";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 import { toast } from "sonner";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString();
 
 type ApplicantDetailResumeSectionProps = {
   applicant: TrackerApplicant;
@@ -34,6 +43,68 @@ type ApplicantDetailResumeSectionProps = {
   }) => void;
 };
 
+type ResumePreviewItem = {
+  id: string;
+  fileKey: string;
+  fileName: string;
+  size: number | null;
+  mimeType: string | null;
+  createdAt: string;
+  isPrimary: boolean;
+  url: string;
+};
+
+function formatFileSize(size: number | null): string {
+  if (!size || size <= 0) return "-";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function PdfPreview({
+  fileUrl,
+  fileName,
+}: {
+  fileUrl: string;
+  fileName: string;
+}) {
+  const [numPages, setNumPages] = useState(0);
+
+  return (
+    <div className="rounded-md border border-border/80 bg-muted/20 p-2">
+      <Document
+        file={fileUrl}
+        loading={
+          <p className="p-3 text-xs text-muted-foreground">Loading PDF...</p>
+        }
+        error={
+          <p className="p-3 text-xs text-destructive">เปิดไฟล์ PDF ไม่สำเร็จ</p>
+        }
+        onLoadSuccess={({ numPages: totalPages }) => setNumPages(totalPages)}
+      >
+        {Array.from({ length: numPages }, (_, index) => (
+          <Page
+            key={`${fileName}-${index + 1}`}
+            pageNumber={index + 1}
+            width={520}
+            renderAnnotationLayer={false}
+            renderTextLayer={false}
+            className="mx-auto mb-3 last:mb-0"
+          />
+        ))}
+      </Document>
+    </div>
+  );
+}
+
+function ResumeMeta({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <p className="text-xs text-muted-foreground">
+      {label}: <span className="font-medium text-foreground">{value}</span>
+    </p>
+  );
+}
+
 export function ApplicantDetailResumeSection({
   applicant,
   applicantsQueryKey,
@@ -43,6 +114,7 @@ export function ApplicantDetailResumeSection({
   const [open, setOpen] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
   const [textDraft, setTextDraft] = useState(applicant.cvText ?? "");
+  const [previewResumeId, setPreviewResumeId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const downloadMut = useMutation(
@@ -69,6 +141,23 @@ export function ApplicantDetailResumeSection({
       queryClient,
     ),
   );
+  const resumeUrlsQuery = useQuery({
+    queryKey: ["applicant-resume-urls", applicant.id],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await api.api
+        .applicants({ id: applicant.id })
+        ["resumes-url"].get({
+          fetch: { credentials: "include" },
+        });
+      if (error) throw error.value;
+      const payload =
+        data && typeof data === "object" && "resumes" in data
+          ? (data as { resumes?: Array<ResumePreviewItem> }).resumes
+          : [];
+      return payload ?? [];
+    },
+  });
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -94,10 +183,19 @@ export function ApplicantDetailResumeSection({
     });
   }
 
-  const hasPdf = Boolean(applicant.cvFileKey);
+  const resumes = resumeUrlsQuery.data ?? [];
+  const hasPdf = resumes.length > 0 || Boolean(applicant.cvFileKey);
   const hasText = Boolean(applicant.cvText?.trim());
   const pdfBusy =
     uploadMut.isPending || deleteMut.isPending || downloadMut.isPending;
+  const defaultPreviewResumeId =
+    resumes.find((resume) => resume.isPrimary)?.id ?? resumes[0]?.id ?? null;
+  const effectivePreviewResumeId =
+    previewResumeId && resumes.some((resume) => resume.id === previewResumeId)
+      ? previewResumeId
+      : defaultPreviewResumeId;
+  const activeResume =
+    resumes.find((resume) => resume.id === effectivePreviewResumeId) ?? null;
 
   return (
     <Collapsible
@@ -165,18 +263,80 @@ export function ApplicantDetailResumeSection({
                     }
                   >
                     <Trash2Icon data-icon="inline-start" />
-                    ลบไฟล์
+                    ลบไฟล์หลัก
                   </Button>
                 </>
               ) : null}
             </div>
-            {hasPdf ? (
+            {resumeUrlsQuery.isPending ? (
               <p className="text-xs text-muted-foreground">
-                ไฟล์:{" "}
-                <span className="font-medium text-foreground">
-                  {applicant.cvFileName ?? "resume.pdf"}
-                </span>
+                กำลังโหลดรายการไฟล์...
               </p>
+            ) : null}
+            {resumes.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <div className="grid gap-2">
+                  {resumes.map((resume) => (
+                    <button
+                      key={resume.id}
+                      type="button"
+                      onClick={() => setPreviewResumeId(resume.id)}
+                      className="rounded-md border border-border/80 bg-background px-3 py-2 text-left transition-colors hover:bg-muted/30"
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-medium">
+                          {resume.fileName}
+                        </p>
+                        {resume.isPrimary ? (
+                          <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            Primary
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        <ResumeMeta
+                          label="Uploaded"
+                          value={new Date(resume.createdAt).toLocaleString(
+                            "th-TH",
+                          )}
+                        />
+                        <ResumeMeta
+                          label="Size"
+                          value={formatFileSize(resume.size)}
+                        />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {activeResume ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Preview: {activeResume.fileName}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            activeResume.url,
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }
+                      >
+                        <DownloadIcon data-icon="inline-start" />
+                        เปิดไฟล์
+                      </Button>
+                    </div>
+                    <PdfPreview
+                      fileUrl={activeResume.url}
+                      fileName={activeResume.fileName}
+                    />
+                  </div>
+                ) : null}
+              </div>
             ) : null}
           </div>
 
