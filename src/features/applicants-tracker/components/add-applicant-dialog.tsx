@@ -268,8 +268,8 @@ export function AddApplicantDialog({
                   disabled={jobsLoading || jobs.length === 0}
                   onClick={() => setAddFlowStep("manual")}
                 >
-                  <div className="bg-primary/10 rounded-lg p-2">
-                    <RiFilePaper2Fill className="size-8 text-primary" />
+                  <div className="bg-yellow-500/10 rounded-lg p-2">
+                    <RiFilePaper2Fill className="size-8 text-yellow-500" />
                   </div>
 
                   <span className="font-semibold text-lg">กรอกข้อมูลเอง</span>
@@ -284,8 +284,8 @@ export function AddApplicantDialog({
                   disabled={jobsLoading || jobs.length === 0}
                   onClick={() => setAddFlowStep("ai_review")}
                 >
-                  <div className="bg-primary/10 rounded-lg p-2">
-                    <RiSparklingFill className="size-8 text-primary" />
+                  <div className="bg-pink-500/10 rounded-lg p-2">
+                    <RiSparklingFill className="size-8 text-pink-500" />
                   </div>
                   <span className="font-semibold text-lg">
                     วิเคราะห์ด้วย AI
