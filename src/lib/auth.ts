@@ -9,9 +9,10 @@ export const auth = betterAuth({
   }),
   socialProviders: {
     google: {
-      prompt: "select_account",
+      prompt: "select_account consent",
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      accessType: "offline",
       scopes: [
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/userinfo.profile",
