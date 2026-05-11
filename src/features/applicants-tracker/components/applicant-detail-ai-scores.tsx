@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import { formatScoreOneDecimal } from "@/features/applicants-tracker/lib/tracker-display-helpers";
 import { RiSparklingFill } from "@remixicon/react";
-import { Loader2Icon, RefreshCwIcon, SparklesIcon } from "lucide-react";
+import { Loader2Icon, RefreshCwIcon } from "lucide-react";
 
 type ApplicantDetailAiScoresProps = {
   row: TrackerApplicant;
@@ -31,7 +31,7 @@ export function ApplicantDetailAiScores({
   if (!hasData) {
     return (
       <Alert variant="warning">
-        <SparklesIcon />
+        <RiSparklingFill />
         <AlertTitle>ยังไม่วิเคราะห์ด้วย AI</AlertTitle>
         <AlertDescription>
           <p>

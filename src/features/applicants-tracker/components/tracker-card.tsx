@@ -1,13 +1,9 @@
 "use client";
 
 import { KanbanItem, KanbanItemHandle } from "@/components/reui/kanban";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  initialsFromName,
-  type TrackerApplicant,
-} from "@/features/applicants-tracker/lib/applicant-tracker-model";
+import { type TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import {
   scoreBadgeClass,
   sourceLabel,
@@ -17,6 +13,7 @@ import { RiStarFill } from "@remixicon/react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { ClockIcon, TagIcon } from "lucide-react";
+import Image from "next/image";
 
 type TrackerCardProps = {
   row: TrackerApplicant;
@@ -50,11 +47,16 @@ export function TrackerCard({
     >
       <CardContent className="flex flex-col gap-3">
         <div className="flex gap-3">
-          <Avatar size="lg" className="after:border-0">
-            <AvatarFallback className="bg-[#FFCC00] text-sm font-semibold text-foreground">
-              {initialsFromName(row.name)}
-            </AvatarFallback>
-          </Avatar>
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-md">
+            <Image
+              src={`https://api.dicebear.com/9.x/glass/svg?seed=${row.name}`}
+              alt="profile image"
+              width={40}
+              height={40}
+              className="rounded-full"
+              unoptimized
+            />
+          </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">

@@ -28,6 +28,7 @@
     "@remixicon/react": "^4.9.0",
     "@tanstack/react-query": "^5.100.9",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.24",
     "@types/pg": "^8.20.0",
     "ai": "^6.0.176",
     "ai-fallback": "^2.0.1",

@@ -1,17 +1,16 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  initialsFromName,
   stageDotClass,
   stageLabel,
 } from "@/features/applicants-tracker/lib/applicant-tracker-model";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import Image from "next/image";
 
 type RecentApplicant = {
   id: string;
@@ -63,15 +62,14 @@ export function DashboardRecentApplicants({
               key={applicant.id}
               className="flex items-center gap-3 px-6 py-3 border-b last:border-0"
             >
-              <Avatar className="size-9 shrink-0">
-                <AvatarImage
-                  src={`https://api.dicebear.com/9.x/glass/svg?seed=${applicant.id}`}
-                  alt={applicant.name}
-                />
-                <AvatarFallback className="text-xs">
-                  {initialsFromName(applicant.name)}
-                </AvatarFallback>
-              </Avatar>
+              <Image
+                src={`https://api.dicebear.com/9.x/glass/svg?seed=${applicant.name}`}
+                alt={applicant.name}
+                width={40}
+                height={40}
+                className="rounded-full"
+                unoptimized
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{applicant.name}</p>
                 <p className="text-xs text-muted-foreground truncate">

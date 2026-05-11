@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
-import { Anuphan, Geist_Mono } from "next/font/google";
+import { Geist_Mono, IBM_Plex_Sans_Thai } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
@@ -13,7 +13,7 @@ const mono = Geist_Mono({
   weight: ["400", "500", "600", "700"],
 });
 
-const font = Anuphan({
+const font = IBM_Plex_Sans_Thai({
   subsets: ["latin", "thai"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",

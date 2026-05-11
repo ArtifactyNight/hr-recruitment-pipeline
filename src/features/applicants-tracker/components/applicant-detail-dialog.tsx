@@ -1,14 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import ScrollFade from "@/components/ui/scroll-fade";
 import {
   Select,
   SelectContent,
@@ -17,6 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ApplicantDetailAiScores } from "@/features/applicants-tracker/components/applicant-detail-ai-scores";
 import { ApplicantDetailInterviewSection } from "@/features/applicants-tracker/components/applicant-detail-interview-section";
 import { ApplicantDetailNotesSection } from "@/features/applicants-tracker/components/applicant-detail-notes-section";
@@ -30,7 +31,6 @@ import {
 } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
 import { DetailRow } from "@/features/applicants-tracker/components/detail-row";
 import {
-  initialsFromName,
   STAGE_ORDER,
   stageLabel,
   type TrackerApplicant,
@@ -50,6 +50,7 @@ import {
   Trash2Icon,
   UserIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useState } from "react";
 
 function HeaderInlineEdit({
@@ -649,7 +650,7 @@ export function ApplicantDetailDialog({
 
   return (
     <>
-      <Dialog
+      <Sheet
         open={!!applicant}
         onOpenChange={(o) => {
           if (!o) {
@@ -659,17 +660,25 @@ export function ApplicantDetailDialog({
           }
         }}
       >
-        <DialogContent className="sm:max-w-2xl" showCloseButton={false}>
+        <SheetContent
+          side="right"
+          className="data-[side=right]:sm:max-w-2xl p-0"
+        >
           {applicant ? (
             <>
-              <DialogHeader className="flex flex-row items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FACC15] text-sm font-semibold text-black">
-                  {initialsFromName(applicant.name)}
+              <SheetHeader className="flex flex-row items-start gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-md">
+                  <Image
+                    src={`https://api.dicebear.com/9.x/glass/svg?seed=${applicant.name}`}
+                    alt="profile image"
+                    width={40}
+                    height={40}
+                    className="rounded-full"
+                    unoptimized
+                  />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <DialogTitle className="sr-only">
-                    {applicant.name}
-                  </DialogTitle>
+                  <SheetTitle className="sr-only">{applicant.name}</SheetTitle>
                   <HeaderInlineEdit
                     value={applicant.name}
                     onSave={(name) => onPatchInfo({ name })}
@@ -684,122 +693,129 @@ export function ApplicantDetailDialog({
                     className="mt-1 text-sm text-muted-foreground"
                   />
                 </div>
-              </DialogHeader>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DetailRow
-                  icon={<UserIcon className="size-4" />}
-                  label="ตำแหน่ง"
-                  value={applicant.positionTitle}
-                />
-                <InlineSelectRow
-                  icon={<GlobeIcon className="size-4" />}
-                  label="แหล่งที่มา"
-                  value={applicant.source}
-                  onSave={(source) => onPatchInfo({ source })}
-                  disabled={patchPending}
-                />
-                <DetailRow
-                  icon={<CalendarIcon className="size-4" />}
-                  label="วันที่สมัคร"
-                  value={format(new Date(applicant.appliedAt), "PPP", {
-                    locale: th,
-                  })}
-                />
-                <InlineEditRow
-                  icon={<PhoneIcon className="size-4" />}
-                  label="โทรศัพท์"
-                  value={applicant.phone?.trim() || ""}
-                  onSave={(phone) => onPatchInfo({ phone })}
-                  inputType="tel"
-                  disabled={patchPending}
-                />
-                <DetailRow
-                  icon={<BriefcaseBusinessIcon className="size-4" />}
-                  label="ตำแหน่งล่าสุด"
-                  value={applicant.latestRole?.trim() || "-"}
-                />
-                <DetailRow
-                  icon={<UserIcon className="size-4" />}
-                  label="ทักษะ"
-                  value={
-                    applicant.skills.length > 0
-                      ? applicant.skills.join(", ")
-                      : "-"
-                  }
-                />
-                <DetailRow
-                  icon={<CalendarIcon className="size-4" />}
-                  label="ประวัติ"
-                  value={`${applicant.experiences.length} experiences, ${applicant.educations.length} educations`}
-                />
-              </div>
-              {applicant.jobPostingUrl ? (
-                <a
-                  href={applicant.jobPostingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 text-sm text-muted-foreground hover:text-foreground"
-                >
-                  <LinkIcon className="size-4" />
-                  Job posting URL
-                </a>
-              ) : null}
-              <div>
-                <p className="mb-2 text-sm font-medium">Pipeline Stages</p>
-                <div className="flex flex-wrap gap-1">
-                  {STAGE_ORDER.map((s) => (
-                    <Button
-                      key={s}
-                      type="button"
-                      size="sm"
-                      variant={detailStage === s ? "default" : "outline"}
-                      className={cn(
-                        "rounded-sm",
-                        detailStage === s && "bg-foreground text-background",
-                      )}
+              </SheetHeader>
+              <ScrollFade
+                className="max-h-[calc(100vh-15rem)] px-4"
+                axis="vertical"
+              >
+                <div className="flex flex-col gap-4 pb-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <DetailRow
+                      icon={<UserIcon className="size-4" />}
+                      label="ตำแหน่ง"
+                      value={applicant.positionTitle}
+                    />
+                    <InlineSelectRow
+                      icon={<GlobeIcon className="size-4" />}
+                      label="แหล่งที่มา"
+                      value={applicant.source}
+                      onSave={(source) => onPatchInfo({ source })}
                       disabled={patchPending}
-                      onClick={() => {
-                        if (s === applicant.stage) return;
-                        onStageSelect(s);
-                      }}
+                    />
+                    <DetailRow
+                      icon={<CalendarIcon className="size-4" />}
+                      label="วันที่สมัคร"
+                      value={format(new Date(applicant.appliedAt), "PPP", {
+                        locale: th,
+                      })}
+                    />
+                    <InlineEditRow
+                      icon={<PhoneIcon className="size-4" />}
+                      label="โทรศัพท์"
+                      value={applicant.phone?.trim() || ""}
+                      onSave={(phone) => onPatchInfo({ phone })}
+                      inputType="tel"
+                      disabled={patchPending}
+                    />
+                    <DetailRow
+                      icon={<BriefcaseBusinessIcon className="size-4" />}
+                      label="ตำแหน่งล่าสุด"
+                      value={applicant.latestRole?.trim() || "-"}
+                    />
+                    <DetailRow
+                      icon={<UserIcon className="size-4" />}
+                      label="ทักษะ"
+                      value={
+                        applicant.skills.length > 0
+                          ? applicant.skills.join(", ")
+                          : "-"
+                      }
+                    />
+                    <DetailRow
+                      icon={<CalendarIcon className="size-4" />}
+                      label="ประวัติ"
+                      value={`${applicant.experiences.length} experiences, ${applicant.educations.length} educations`}
+                    />
+                  </div>
+                  {applicant.jobPostingUrl ? (
+                    <a
+                      href={applicant.jobPostingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-3 text-sm text-muted-foreground hover:text-foreground"
                     >
-                      {stageLabel[s]}
-                    </Button>
-                  ))}
+                      <LinkIcon className="size-4" />
+                      Job posting URL
+                    </a>
+                  ) : null}
+                  <div>
+                    <p className="mb-2 text-sm font-medium">Pipeline Stages</p>
+                    <div className="flex flex-wrap gap-1">
+                      {STAGE_ORDER.map((s) => (
+                        <Button
+                          key={s}
+                          type="button"
+                          size="sm"
+                          variant={detailStage === s ? "default" : "outline"}
+                          className={cn(
+                            "rounded-sm",
+                            detailStage === s &&
+                              "bg-foreground text-background",
+                          )}
+                          disabled={patchPending}
+                          onClick={() => {
+                            if (s === applicant.stage) return;
+                            onStageSelect(s);
+                          }}
+                        >
+                          {stageLabel[s]}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <ApplicantDetailAiScores
+                    row={applicant}
+                    screenAiPending={screenAiPending}
+                    onScreenWithAi={onScreenWithAi}
+                  />
+                  <ApplicantBackgroundSection
+                    applicant={applicant}
+                    patchPending={patchPending}
+                    onPatchInfo={onPatchInfo}
+                  />
+                  <ApplicantDetailResumeSection
+                    applicant={applicant}
+                    applicantsQueryKey={applicantsQueryKey}
+                    onCvPatch={onCvPatch}
+                  />
+                  <ApplicantDetailInterviewSection applicant={applicant} />
+                  <ApplicantDetailNotesSection
+                    key={applicant.id}
+                    applicant={applicant}
+                    patchPending={patchPending}
+                    notesSaving={notesSaving}
+                    onSave={onSaveNotes}
+                  />
                 </div>
-              </div>
-              <ApplicantDetailAiScores
-                row={applicant}
-                screenAiPending={screenAiPending}
-                onScreenWithAi={onScreenWithAi}
-              />
-              <ApplicantBackgroundSection
-                applicant={applicant}
-                patchPending={patchPending}
-                onPatchInfo={onPatchInfo}
-              />
-              <ApplicantDetailResumeSection
-                applicant={applicant}
-                applicantsQueryKey={applicantsQueryKey}
-                onCvPatch={onCvPatch}
-              />
-              <ApplicantDetailInterviewSection applicant={applicant} />
-              <ApplicantDetailNotesSection
-                key={applicant.id}
-                applicant={applicant}
-                patchPending={patchPending}
-                notesSaving={notesSaving}
-                onSave={onSaveNotes}
-              />
-              <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+              </ScrollFade>
+              <SheetFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
                 <Button
                   type="button"
-                  variant="outline"
-                  className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                  variant="destructive"
                   onClick={onRequestDelete}
                 >
                   <Trash2Icon data-icon="inline-start" />
-                  ลบ
+                  ลบผู้สมัคร
                 </Button>
                 <div className="flex flex-1 flex-wrap justify-end gap-2">
                   <Button
@@ -824,11 +840,11 @@ export function ApplicantDetailDialog({
                     </Button>
                   )}
                 </div>
-              </DialogFooter>
+              </SheetFooter>
             </>
           ) : null}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
       {applicant ? (
         <ApplicantScheduleInterviewDialog
           applicantId={applicant.id}

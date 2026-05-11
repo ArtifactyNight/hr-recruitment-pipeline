@@ -1,3 +1,19 @@
+### [2026-05-11 18:10] - Applicant detail sheet uses ScrollArea
+
+**Prompt:** add `src/components/ui/scroll-area.tsx`
+
+**Output:** Integrated shadcn `ScrollArea` into `ApplicantDetailDialog` sheet content. Converted sheet body to `p-0`, wrapped the main detail sections with `ScrollArea` (`flex-1`) and moved content into an inner vertical stack (`gap-4`, `pb-4`) so long applicant details scroll independently while footer actions stay accessible.
+
+**Edited:** `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-11 18:07] - Applicant detail dialog to shadcn Sheet
+
+**Prompt:** convert it to /shadcn sheet
+
+**Output:** Converted `ApplicantDetailDialog` container from shadcn `Dialog` to shadcn `Sheet` with right-side panel behavior. Replaced `Dialog*` primitives with `Sheet*` equivalents (`Sheet`, `SheetContent`, `SheetHeader`, `SheetTitle`, `SheetFooter`) and kept existing close/open and footer actions intact. Applied width override for right panel (`data-[side=right]:sm:max-w-2xl`) and kept hidden title for accessibility.
+
+**Edited:** `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-11 18:03] - Applicant detail: edit experience and education
 
 **Prompt:** make it can edit and display experience, education
