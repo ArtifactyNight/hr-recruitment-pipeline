@@ -18,7 +18,7 @@ export type ScrapedLinkedinProfile = {
     parsed: {
       text: string;
       countryCode: string;
-      regionCode: string;
+      regionCode: string | null;
       country: string;
       countryFull: string;
       state: string;
@@ -27,22 +27,22 @@ export type ScrapedLinkedinProfile = {
   };
   objectUrn: string;
   registeredAt: string;
-  topSkills: Array<string>;
+  topSkills: Array<string> | null;
   connectionsCount: number;
   followerCount: number;
   verified: boolean;
   about: string;
   currentPosition: Array<{
     position: string;
-    location: string;
-    employmentType: string;
-    workplaceType: string;
-    compstringName: string;
-    compstringLinkedinUrl: string;
-    compstringId: string;
-    compstringUniversalName: string;
+    location: string | null;
+    employmentType: string | null;
+    workplaceType: string | null;
+    companyName: string;
+    companyLinkedinUrl: string;
+    companyId: string;
+    companyUniversalName: string;
     duration: string;
-    description: string;
+    description: string | null;
     skills: Array<string>;
     experienceGroupId: string;
     startDate: {
@@ -52,8 +52,10 @@ export type ScrapedLinkedinProfile = {
     };
     endDate: {
       text: string;
+      month?: string;
+      year?: number;
     };
-    compstringLogo: {
+    companyLogo: {
       url: string;
       sizes: Array<{
         url: string;
@@ -67,7 +69,7 @@ export type ScrapedLinkedinProfile = {
     schoolLinkedinUrl: string;
     schoolId: string;
     degree: string;
-    schoolLogo: string;
+    schoolLogo: string | null;
   }>;
   profileActions: Array<string>;
   profilePicture: {
@@ -78,7 +80,7 @@ export type ScrapedLinkedinProfile = {
       height: number;
     }>;
   };
-  coverPicture: string;
+  coverPicture: string | null;
   photo: string;
   profileLocales: Array<{
     country: string;
@@ -92,18 +94,18 @@ export type ScrapedLinkedinProfile = {
     headline: string;
     locale: string;
   }>;
-  services: Array<string>;
+  services: Array<string> | null;
   experience: Array<{
     position: string;
-    location?: string;
-    employmentType?: string;
-    workplaceType?: string;
-    compstringName: string;
-    compstringLinkedinUrl: string;
-    compstringId?: string;
-    compstringUniversalName?: string;
+    location: string | null;
+    employmentType: string | null;
+    workplaceType: string | null;
+    companyName: string;
+    companyLinkedinUrl: string;
+    companyId?: string;
+    companyUniversalName?: string;
     duration: string;
-    description?: string;
+    description: string | null;
     skills: Array<string>;
     experienceGroupId?: string;
     startDate: {
@@ -116,7 +118,7 @@ export type ScrapedLinkedinProfile = {
       month?: string;
       year?: number;
     };
-    compstringLogo?: {
+    companyLogo?: {
       url: string;
       sizes: Array<{
         url: string;
@@ -130,7 +132,7 @@ export type ScrapedLinkedinProfile = {
     schoolLinkedinUrl: string;
     schoolId: string;
     degree: string;
-    schoolLogo: string;
+    schoolLogo: string | null;
   }>;
   certifications: Array<string>;
   projects: Array<string>;
@@ -146,7 +148,7 @@ export type ScrapedLinkedinProfile = {
   honorsAndAwards: Array<string>;
   languages: Array<string>;
   causes: Array<string>;
-  featured: string;
+  featured: string | null;
   composeOptionType: string;
   organizations: Array<string>;
   moreProfiles: Array<{

@@ -1,3 +1,4 @@
+import type { ApplicantProfileMap } from "@/features/applicants-tracker/lib/applicant-profile-map-schema";
 import { fitReportSchema } from "@/features/screener/lib/fit-report-schemas";
 import {
   type ApplicantSource,
@@ -14,22 +15,22 @@ import {
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
+import { mapProfileTextFromRaw } from "@/server/lib/applicant-profile-map-service";
 import { authPlugin } from "@/server/lib/auth-plugin";
 import {
   extractScrapedMeta,
   extractScrapedTitle,
   stripHtml,
 } from "@/server/lib/html-scrape-helpers";
-import { scrapeCandidateProfileUrl } from "@/server/lib/profile-url-scrape";
 import {
   evaluateResumeAgainstJob,
   fileHasBytes,
   fitReportToScreeningScalars,
 } from "@/server/lib/resume-screening-service";
+import { scrape } from "@/server/lib/scraping";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { mapProfileTextFromRaw } from "../lib/applicant-profile-map-service";
 
 const stageUnion = t.Union([
   t.Literal("APPLIED"),
@@ -608,8 +609,94 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         return { error: "URL ไม่ถูกต้อง" };
       }
       try {
-        const { text, title } = await scrapeCandidateProfileUrl(url);
-        return { url, text, title };
+        const result = await scrape(url);
+
+        if (result.kind === "linkedin") {
+          const p = result.data;
+          const name = `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim();
+          const latestRole =
+            p.currentPosition?.[0]?.position?.trim() ??
+            p.experience?.[0]?.position?.trim() ??
+            "";
+          const skills = Array.from(
+            new Set(
+              [...(p.topSkills ?? []), ...(p.skills?.map((s) => s.name) ?? [])]
+                .map((s) => s?.trim() ?? "")
+                .filter((s) => s.length > 0),
+            ),
+          );
+          const experiences = (p.experience ?? [])
+            .map((e) => {
+              const description = e.description?.trim() ?? "";
+              return {
+                company: e.companyName?.trim() ?? "",
+                role: e.position?.trim() ?? "",
+                ...(description.length > 0 ? { description } : {}),
+              };
+            })
+            .filter((e) => e.company && e.role);
+          const educations = (p.education ?? [])
+            .map((ed) => ({
+              school: ed.schoolName?.trim() ?? "",
+              degree: ed.degree?.trim() ?? "",
+            }))
+            .filter((ed) => ed.school && ed.degree);
+
+          const mapped: ApplicantProfileMap = {
+            name,
+            email: (p.emails?.[0] ?? "").trim(),
+            skills,
+            experiences,
+            educations,
+            sourceSuggestion: "LINKEDIN",
+            ...(latestRole ? { latestRole } : {}),
+          };
+
+          const lines: Array<string> = [];
+          lines.push(`Name: ${name}`);
+          if (p.headline) lines.push(`Headline: ${p.headline}`);
+          if (p.location?.linkedinText)
+            lines.push(`Location: ${p.location.linkedinText}`);
+          if (p.about) lines.push(`\nAbout:\n${p.about}`);
+          if (p.experience?.length) {
+            lines.push("\nExperience:");
+            for (const e of p.experience) {
+              lines.push(
+                `- ${e.position} @ ${e.companyName}${e.duration ? ` (${e.duration})` : ""}${e.location ? ` — ${e.location}` : ""}`,
+              );
+              if (e.description) lines.push(`  ${e.description}`);
+            }
+          }
+          if (p.education?.length) {
+            lines.push("\nEducation:");
+            for (const ed of p.education) {
+              lines.push(`- ${ed.degree} @ ${ed.schoolName}`);
+            }
+          }
+          if (p.topSkills?.length) {
+            lines.push(`\nTop Skills: ${p.topSkills.join(", ")}`);
+          }
+
+          return {
+            url,
+            source: "linkedin" as const,
+            title: p.headline ?? name,
+            mapped,
+            resumeText: lines.join("\n"),
+          };
+        }
+
+        const mapped = await mapProfileTextFromRaw({
+          profileText: result.data.markdown,
+          profileUrl: url,
+        });
+        return {
+          url,
+          source: "other" as const,
+          title: result.data.title,
+          mapped,
+          resumeText: result.data.markdown,
+        };
       } catch (error) {
         const statusCode =
           error &&
@@ -628,7 +715,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       body: t.Object({ url: t.String({ minLength: 1 }) }),
       detail: {
         tags: ["applicants"],
-        summary: "ดึงข้อความจาก URL โปรไฟล์ (LinkedIn / JobsDB)",
+        summary: "ดึงข้อมูลโปรไฟล์ (LinkedIn structured / Firecrawl fallback)",
       },
     },
   )

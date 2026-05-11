@@ -289,6 +289,7 @@ export function AddApplicantDialog({
   const [manualDragOver, setManualDragOver] = useState(false);
   const [aiDragOver, setAiDragOver] = useState(false);
   const [manualProfileUrl, setManualProfileUrl] = useState("");
+  const [manualProfileUrlTouched, setManualProfileUrlTouched] = useState(false);
   const [profileMapSourceUrl, setProfileMapSourceUrl] = useState("");
   const [quickFillTab, setQuickFillTab] = useState<"link" | "text">("link");
 
@@ -433,6 +434,7 @@ export function AddApplicantDialog({
       prevFlowStepRef.current = null;
       addApplicantForm.reset();
       setManualProfileUrl("");
+      setManualProfileUrlTouched(false);
       setProfileMapSourceUrl("");
       setQuickFillTab("link");
     }
@@ -574,6 +576,26 @@ export function AddApplicantDialog({
   const profileAnalyzePending =
     scrapeProfileUrlMut.isPending || mapProfileTextMut.isPending;
 
+  let manualProfileUrlError = "";
+  const manualProfileUrlTrim = manualProfileUrl.trim();
+  if (manualProfileUrlTrim.length > 0) {
+    if (!URL.canParse(manualProfileUrlTrim)) {
+      manualProfileUrlError = "Invalid URL";
+    } else {
+      const host = new URL(manualProfileUrlTrim).hostname.toLowerCase();
+      if (
+        host === "jobsdb.com" ||
+        host.endsWith(".jobsdb.com") ||
+        host === "th.jobsdb.com" ||
+        host.endsWith(".jobsdb.th")
+      ) {
+        manualProfileUrlError = "JobsDB ยังไม่รองรับ";
+      }
+    }
+  }
+  const showManualProfileUrlError =
+    manualProfileUrlTouched && manualProfileUrlError.length > 0;
+
   async function handleAnalyzeProfile() {
     if (quickFillTab === "link") {
       const url = manualProfileUrl.trim();
@@ -585,15 +607,23 @@ export function AddApplicantDialog({
         toast.error("Invalid URL");
         return;
       }
+
+      const host = new URL(url).hostname.toLowerCase();
+      if (
+        host === "jobsdb.com" ||
+        host.endsWith(".jobsdb.com") ||
+        host === "th.jobsdb.com" ||
+        host.endsWith(".jobsdb.th")
+      ) {
+        toast.error("JobsDB scraping ยังไม่รองรับ");
+        return;
+      }
+
       try {
         const result = await scrapeProfileUrlMut.mutateAsync(url);
-        setValue("resumeText", result.text, { shouldDirty: true });
-        setProfileMapSourceUrl(url.trim());
-        const { mapped } = await mapProfileTextMut.mutateAsync({
-          profileText: result.text,
-          profileUrl: url.trim(),
-        });
-        applyMappedProfile(mapped);
+        setValue("resumeText", result.resumeText, { shouldDirty: true });
+        setProfileMapSourceUrl(url);
+        applyMappedProfile(result.mapped);
         toast.success(
           result.title.length > 0
             ? `Analyzed profile: ${result.title}`
@@ -777,19 +807,37 @@ export function AddApplicantDialog({
                 </div>
 
                 {quickFillTab === "link" ? (
-                  <div className="mb-3 flex flex-col gap-2">
-                    <Input
-                      value={manualProfileUrl}
-                      onChange={(e) => setManualProfileUrl(e.target.value)}
-                      placeholder="https://www.linkedin.com/in/…"
-                      id="add-applicant-profile-url"
-                    />
-                    <div className="text-xs text-muted-foreground">
-                      Supported links:{" "}
-                      <span className="font-medium text-primary">LinkedIn</span>
-                      {/* , <span className="font-medium text-primary">JobsDB</span> */}
-                    </div>
-                  </div>
+                  <Field
+                    data-invalid={showManualProfileUrlError || undefined}
+                    className="mb-3"
+                  >
+                    <FieldContent>
+                      <Input
+                        value={manualProfileUrl}
+                        onChange={(e) => {
+                          setManualProfileUrl(e.target.value);
+                          if (!manualProfileUrlTouched) {
+                            setManualProfileUrlTouched(true);
+                          }
+                        }}
+                        onBlur={() => setManualProfileUrlTouched(true)}
+                        placeholder="https://www.linkedin.com/in/…"
+                        id="add-applicant-profile-url"
+                        aria-invalid={showManualProfileUrlError || undefined}
+                      />
+                      {showManualProfileUrlError ? (
+                        <FieldError>{manualProfileUrlError}</FieldError>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Supported links:{" "}
+                          <span className="font-medium text-primary">
+                            LinkedIn
+                          </span>
+                          {/* , <span className="font-medium text-primary">JobsDB</span> */}
+                        </p>
+                      )}
+                    </FieldContent>
+                  </Field>
                 ) : (
                   <div className="mb-3 flex flex-col gap-2">
                     <Controller
@@ -818,7 +866,8 @@ export function AddApplicantDialog({
                   disabled={
                     profileAnalyzePending ||
                     (quickFillTab === "link"
-                      ? !manualProfileUrl.trim()
+                      ? !manualProfileUrl.trim() ||
+                        manualProfileUrlError.length > 0
                       : !addResumeText.trim())
                   }
                   onClick={() => void handleAnalyzeProfile()}

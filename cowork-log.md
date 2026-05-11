@@ -722,6 +722,40 @@
 
 **Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
 
+### [2026-05-12 00:52] - Fix LinkedIn type: compstring* → company* (real Apify response)
+
+**Prompt:** Real Apify actor response uses `companyName` etc., not `compstringName` — mapper was silently filtering out every experience row.
+
+**Output:** Rewrote [src/types/scraping.ts](src/types/scraping.ts): renamed `compstringName` / `compstringLinkedinUrl` / `compstringId` / `compstringUniversalName` / `compstringLogo` → `companyName` / `companyLinkedinUrl` / `companyId` / `companyUniversalName` / `companyLogo` on both `currentPosition[]` and `experience[]`. Tightened nullability from the live response: `topSkills`, `services`, `coverPicture`, `featured`, `coverPicture` → `T | null`; `currentPosition[].location` / `employmentType` / `workplaceType` / `description` → `string | null`; same for `experience[]`; `education[].schoolLogo` / `profileTopEducation[].schoolLogo` → `string | null`; `location.parsed.regionCode` → `string | null`. Kept `companyId` / `companyUniversalName` / `companyLogo` / `experienceGroupId` optional on `experience[]` because the third row in the sample (Y.I.M.) omits them.
+
+Updated the inline mapper in [src/server/routes/applicant-routes.ts](src/server/routes/applicant-routes.ts) `/scrape-profile-url` LinkedIn branch: `e.compstringName` → `e.companyName` in both the `experiences` map and the synthesized resume text loop. Pulled the description trim into a local `description` to keep the truthy spread tidy now that the field is explicitly `string | null`.
+
+Net effect: experience rows actually populate the dialog form on save; resume text dump shows `- Frontend Developer @ PTT Digital Solutions Company Limited (2 yrs 10 mos)` instead of `- Frontend Developer @ undefined`.
+
+**Edited:** `src/types/scraping.ts`, `src/server/routes/applicant-routes.ts`, `cowork-log.md`
+
+### [2026-05-12 00:46] - Client-side URL validation for Quick Fill link
+
+**Prompt:** Validate the Quick Fill link input client-side using shadcn Field validation.
+
+**Output:** Added linear `manualProfileUrlError` derivation right after `profileAnalyzePending` ([src/features/applicants-tracker/components/add-applicant-dialog.tsx](src/features/applicants-tracker/components/add-applicant-dialog.tsx)): if non-empty and `!URL.canParse` → "Invalid URL"; if hostname matches JobsDB (`jobsdb.com` / `.jobsdb.com` / `th.jobsdb.com` / `.jobsdb.th`) → "JobsDB ยังไม่รองรับ". Gated display behind `manualProfileUrlTouched` (set on first `onChange` and on `onBlur`) so an empty field doesn't flash red. Wrapped the Quick Fill link `Input` in `Field` + `FieldContent` + conditional `FieldError`; supported-links hint hides while the error is visible. `data-invalid` on the `Field`, `aria-invalid` on the `Input`. Analyze button now also disables when `manualProfileUrlError.length > 0`. `handleOpenChange` resets `manualProfileUrlTouched` alongside the URL on sheet close. Kept the toast.error fallbacks in `handleAnalyzeProfile` as belt-and-braces (defense if someone toggles disabled in devtools).
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-12 00:32] - Wire scrape() dispatcher into API + add-applicant-dialog
+
+**Prompt:** Implement `scrape()` to API and `add-applicant-dialog.tsx`. Replace `/scrape-profile-url` to use the new dispatcher; one round-trip from the link tab.
+
+**Output:** Rewrote `POST /applicants/scrape-profile-url` ([src/server/routes/applicant-routes.ts](src/server/routes/applicant-routes.ts)) to call `scrape(url)` from [src/server/lib/scraping.ts](src/server/lib/scraping.ts). LinkedIn branch: inline `ScrapedLinkedinProfile` → `ApplicantProfileMap` mapper (name from first+last, email from `emails[0]` — empty under "no email" mode, latestRole from `currentPosition[0].position` ?? `experience[0].position`, deduped skills from `topSkills` ∪ `skills[].name`, filtered `experience` / `education` rows). Also synthesizes a `resumeText` dump (headline, location, about, exp lines `position @ compstringName (duration) — location`, education, top skills) so downstream AI screening still has prose. Other branch: feeds Firecrawl markdown into existing `mapProfileTextFromRaw` and returns the markdown as `resumeText`. Response shape: `{ url, source: "linkedin" | "other", title, mapped, resumeText }`. Error handler keeps the existing statusCode narrowing. Removed duplicate `mapProfileTextFromRaw` import (one absolute + one relative). Dropped `scrapeCandidateProfileUrl` import — [src/server/lib/profile-url-scrape.ts](src/server/lib/profile-url-scrape.ts) has no consumers now but kept (out of scope to delete).
+
+Mutation cast in [src/features/applicants-tracker/api/mutations.ts](src/features/applicants-tracker/api/mutations.ts) `scrapeProfileUrl` updated to the new shape.
+
+Dialog ([src/features/applicants-tracker/components/add-applicant-dialog.tsx](src/features/applicants-tracker/components/add-applicant-dialog.tsx)) `handleAnalyzeProfile` link branch: client-side JobsDB host guard (`*.jobsdb.com` / `*.jobsdb.hk` / `hk.jobsdb.com`) toasts `"JobsDB scraping ยังไม่รองรับ"` and short-circuits before the round-trip. On success, `setValue("resumeText", result.resumeText)` + `applyMappedProfile(result.mapped)` in one go — dropped the chained `mapProfileText.mutateAsync` call (saves ~1 Gemini call per LinkedIn scrape). Text-tab branch and `ai_review` flow untouched.
+
+All four touched files lint-clean.
+
+**Edited:** `src/server/routes/applicant-routes.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-12 00:14] - scrape(link) dispatcher in scraping.ts
 
 **Prompt:** Implement linear `scrape(link)` in `src/server/lib/scraping.ts` — auto-detect LinkedIn / JobsDB / fallback. LinkedIn via Apify actor `LpVuK3Zozwuipa5bp` (`profileScraperMode: "Profile details no email ($4 per 1k)"`, `queries: [link]`), JobsDB commented stub, fallback via Firecrawl. No component wiring yet.

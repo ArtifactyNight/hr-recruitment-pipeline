@@ -45,8 +45,8 @@ export async function scrape(link: string): Promise<ScrapeResult> {
   } else if (
     h === "jobsdb.com" ||
     h.endsWith(".jobsdb.com") ||
-    h === "hk.jobsdb.com" ||
-    h.endsWith(".jobsdb.hk")
+    h === "th.jobsdb.com" ||
+    h.endsWith(".jobsdb.th")
   ) {
     // TODO: JobsDB scraper (Firecrawl / Apify / etc.)
     // const run = await apifyClient.actor("<jobsdb-actor-id>").call({ url: link });

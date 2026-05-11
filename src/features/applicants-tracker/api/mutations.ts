@@ -210,7 +210,13 @@ export const applicantMutations = {
           "scrape-profile-url"
         ].post({ url }, { fetch: { credentials: "include" } });
         if (error) throw error.value;
-        return data as { url: string; text: string; title: string };
+        return data as {
+          url: string;
+          source: "linkedin" | "other";
+          title: string;
+          mapped: ApplicantProfileMap;
+          resumeText: string;
+        };
       },
       onError: (e: unknown) => {
         toast.error(mutationErrorMessage(e));
