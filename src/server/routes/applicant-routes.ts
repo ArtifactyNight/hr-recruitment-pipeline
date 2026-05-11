@@ -209,10 +209,7 @@ const withScreeningPayloadSchema = z.object({
   resumeText: z.string().optional(),
 });
 
-function collectResumeUploadFiles(body: {
-  file?: File | null;
-  files?: File | Array<File> | null;
-}): Array<File> {
+function collectResumeUploadFiles(body: { files?: unknown }): Array<File> {
   const out: Array<File> = [];
   const multi = body.files;
   if (Array.isArray(multi)) {
@@ -223,9 +220,6 @@ function collectResumeUploadFiles(body: {
     }
   } else if (fileHasBytes(multi)) {
     out.push(multi);
-  }
-  if (fileHasBytes(body.file)) {
-    out.push(body.file);
   }
   return out;
 }
@@ -673,12 +667,14 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
   .post(
     "/with-resume",
     async ({ body, set, user }) => {
-      let raw: unknown;
-      try {
-        raw = JSON.parse(body.payload) as unknown;
-      } catch {
-        set.status = 400;
-        return { error: "payload ไม่ใช่ JSON ที่อ่านได้" };
+      let raw: unknown = body.payload;
+      if (typeof body.payload === "string") {
+        try {
+          raw = JSON.parse(body.payload) as unknown;
+        } catch {
+          set.status = 400;
+          return { error: "payload ไม่ใช่ JSON ที่อ่านได้" };
+        }
       }
       const parsed = withResumePayloadSchema.safeParse(raw);
       if (!parsed.success) {
@@ -867,9 +863,50 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
     {
       body: t.Object({
-        payload: t.String({ minLength: 2 }),
-        file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
-        files: t.Optional(t.Array(t.File({ maxSize: 8 * 1024 * 1024 }))),
+        payload: t.Union([
+          t.String({ minLength: 2 }),
+          t.Object({
+            name: t.String({ minLength: 1 }),
+            email: t.String({ format: "email" }),
+            phone: t.Optional(t.String()),
+            jobDescriptionId: t.String({ minLength: 1 }),
+            source: t.Optional(
+              t.Union([
+                t.Literal("LINKEDIN"),
+                t.Literal("JOBSDB"),
+                t.Literal("REFERRAL"),
+                t.Literal("OTHER"),
+              ]),
+            ),
+            cvText: t.Optional(t.String()),
+            jobPostingUrl: t.Optional(t.String()),
+            latestRole: t.Optional(t.String()),
+            skills: t.Optional(t.Array(t.String({ minLength: 1 }))),
+            experiences: t.Optional(
+              t.Array(
+                t.Object({
+                  company: t.String({ minLength: 1 }),
+                  role: t.String({ minLength: 1 }),
+                  description: t.Optional(t.String()),
+                }),
+              ),
+            ),
+            educations: t.Optional(
+              t.Array(
+                t.Object({
+                  school: t.String({ minLength: 1 }),
+                  degree: t.String({ minLength: 1 }),
+                }),
+              ),
+            ),
+          }),
+        ]),
+        files: t.Optional(
+          t.Union([
+            t.Array(t.File({ maxSize: 8 * 1024 * 1024 })),
+            t.Object({}),
+          ]),
+        ),
       }),
       detail: {
         tags: ["applicants"],

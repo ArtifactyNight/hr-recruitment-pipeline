@@ -1,3 +1,11 @@
+### [2026-05-11 17:46] - Remove `file` body from `/applicants/with-resume`
+
+**Prompt:** Remove `file` from `/applicants/with-resume`; single upload must use `files` array.
+
+**Output:** Updated `POST /applicants/with-resume` body schema to remove `file` and keep `files` as upload input. Updated `collectResumeUploadFiles()` contract to consume only `files`, preserving array handling plus compatibility for empty multipart object (`files: {}`). Verified caller already sends `{ payload, files }` in applicants mutation. Typecheck and lints pass.
+
+**Edited:** `src/server/routes/applicant-routes.ts`, `cowork-log.md`
+
 ### [2026-05-11] - Add applicant: manual JD URL, lists, multi-PDF
 
 **Prompt:** Implement plan: move job posting URL to manual; experience/education/certificate dynamic lists; remove plain-text CV in manual; multi-file dropzone; Prisma Applicant fields + ApplicantResume; shadcn Field + RHF.
@@ -539,6 +547,14 @@
 **Output:** Wired the add applicant dialog to `react-hook-form` with a Zod resolver, shadcn `FieldError` validation states, submit-based manual/AI-confirm saves, and grouped radix `SelectItem` composition while keeping Zustand synced as the tracker source of truth.
 **Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
 
+### [2026-05-11 17:35] - Fix /with-resume payload validation mismatch
+
+**Prompt:** error with /resume route — backend validation expects `payload` string and `files` array, but request sends object payload and empty files object.
+
+**Output:** Updated `POST /applicants/with-resume` to accept both `payload` as JSON string **or** object. Handler now parses JSON only when payload is a string; object payload goes straight into Zod validation. Relaxed `files` request schema to allow either file array or empty object so multipart clients that send `files: {}` no longer fail TypeBox validation before business logic runs. Kept existing resume file extraction behavior and validations.
+
+**Edited:** `src/server/routes/applicant-routes.ts`, `cowork-log.md`
+
 ### [2026-05-10 23:23] - Migrate Clerk to Better Auth
 
 **Prompt:** Remove Clerk and migrate to better-auth (Google OAuth only). Tasks: (1) migrate middleware to better-auth with Elysia auth plugin, (2) build sign-in page with shadcn UI.
@@ -615,5 +631,13 @@
 **Prompt:** Use shadcn Select component for target role.
 
 **Output:** Replaced native `<select>` with `Select` / `SelectTrigger` / `SelectValue` / `SelectContent` / `SelectGroup` / `SelectItem` from `@/components/ui/select` for both manual flow and AI review `jobId` field. Empty selection uses `value={field.value || undefined}` + `SelectValue placeholder="Select role"`. Full-width trigger (`className="w-full"`), `position="popper"` on content, `aria-invalid` + `FieldError` unchanged. AI review block now uses `Field` + `FieldLabel` + `FieldContent` instead of raw `Label` + `<p>` for errors.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-11 17:29] - Add Applicant: Dialog → Sheet
+
+**Prompt:** Convert shadcn Dialog to shadcn Sheet in add-applicant-dialog.tsx.
+
+**Output:** Swapped `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle` for `Sheet`/`SheetContent`/`SheetHeader`/`SheetTitle`. Sheet slides in from the right (`side="right"`), width overridden to `data-[side=right]:sm:max-w-xl md:data-[side=right]:sm:max-w-2xl` so the form has breathing room (default sheet cap is `sm:max-w-sm`). Scroll container switched from `max-h-[75vh] overflow-y-auto` to `flex-1 overflow-y-auto` to fit the full-height sheet. Header padding compacted to `px-5 py-4` and gets `pr-8` to clear the built-in `SheetClose` × button. Component name `AddApplicantDialog` and file name kept intact to avoid touching `src/app/(dashboard)/candidates/page.tsx`. `tsc --noEmit` + lints clean.
 
 **Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`

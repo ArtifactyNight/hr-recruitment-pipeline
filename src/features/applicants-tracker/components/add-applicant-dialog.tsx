@@ -5,12 +5,6 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Field,
   FieldContent,
   FieldError,
@@ -27,6 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
@@ -599,10 +599,15 @@ export function AddApplicantDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={cn("overflow-hidden p-0 gap-0 sm:max-w-3xl")}>
-        <DialogHeader className="border-b px-5 pb-4 pt-5">
-          <div className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        side="right"
+        className={cn(
+          "gap-0 p-0 sm:max-w-xl data-[side=right]:sm:max-w-xl md:data-[side=right]:sm:max-w-2xl",
+        )}
+      >
+        <SheetHeader className="border-b px-5 py-4">
+          <div className="flex items-center gap-2 pr-8">
             {addFlowStep !== "pick" ? (
               <button
                 type="button"
@@ -618,16 +623,16 @@ export function AddApplicantDialog({
                 <ArrowLeftIcon className="size-4" />
               </button>
             ) : null}
-            <DialogTitle className="text-base font-semibold">
+            <SheetTitle className="text-base font-semibold">
               {addFlowStep === "pick" && "Add Applicant"}
               {addFlowStep === "manual" && "Manual Input"}
               {addFlowStep === "ai_review" && "AI Resume Screener"}
               {addFlowStep === "ai_result" && "AI Score Card"}
-            </DialogTitle>
+            </SheetTitle>
           </div>
-        </DialogHeader>
+        </SheetHeader>
 
-        <div className="max-h-[75vh] overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-5">
           {addFlowStep === "pick" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
@@ -1548,7 +1553,7 @@ export function AddApplicantDialog({
             </div>
           ) : null}
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
