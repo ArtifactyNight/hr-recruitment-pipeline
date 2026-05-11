@@ -1,12 +1,12 @@
-import type { ApplicantProfileMap } from "@/features/applicants-tracker/lib/applicant-profile-map-schema";
+import type { ApplicantProfileMap } from "@/features/applicants-tracker/schemas";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
-import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
+import type { FitReport } from "@/features/screener/schemas";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { api } from "@/lib/api";
 import type { QueryClient } from "@tanstack/react-query";
 import { mutationOptions } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { TrackerApplicant } from "../lib/applicant-tracker-model";
+import type { TrackerApplicant } from "../types";
 import type { ListResponse } from "./queries";
 
 function mutationErrorMessage(err: unknown): string {

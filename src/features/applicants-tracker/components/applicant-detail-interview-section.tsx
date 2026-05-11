@@ -3,7 +3,7 @@
 import type {
   TrackerApplicant,
   TrackerApplicantInterview,
-} from "@/features/applicants-tracker/lib/applicant-tracker-model";
+} from "@/features/applicants-tracker/types";
 import { addMinutes, format } from "date-fns";
 import { th } from "date-fns/locale";
 import { ExternalLinkIcon, VideoIcon } from "lucide-react";

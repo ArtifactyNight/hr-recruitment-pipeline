@@ -19,8 +19,7 @@ import {
   stageBoardTitle,
   stageDotClass,
   type TrackerApplicant,
-} from "@/features/applicants-tracker/lib/applicant-tracker-model";
-import { canonicalizeKanbanColumns } from "@/features/applicants-tracker/lib/tracker-display-helpers";
+} from "@/features/applicants-tracker/types";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -122,7 +121,10 @@ export function ApplicantKanbanBoardView({
 
   const onKanbanChange = useCallback(
     (next: Record<string, Array<TrackerApplicant>>) => {
-      const fixed = canonicalizeKanbanColumns(next);
+      const fixed: Record<string, Array<TrackerApplicant>> = {};
+      for (const id of STAGE_ORDER) {
+        fixed[id] = next[id] ?? [];
+      }
       setOverride(fixed);
       const patches = listStagePatches(fixed);
       if (patches.length === 0) return;

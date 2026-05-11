@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
-import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
+import type { TrackerApplicant } from "@/features/applicants-tracker/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronsUpDownIcon,

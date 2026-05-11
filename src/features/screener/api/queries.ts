@@ -1,4 +1,4 @@
-import type { JobDetailResponse } from "@/features/screener/lib/resume-screener-utils";
+import type { JobDetailResponse } from "@/features/screener/types";
 import { api } from "@/lib/api";
 import { queryOptions } from "@tanstack/react-query";
 import { toast } from "sonner";

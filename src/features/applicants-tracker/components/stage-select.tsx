@@ -10,7 +10,7 @@ import {
 import {
   STAGE_ORDER,
   stageLabel,
-} from "@/features/applicants-tracker/lib/applicant-tracker-model";
+} from "@/features/applicants-tracker/types";
 import type { ApplicantStage } from "@/generated/prisma/client";
 
 type StageSelectProps = {

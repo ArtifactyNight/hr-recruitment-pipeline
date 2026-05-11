@@ -4,7 +4,7 @@ import {
   NO_GOOGLE_OAUTH_TOKEN,
 } from "@/lib/get-google-token";
 import prisma from "@/lib/prisma";
-import { authPlugin } from "@/server/lib/auth-plugin";
+import { authPlugin } from "@/lib/auth-plugin";
 import { addHours, subHours } from "date-fns";
 import { Elysia, t } from "elysia";
 
@@ -17,9 +17,9 @@ import {
   listPrimaryCalendarEvents,
   patchEventDetails,
   snapshotFromGoogleCalendarEvent,
-} from "@/server/google-calendar/google-calendar-service";
-import { findDbInterviewConflict } from "@/server/lib/interview-scheduling";
-import { ensureInterviewerIdsFromEmails } from "@/server/lib/interviewer-email";
+} from "@/lib/google-calendar-service";
+import { findDbInterviewConflict } from "@/lib/interview-scheduling";
+import { ensureInterviewerIdsFromEmails } from "@/lib/interviewer-email";
 import type { InterviewCalendarUiSnapshot } from "@/types/interview-calendar-snapshot";
 
 const TZ = "Asia/Bangkok";

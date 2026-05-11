@@ -1,6 +1,5 @@
 "use client";
 
-import { trimItems } from "@/features/screener/lib/resume-screener-utils";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
@@ -21,7 +20,7 @@ export function ReportBulletBlock({
   iconClassName,
   titleClassName,
 }: ReportBulletBlockProps) {
-  const list = trimItems(items);
+  const list = items.map((s) => s.trim()).filter(Boolean);
   return (
     <div className="rounded-lg border border-border/80 p-4">
       <p

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
-import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
-import type { TrackerApplicant } from "../lib/applicant-tracker-model";
+import type { FitReport } from "@/features/screener/schemas";
+import type { TrackerApplicant } from "../types";
 
 type AddSource = "LINKEDIN" | "JOBSDB" | "REFERRAL" | "OTHER";
 

@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   stageDotClass,
   stageLabel,
-} from "@/features/applicants-tracker/lib/applicant-tracker-model";
+} from "@/features/applicants-tracker/types";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";

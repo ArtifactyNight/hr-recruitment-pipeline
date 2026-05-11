@@ -1,7 +1,59 @@
-import {
-  extractScrapedTitle,
-  stripHtml,
-} from "@/server/lib/html-scrape-helpers";
+export function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&nbsp;/gi, " ");
+}
+
+export function extractScrapedTitle(html: string): string {
+  const ogTitle =
+    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>/i.exec(
+      html,
+    );
+  if (ogTitle?.[1]) {
+    return decodeHtmlEntities(ogTitle[1]).trim();
+  }
+  const titleTag = /<title[^>]*>([^<]+)<\/title>/i.exec(html);
+  if (titleTag?.[1]) {
+    return decodeHtmlEntities(titleTag[1]).trim();
+  }
+  return "";
+}
+
+export function extractScrapedMeta(html: string, name: string): string {
+  const safe = name.replace(/[^a-z0-9:_-]/gi, "");
+  const ogPattern = new RegExp(
+    `<meta[^>]+property=["']og:${safe}["'][^>]+content=["']([^"']+)["'][^>]*>`,
+    "i",
+  );
+  const og = ogPattern.exec(html);
+  if (og?.[1]) {
+    return decodeHtmlEntities(og[1]).trim();
+  }
+  const namePattern = new RegExp(
+    `<meta[^>]+name=["']${safe}["'][^>]+content=["']([^"']+)["'][^>]*>`,
+    "i",
+  );
+  const m = namePattern.exec(html);
+  if (m?.[1]) {
+    return decodeHtmlEntities(m[1]).trim();
+  }
+  return "";
+}
 
 export function isAllowedCandidateProfileHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
@@ -57,10 +109,6 @@ async function scrapeWithFirecrawl(
   throw Object.assign(new Error(errMsg), { statusCode: 502 });
 }
 
-/**
- * Fetch public profile HTML (LinkedIn / JobsDB) and return plain text for AI mapping.
- * Uses plain fetch first; if content is too short and FIRECRAWL_API_KEY is set, retries via Firecrawl.
- */
 export async function scrapeCandidateProfileUrl(
   url: string,
 ): Promise<{ text: string; title: string }> {

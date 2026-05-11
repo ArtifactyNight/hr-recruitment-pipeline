@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import { queryOptions } from "@tanstack/react-query";
-import type { TrackerApplicant } from "../lib/applicant-tracker-model";
+import type { TrackerApplicant } from "../types";
 import { applicantKeys } from "./query-keys";
 
 export const applicantQueries = {

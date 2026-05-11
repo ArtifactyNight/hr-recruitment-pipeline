@@ -1,4 +1,4 @@
-import type { TrackerApplicant } from "../lib/applicant-tracker-model";
+import type { TrackerApplicant } from "../types";
 
 export const applicantKeys = {
   all: ["applicants"] as const,

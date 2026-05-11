@@ -1,7 +1,6 @@
 import { FitStatus } from "@/generated/prisma/enums";
 import { z } from "zod";
 
-/** AI structured output + API payloads - camelCase + Schema suffix per project rules */
 export const fitReportSchema = z.object({
   overallScore: z.number().min(0).max(10),
   fitStatus: z.nativeEnum(FitStatus),
@@ -19,7 +18,6 @@ export const fitReportSchema = z.object({
 
 export type FitReport = z.infer<typeof fitReportSchema>;
 
-/** Structured output from evaluate - includes contact inference from CV */
 export const screeningEvaluateSchema = fitReportSchema.extend({
   detectedName: z.string().nullable().optional(),
   detectedEmail: z.string().nullable().optional(),

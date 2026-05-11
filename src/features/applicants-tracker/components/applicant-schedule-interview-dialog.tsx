@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   parseInterviewerEmails,
   scheduleInterviewFormSchema,
-} from "@/features/applicants-tracker/lib/schedule-interview-schema";
+} from "@/features/applicants-tracker/schemas";
 import { format } from "date-fns";
 import { Loader2Icon } from "lucide-react";
 import {

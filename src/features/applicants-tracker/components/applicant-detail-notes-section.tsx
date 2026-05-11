@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
+import type { TrackerApplicant } from "@/features/applicants-tracker/types";
 import { Loader2Icon, PencilLineIcon } from "lucide-react";
 
 type ApplicantDetailNotesSectionProps = {

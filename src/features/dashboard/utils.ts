@@ -1,4 +1,3 @@
-/** Thai labels for URL segments (breadcrumb + nav). */
 export const routeSegmentLabels: Record<string, string> = {
   screener: "ตรวจสอบ Resume",
   interviews: "นัดหมายสัมภาษณ์",

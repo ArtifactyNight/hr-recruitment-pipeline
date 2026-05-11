@@ -11,7 +11,7 @@ import {
 import {
   labelForDynamicSegment,
   routeSegmentLabels,
-} from "@/features/dashboard/lib/route-labels";
+} from "@/features/dashboard/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";

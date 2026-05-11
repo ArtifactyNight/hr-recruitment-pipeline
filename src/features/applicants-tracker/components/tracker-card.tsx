@@ -3,11 +3,11 @@
 import { KanbanItem, KanbanItemHandle } from "@/components/reui/kanban";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { type TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
+import { type TrackerApplicant } from "@/features/applicants-tracker/types";
 import {
   scoreBadgeClass,
   sourceLabel,
-} from "@/features/applicants-tracker/lib/tracker-display-helpers";
+} from "@/features/applicants-tracker/utils";
 import { cn } from "@/lib/utils";
 import { RiStarFill } from "@remixicon/react";
 import { format } from "date-fns";

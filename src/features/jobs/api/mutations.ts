@@ -1,4 +1,4 @@
-import type { CreateJobFormValues } from "@/features/jobs/lib/job-description-schema";
+import type { CreateJobFormValues } from "@/features/jobs/schemas";
 import { api } from "@/lib/api";
 import type { QueryClient } from "@tanstack/react-query";
 import { mutationOptions } from "@tanstack/react-query";

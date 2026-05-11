@@ -1,16 +1,16 @@
-import { addToTrackerBodySchema } from "@/features/screener/lib/fit-report-schemas";
+import { addToTrackerBodySchema } from "@/features/screener/schemas";
 import prisma from "@/lib/prisma";
 import {
   isR2Configured,
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
-import { authPlugin } from "@/server/lib/auth-plugin";
+import { authPlugin } from "@/lib/auth-plugin";
 import {
   evaluateResumeAgainstJob,
   fileHasBytes,
   fitReportToScreeningScalars,
-} from "@/server/lib/resume-screening-service";
+} from "@/lib/resume-screening-service";
 import { randomUUID } from "node:crypto";
 
 import { Elysia, t } from "elysia";

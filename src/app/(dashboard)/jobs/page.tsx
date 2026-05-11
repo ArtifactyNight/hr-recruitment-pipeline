@@ -17,10 +17,8 @@ import { jobMutations } from "@/features/jobs/api/mutations";
 import { jobQueries } from "@/features/jobs/api/queries";
 import { JobFormDialog } from "@/features/jobs/components/job-form-dialog";
 import { JobsTable } from "@/features/jobs/components/jobs-table";
-import type {
-  AdminJobRow,
-  CreateJobFormValues,
-} from "@/features/jobs/lib/job-description-schema";
+import type { AdminJobRow } from "@/features/jobs/types";
+import type { CreateJobFormValues } from "@/features/jobs/schemas";
 import { useJobsStore } from "@/features/jobs/store/jobs-store";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";

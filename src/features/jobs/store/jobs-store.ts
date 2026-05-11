@@ -1,4 +1,4 @@
-import type { AdminJobRow } from "@/features/jobs/lib/job-description-schema";
+import type { AdminJobRow } from "@/features/jobs/types";
 import { create } from "zustand";
 
 interface JobsState {

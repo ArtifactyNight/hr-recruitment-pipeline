@@ -2,8 +2,8 @@
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert";
 import { Button } from "@/components/ui/button";
-import type { TrackerApplicant } from "@/features/applicants-tracker/lib/applicant-tracker-model";
-import { formatScoreOneDecimal } from "@/features/applicants-tracker/lib/tracker-display-helpers";
+import type { TrackerApplicant } from "@/features/applicants-tracker/types";
+import { formatScoreOneDecimal } from "@/features/applicants-tracker/utils";
 import { RiSparklingFill } from "@remixicon/react";
 import { Loader2Icon, RefreshCwIcon } from "lucide-react";
 

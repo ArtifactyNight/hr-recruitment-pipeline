@@ -1,4 +1,4 @@
-import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
+import type { FitReport } from "@/features/screener/schemas";
 import { create } from "zustand";
 
 interface ResumeScreenerState {

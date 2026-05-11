@@ -48,10 +48,6 @@ export async function scrape(link: string): Promise<ScrapeResult> {
     h === "th.jobsdb.com" ||
     h.endsWith(".jobsdb.th")
   ) {
-    // TODO: JobsDB scraper (Firecrawl / Apify / etc.)
-    // const run = await apifyClient.actor("<jobsdb-actor-id>").call({ url: link });
-    // const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
-    // return { kind: "jobsdb", url: link, data: items[0] as ScrapedJobsdbPosting };
     throw Object.assign(new Error("JobsDB scraping ยังไม่ได้ implement"), {
       statusCode: 501,
     });

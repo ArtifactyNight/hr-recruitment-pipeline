@@ -7,8 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
-import { trimItems } from "@/features/screener/lib/resume-screener-utils";
+import type { FitReport } from "@/features/screener/schemas";
 import {
   AlertTriangleIcon,
   CheckIcon,
@@ -141,13 +140,13 @@ export function ScreenerReportPanel({
               <MailQuestion className="size-4" />
               คำถามในการโทรคัดกรองเบื้องต้น
             </div>
-            {trimItems(report.suggestedQuestions).length === 0 ? (
+            {report.suggestedQuestions.map((s) => s.trim()).filter(Boolean).length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 ยังไม่มีคำถามแนะนำ (ลองรันวิเคราะห์อีกครั้งหรือปรับเนื้อหา CV)
               </p>
             ) : (
               <ol className="mt-3 list-decimal ps-5 text-sm leading-relaxed">
-                {trimItems(report.suggestedQuestions).map((question, index) => (
+                {report.suggestedQuestions.map((s) => s.trim()).filter(Boolean).map((question, index) => (
                   <li
                     key={`${String(index)}-${question.slice(0, 24)}`}
                     className="py-1"

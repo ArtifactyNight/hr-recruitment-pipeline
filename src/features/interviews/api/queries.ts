@@ -45,7 +45,7 @@ export const interviewQueries = {
         });
         if (error) throw error.value;
         return data as {
-          applicants: import("@/features/applicants-tracker/lib/applicant-tracker-model").TrackerApplicant[];
+          applicants: import("@/features/applicants-tracker/types").TrackerApplicant[];
         };
       },
       staleTime: 60_000,

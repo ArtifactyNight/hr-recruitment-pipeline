@@ -13,8 +13,8 @@ import { StageSelect } from "@/features/applicants-tracker/components/stage-sele
 import {
   initialsFromName,
   type TrackerApplicant,
-} from "@/features/applicants-tracker/lib/applicant-tracker-model";
-import { sourceLabel } from "@/features/applicants-tracker/lib/tracker-display-helpers";
+} from "@/features/applicants-tracker/types";
+import { sourceLabel } from "@/features/applicants-tracker/utils";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";

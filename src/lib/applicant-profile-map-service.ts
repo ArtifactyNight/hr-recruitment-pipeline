@@ -1,7 +1,7 @@
 import {
   applicantProfileMapSchema,
   type ApplicantProfileMap,
-} from "@/features/applicants-tracker/lib/applicant-profile-map-schema";
+} from "@/features/applicants-tracker/schemas";
 import { google } from "@ai-sdk/google";
 import { generateText, Output, zodSchema } from "ai";
 import { createFallback } from "ai-fallback";
@@ -73,10 +73,14 @@ function normalizeMappedProfile(raw: ApplicantProfileMap): ApplicantProfileMap {
   };
 }
 
-export async function mapProfileTextFromRaw(input: {
+type MapProfileTextFromRawInput = {
   profileText: string;
   profileUrl?: string;
-}): Promise<ApplicantProfileMap> {
+};
+
+export async function mapProfileTextFromRaw(
+  input: MapProfileTextFromRawInput,
+): Promise<ApplicantProfileMap> {
   const trimmed = input.profileText.trim();
   if (!trimmed) {
     throw Object.assign(new Error("ไม่มีข้อความโปรไฟล์"), {

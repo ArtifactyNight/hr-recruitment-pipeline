@@ -1,4 +1,4 @@
-import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
+import type { FitReport } from "@/features/screener/schemas";
 import { api } from "@/lib/api";
 import type { QueryClient } from "@tanstack/react-query";
 import { mutationOptions } from "@tanstack/react-query";

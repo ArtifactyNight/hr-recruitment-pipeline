@@ -21,12 +21,14 @@ function intervalsOverlap(
   return aMs < bEnd && aEnd > bMs;
 }
 
-export async function findDbInterviewConflict(opts: {
+type FindDbInterviewConflictOpts = {
   organizerUserId: string;
   slotStart: Date;
   durationMinutes: number;
   excludeInterviewId?: string | undefined;
-}) {
+};
+
+export async function findDbInterviewConflict(opts: FindDbInterviewConflictOpts) {
   const windowStart = addMinutes(opts.slotStart, -opts.durationMinutes * 2);
   const windowEnd = addMinutes(
     opts.slotStart,

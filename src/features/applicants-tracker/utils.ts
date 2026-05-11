@@ -1,17 +1,4 @@
-import {
-  STAGE_ORDER,
-  type TrackerApplicant,
-} from "@/features/applicants-tracker/lib/applicant-tracker-model";
-
-export function canonicalizeKanbanColumns(
-  cols: Record<string, Array<TrackerApplicant>>,
-): Record<string, Array<TrackerApplicant>> {
-  const out: Record<string, Array<TrackerApplicant>> = {};
-  for (const id of STAGE_ORDER) {
-    out[id] = cols[id] ?? [];
-  }
-  return out;
-}
+import type { TrackerApplicant } from "@/features/applicants-tracker/types";
 
 export function sourceLabel(source: TrackerApplicant["source"]): string {
   switch (source) {

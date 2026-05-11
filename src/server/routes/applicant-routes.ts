@@ -1,5 +1,5 @@
-import type { ApplicantProfileMap } from "@/features/applicants-tracker/lib/applicant-profile-map-schema";
-import { fitReportSchema } from "@/features/screener/lib/fit-report-schemas";
+import type { ApplicantProfileMap } from "@/features/applicants-tracker/schemas";
+import { fitReportSchema } from "@/features/screener/schemas";
 import {
   type ApplicantSource,
   type ApplicantStage,
@@ -15,19 +15,19 @@ import {
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
-import { mapProfileTextFromRaw } from "@/server/lib/applicant-profile-map-service";
-import { authPlugin } from "@/server/lib/auth-plugin";
+import { mapProfileTextFromRaw } from "@/lib/applicant-profile-map-service";
+import { authPlugin } from "@/lib/auth-plugin";
 import {
   extractScrapedMeta,
   extractScrapedTitle,
   stripHtml,
-} from "@/server/lib/html-scrape-helpers";
+} from "@/lib/profile-url-scrape";
 import {
   evaluateResumeAgainstJob,
   fileHasBytes,
   fitReportToScreeningScalars,
-} from "@/server/lib/resume-screening-service";
-import { scrape } from "@/server/lib/scraping";
+} from "@/lib/resume-screening-service";
+import { scrape } from "@/lib/scraping";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";

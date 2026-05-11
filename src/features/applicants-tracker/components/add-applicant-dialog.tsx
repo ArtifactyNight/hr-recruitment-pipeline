@@ -31,7 +31,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
-import type { ApplicantProfileMap } from "@/features/applicants-tracker/lib/applicant-profile-map-schema";
+import type { ApplicantProfileMap } from "@/features/applicants-tracker/schemas";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";

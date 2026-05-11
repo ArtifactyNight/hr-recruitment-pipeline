@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   fitStatusBadgeClassName,
   getFitStatusLabel,
-} from "@/features/screener/lib/fit-status";
+} from "@/features/screener/utils";
 import { FitStatus } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 

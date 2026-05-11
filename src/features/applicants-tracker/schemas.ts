@@ -1,6 +1,38 @@
 import { z } from "zod";
 
-/** Client form before splitting interviewer emails. */
+export const applicantProfileExperienceItemSchema = z.object({
+  company: z.string(),
+  role: z.string(),
+  description: z.string().optional(),
+});
+
+export const applicantProfileEducationItemSchema = z.object({
+  school: z.string(),
+  degree: z.string(),
+});
+
+export const applicantProfileSourceSuggestionSchema = z.enum([
+  "LINKEDIN",
+  "JOBSDB",
+  "REFERRAL",
+  "OTHER",
+]);
+
+export const applicantProfileMapSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  phone: z.union([z.string(), z.null()]).optional(),
+  latestRole: z.union([z.string(), z.null()]).optional(),
+  skills: z.array(z.string()),
+  experiences: z.array(applicantProfileExperienceItemSchema),
+  educations: z.array(applicantProfileEducationItemSchema),
+  sourceSuggestion: z
+    .union([applicantProfileSourceSuggestionSchema, z.null()])
+    .optional(),
+});
+
+export type ApplicantProfileMap = z.infer<typeof applicantProfileMapSchema>;
+
 export const scheduleInterviewFormSchema = z.object({
   datetimeLocal: z.string().min(1, "เลือกวันและเวลา"),
   durationMinutes: z.coerce.number().int().min(15).max(480),

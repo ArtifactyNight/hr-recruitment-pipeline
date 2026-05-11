@@ -4,8 +4,8 @@ import { useCallback, useMemo, type ChangeEvent } from "react";
 
 import { screenerMutations } from "@/features/screener/api/mutations";
 import { screenerQueries } from "@/features/screener/api/queries";
-import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
-import { formatReportText } from "@/features/screener/lib/resume-screener-utils";
+import type { FitReport } from "@/features/screener/schemas";
+import { formatReportText } from "@/features/screener/utils";
 import { useResumeScreenerStore } from "@/features/screener/store/resume-screener-store";
 import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

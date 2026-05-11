@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { routeSegmentLabels } from "@/features/dashboard/lib/route-labels";
+import { routeSegmentLabels } from "@/features/dashboard/utils";
 import { authClient } from "@/lib/auth-client";
 import {
   BriefcaseIcon,

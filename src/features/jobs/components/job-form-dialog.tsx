@@ -15,9 +15,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createJobFormSchema,
-  type AdminJobRow,
   type CreateJobFormValues,
-} from "@/features/jobs/lib/job-description-schema";
+} from "@/features/jobs/schemas";
+import type { AdminJobRow } from "@/features/jobs/types";
 import { useState } from "react";
 
 type JobFormDialogProps = {

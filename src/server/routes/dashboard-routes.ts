@@ -1,6 +1,6 @@
 import type { ApplicantStage } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
-import { authPlugin } from "@/server/lib/auth-plugin";
+import { authPlugin } from "@/lib/auth-plugin";
 import { Elysia } from "elysia";
 
 const PIPELINE_STAGES: ApplicantStage[] = [

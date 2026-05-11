@@ -10,7 +10,6 @@ export type TrackerApplicantInterviewer = {
   title: string | null;
 };
 
-/** Latest active interview for current organizer (see GET /applicants). */
 export type TrackerApplicantInterview = {
   id: string;
   scheduledAt: string;
@@ -140,8 +139,7 @@ export function initialsFromName(name: string): string {
   return name.trim().slice(0, 2).toUpperCase() || "?";
 }
 
-/** Map `POST /interviews` embedded interview row → tracker DTO. */
-export function trackerInterviewFromScheduleResponse(interview: {
+type ScheduleResponseInterview = {
   id: string;
   scheduledAt: Date | string;
   durationMinutes: number;
@@ -154,7 +152,11 @@ export function trackerInterviewFromScheduleResponse(interview: {
     email: string;
     title: string | null;
   }>;
-}): TrackerApplicantInterview {
+};
+
+export function trackerInterviewFromScheduleResponse(
+  interview: ScheduleResponseInterview,
+): TrackerApplicantInterview {
   const scheduledAt =
     typeof interview.scheduledAt === "string"
       ? interview.scheduledAt
