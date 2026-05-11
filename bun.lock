@@ -319,7 +319,7 @@
 
     "@electric-sql/pglite-tools": ["@electric-sql/pglite-tools@0.3.1", "https://registry.better-npm.dev/@electric-sql/pglite-tools/-/pglite-tools-0.3.1.tgz", { "peerDependencies": { "@electric-sql/pglite": "0.4.1" } }, "sha512-C+T3oivmy9bpQvSxVqXA1UDY8cB9Eb9vZHL9zxWwEUfDixbXv4G3r2LjoTdR33LD8aomR3O9ZXEO3XEwr/cUCA=="],
 
-    "@elysia/openapi": ["@elysia/openapi@1.4.15", "", { "peerDependencies": { "elysia": ">= 1.4.0" } }, "sha512-MrVGCPo5hnRF4/yWGOyH5ddjt4DlSIbeC5rrkupQtHY8TEQe+XdJa2YM9aUOrtgtRcy4UNGyiVlLl/jllPkPQA=="],
+    "@elysia/openapi": ["@elysia/openapi@1.4.15", "https://registry.better-npm.dev/@elysia/openapi/-/openapi-1.4.15.tgz", { "peerDependencies": { "elysia": ">= 1.4.0" } }, "sha512-MrVGCPo5hnRF4/yWGOyH5ddjt4DlSIbeC5rrkupQtHY8TEQe+XdJa2YM9aUOrtgtRcy4UNGyiVlLl/jllPkPQA=="],
 
     "@elysiajs/eden": ["@elysiajs/eden@1.4.9", "https://registry.better-npm.dev/@elysiajs/eden/-/eden-1.4.9.tgz", { "peerDependencies": { "elysia": ">=1.4.19" } }, "sha512-3CKVD4ycVjB8nCNssfmhnUuq3SzSHkUES3v5PNCFr9LxIrx39/HVRAZ8z2sLxrFqzUs48dCBZaxoZzJ5UUVHDA=="],
 

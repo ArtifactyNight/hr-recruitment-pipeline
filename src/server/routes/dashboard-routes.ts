@@ -17,12 +17,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
   .get(
     "/stats",
     async ({ user }) => {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+      sixMonthsAgo.setDate(1);
+      sixMonthsAgo.setHours(0, 0, 0, 0);
+
       const [
         stageGroups,
         screeningStats,
         upcomingInterviewRows,
         recentApplicantRows,
         openPositionRows,
+        monthlyApplicantRows,
       ] = await Promise.all([
         prisma.applicant.groupBy({
           by: ["stage"],
@@ -67,6 +73,10 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
             title: true,
             _count: { select: { applicants: true } },
           },
+        }),
+        prisma.applicant.findMany({
+          where: { appliedAt: { gte: sixMonthsAgo } },
+          select: { appliedAt: true },
         }),
       ]);
 
@@ -115,6 +125,22 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         applicantCount: row._count.applicants,
       }));
 
+      const monthlyMap = new Map<string, number>();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        monthlyMap.set(key, 0);
+      }
+      for (const row of monthlyApplicantRows) {
+        const key = `${row.appliedAt.getFullYear()}-${String(row.appliedAt.getMonth() + 1).padStart(2, "0")}`;
+        if (monthlyMap.has(key)) monthlyMap.set(key, (monthlyMap.get(key) ?? 0) + 1);
+      }
+      const monthlyTrend = Array.from(monthlyMap.entries()).map(([month, count]) => ({
+        month,
+        count,
+      }));
+
       return {
         totalApplicants,
         inProgress,
@@ -127,6 +153,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         recentApplicants,
         upcomingInterviewList,
         openPositions,
+        monthlyTrend,
       };
     },
     { detail: { tags: ["dashboard"], summary: "Dashboard stats" } },

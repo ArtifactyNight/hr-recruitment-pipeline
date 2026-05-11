@@ -2,6 +2,7 @@
 
 import { Container } from "@/components/layout/container";
 import { dashboardQueries } from "@/features/dashboard/api/queries";
+import { DashboardApplicantsTrend } from "@/features/dashboard/components/dashboard-applicants-trend";
 import { DashboardOpenPositions } from "@/features/dashboard/components/dashboard-open-positions";
 import { DashboardPipelineOverview } from "@/features/dashboard/components/dashboard-pipeline-overview";
 import { DashboardRecentApplicants } from "@/features/dashboard/components/dashboard-recent-applicants";
@@ -41,16 +42,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <DashboardUpcomingInterviews
-          upcomingInterviewList={data?.upcomingInterviewList ?? []}
-          loading={statsQuery.isLoading}
-        />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <DashboardApplicantsTrend
+            monthlyTrend={data?.monthlyTrend ?? []}
+            loading={statsQuery.isLoading}
+          />
+        </div>
         <DashboardOpenPositions
           openPositions={data?.openPositions ?? []}
           loading={statsQuery.isLoading}
         />
       </div>
+
+      <DashboardUpcomingInterviews
+        upcomingInterviewList={data?.upcomingInterviewList ?? []}
+        loading={statsQuery.isLoading}
+      />
     </Container>
   );
 }
