@@ -27,7 +27,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       });
       return { jobs };
     },
-    { detail: { tags: ["screener"], summary: "รายการตำแหน่งงานที่เปิดรับ" } },
+    { detail: { tags: ["screener"], summary: "List open job positions" } },
   )
   .get(
     "/jobs/:id",
@@ -46,7 +46,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
         requirements: job.requirements,
       };
     },
-    { detail: { tags: ["screener"], summary: "รายละเอียด JD" } },
+    { detail: { tags: ["screener"], summary: "Job description detail" } },
   )
   .post(
     "/evaluate",
@@ -111,7 +111,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       }),
       detail: {
         tags: ["screener"],
-        summary: "วิเคราะห์ CV - รองรับ PDF (ส่งเข้าโมเดล) หรือข้อความ",
+        summary: "Analyze CV - supports PDF (sent to model) or text",
       },
     },
   )
@@ -202,7 +202,7 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       }),
       detail: {
         tags: ["screener"],
-        summary: "เพิ่มผู้สมัครและผล screener - รองรับแนบ PDF (multipart)",
+        summary: "Add applicant and screener result - supports PDF attachment (multipart)",
       },
     },
   );

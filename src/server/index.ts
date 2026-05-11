@@ -8,8 +8,10 @@ import {
 } from "@/server/routes/interview-routes";
 import { jobRoutes } from "@/server/routes/job-routes";
 import { screenerRoutes } from "@/server/routes/screener-routes";
+import { openapi } from "@elysia/openapi";
 
 export const elysiaApp = new Elysia({ prefix: "/api" })
+  .use(openapi())
   .get("/", () => ({
     ok: true,
     message: "Service API is ready",

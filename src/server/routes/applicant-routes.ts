@@ -183,7 +183,7 @@ const educationItemSchema = z.object({
 
 const withResumePayloadSchema = z.object({
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.email(),
   phone: z.string().optional(),
   jobDescriptionId: z.string().min(1),
   source: applicantSourceSchema.optional(),
@@ -210,7 +210,7 @@ const withResumePayloadSchema = z.object({
 const withScreeningPayloadSchema = z.object({
   jobDescriptionId: z.string().min(1),
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.email(),
   phone: z.string().optional(),
   source: applicantSourceSchema.optional(),
   report: fitReportSchema,
@@ -463,7 +463,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         jobDescriptionId: t.Optional(t.String()),
         source: t.Optional(sourceUnion),
       }),
-      detail: { tags: ["applicants"], summary: "รายการผู้สมัคร" },
+      detail: { tags: ["applicants"], summary: "List applicants" },
     },
   )
   .post(
@@ -545,7 +545,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         stage: t.Optional(stageUnion),
         cvText: t.Optional(t.String()),
       }),
-      detail: { tags: ["applicants"], summary: "เพิ่มผู้สมัคร" },
+      detail: { tags: ["applicants"], summary: "Add applicant" },
     },
   )
   .post(
@@ -596,7 +596,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       body: t.Object({ url: t.String({ minLength: 1 }) }),
       detail: {
         tags: ["applicants"],
-        summary: "ดึงข้อมูลจาก Job Posting URL",
+        summary: "Fetch data from job posting URL",
       },
     },
   )
@@ -715,7 +715,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       body: t.Object({ url: t.String({ minLength: 1 }) }),
       detail: {
         tags: ["applicants"],
-        summary: "ดึงข้อมูลโปรไฟล์ (LinkedIn structured / Firecrawl fallback)",
+        summary: "Fetch profile data (LinkedIn structured / Firecrawl fallback)",
       },
     },
   )
@@ -745,7 +745,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       }),
       detail: {
         tags: ["applicants"],
-        summary: "แมปข้อความโปรไฟล์เป็นฟิลด์ผู้สมัครด้วย AI",
+        summary: "Map profile text to applicant fields with AI",
       },
     },
   )
@@ -789,7 +789,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       }),
       detail: {
         tags: ["applicants"],
-        summary: "วิเคราะห์ CV แบบร่าง (ยังไม่บันทึกผู้สมัคร)",
+        summary: "Analyze CV draft (applicant not saved)",
       },
     },
   )
@@ -1039,7 +1039,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       }),
       detail: {
         tags: ["applicants"],
-        summary: "เพิ่มผู้สมัครพร้อม resume (PDF และ/หรือข้อความ)",
+        summary: "Add applicant with resume (PDF and/or text)",
       },
     },
   )
@@ -1221,7 +1221,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       }),
       detail: {
         tags: ["applicants"],
-        summary: "เพิ่มผู้สมัครพร้อมผล AI screening",
+        summary: "Add applicant with AI screening result",
       },
     },
   )
@@ -1250,7 +1250,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       params: t.Object({ id: t.String() }),
       detail: {
         tags: ["applicants"],
-        summary: "ลิงก์ดาวน์โหลด resume (signed URL)",
+        summary: "Resume download link (signed URL)",
       },
     },
   )
@@ -1306,7 +1306,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       params: t.Object({ id: t.String() }),
       detail: {
         tags: ["applicants"],
-        summary: "ลิงก์ preview/download ของ resume ทั้งหมด (signed URLs)",
+        summary: "Preview/download links for all resumes (signed URLs)",
       },
     },
   )
@@ -1375,7 +1375,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       body: t.Object({
         file: t.File({ maxSize: 8 * 1024 * 1024 }),
       }),
-      detail: { tags: ["applicants"], summary: "อัปโหลด resume PDF ไป R2" },
+      detail: { tags: ["applicants"], summary: "Upload resume PDF to R2" },
     },
   )
   .delete(
@@ -1404,7 +1404,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
     {
       params: t.Object({ id: t.String() }),
-      detail: { tags: ["applicants"], summary: "ลบไฟล์ resume จาก R2" },
+      detail: { tags: ["applicants"], summary: "Delete resume file from R2" },
     },
   )
   .patch(
@@ -1550,7 +1550,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           ),
         ),
       }),
-      detail: { tags: ["applicants"], summary: "อัปเดตผู้สมัคร" },
+      detail: { tags: ["applicants"], summary: "Update applicant" },
     },
   )
   .post(
@@ -1674,7 +1674,7 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       params: t.Object({ id: t.String() }),
       detail: {
         tags: ["applicants"],
-        summary: "วิเคราะห์ resume ด้วย AI (บันทึกผล screening)",
+        summary: "Analyze resume with AI (save screening result)",
       },
     },
   )
@@ -1691,6 +1691,6 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
     {
       params: t.Object({ id: t.String() }),
-      detail: { tags: ["applicants"], summary: "ลบผู้สมัคร" },
+      detail: { tags: ["applicants"], summary: "Delete applicant" },
     },
   );

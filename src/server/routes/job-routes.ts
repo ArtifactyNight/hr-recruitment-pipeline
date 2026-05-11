@@ -34,7 +34,7 @@ export const jobRoutes = new Elysia({ prefix: "/jobs" })
       };
     },
     {
-      detail: { tags: ["jobs"], summary: "รายการ JD ทั้งหมด (จัดการตำแหน่ง)" },
+      detail: { tags: ["jobs"], summary: "List all job descriptions" },
     },
   )
   .post(
@@ -85,7 +85,7 @@ export const jobRoutes = new Elysia({ prefix: "/jobs" })
         requirements: t.String({ minLength: 1 }),
         isActive: t.Optional(t.Boolean()),
       }),
-      detail: { tags: ["jobs"], summary: "สร้าง JD" },
+      detail: { tags: ["jobs"], summary: "Create job description" },
     },
   )
   .patch(
@@ -171,7 +171,7 @@ export const jobRoutes = new Elysia({ prefix: "/jobs" })
         requirements: t.Optional(t.String({ minLength: 1 })),
         isActive: t.Optional(t.Boolean()),
       }),
-      detail: { tags: ["jobs"], summary: "แก้ไข JD" },
+      detail: { tags: ["jobs"], summary: "Update job description" },
     },
   )
   .delete(
@@ -199,6 +199,6 @@ export const jobRoutes = new Elysia({ prefix: "/jobs" })
     },
     {
       params: t.Object({ id: t.String() }),
-      detail: { tags: ["jobs"], summary: "ลบ JD" },
+      detail: { tags: ["jobs"], summary: "Delete job description" },
     },
   );

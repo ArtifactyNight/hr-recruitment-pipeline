@@ -28,7 +28,7 @@ export type ScreeningEvaluateOutput = z.infer<typeof screeningEvaluateSchema>;
 export const addToTrackerBodySchema = z.object({
   jobDescriptionId: z.string().min(1),
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.email(),
   resumeText: z.string().optional(),
   report: fitReportSchema,
 });

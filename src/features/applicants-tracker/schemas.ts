@@ -63,7 +63,7 @@ export function parseInterviewerEmails(raw: string | undefined):
   const tokens = splitEmailTokens(raw);
   const emails: Array<string> = [];
   for (const t of tokens) {
-    const r = z.string().email().safeParse(t);
+    const r = z.email().safeParse(t);
     if (!r.success) {
       return { ok: false, message: `อีเมลผู้สัมภาษณ์ไม่ถูกต้อง: ${t}` };
     }
