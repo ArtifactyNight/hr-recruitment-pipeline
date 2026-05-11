@@ -1,3 +1,11 @@
+### [2026-05-11 19:47] - Remove inline resume PDF preview
+
+**Prompt:** remove preview (react-pdf) feature
+
+**Output:** Removed the inline resume preview flow from `ApplicantDetailResumeSection`: deleted `react-pdf` imports/worker setup and `PdfPreview` renderer, removed preview-selection state, and simplified the resume list to metadata + `เปิดไฟล์` action per file (new tab only). Kept existing upload/download/delete behavior for primary resume and text-note editing unchanged. Uninstalled `react-pdf` from dependencies.
+
+**Edited:** `src/features/applicants-tracker/components/applicant-detail-resume-section.tsx`, `package.json`, `bun.lock`, `cowork-log.md`
+
 ### [2026-05-11 18:10] - Applicant detail sheet uses ScrollArea
 
 **Prompt:** add `src/components/ui/scroll-area.tsx`

@@ -40,10 +40,10 @@ import {
   ChevronRightIcon,
   FileTextIcon,
   LightbulbIcon,
-  Link2Icon,
   Loader2Icon,
   MessageSquareQuoteIcon,
   PlusIcon,
+  ScanEyeIcon,
   SparklesIcon,
   StarIcon,
   Trash2Icon,
@@ -721,7 +721,7 @@ export function AddApplicantDialog({
                             {scrapeJobUrlMut.isPending ? (
                               <Loader2Icon className="size-4 animate-spin" />
                             ) : (
-                              <Link2Icon className="size-4" />
+                              <ScanEyeIcon className="size-4" />
                             )}
                             {scrapeJobUrlMut.isPending
                               ? "Fetching..."

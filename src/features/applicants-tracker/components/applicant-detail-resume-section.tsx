@@ -23,15 +23,7 @@ import {
   UploadIcon,
   XIcon,
 } from "lucide-react";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
 import { toast } from "sonner";
-
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
 
 type ApplicantDetailResumeSectionProps = {
   applicant: TrackerApplicant;
@@ -61,42 +53,6 @@ function formatFileSize(size: number | null): string {
   return `${(size / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function PdfPreview({
-  fileUrl,
-  fileName,
-}: {
-  fileUrl: string;
-  fileName: string;
-}) {
-  const [numPages, setNumPages] = useState(0);
-
-  return (
-    <div className="rounded-md border border-border/80 bg-muted/20 p-2">
-      <Document
-        file={fileUrl}
-        loading={
-          <p className="p-3 text-xs text-muted-foreground">Loading PDF...</p>
-        }
-        error={
-          <p className="p-3 text-xs text-destructive">เปิดไฟล์ PDF ไม่สำเร็จ</p>
-        }
-        onLoadSuccess={({ numPages: totalPages }) => setNumPages(totalPages)}
-      >
-        {Array.from({ length: numPages }, (_, index) => (
-          <Page
-            key={`${fileName}-${index + 1}`}
-            pageNumber={index + 1}
-            width={520}
-            renderAnnotationLayer={false}
-            renderTextLayer={false}
-            className="mx-auto mb-3 last:mb-0"
-          />
-        ))}
-      </Document>
-    </div>
-  );
-}
-
 function ResumeMeta({ label, value }: { label: string; value: ReactNode }) {
   return (
     <p className="text-xs text-muted-foreground">
@@ -114,7 +70,6 @@ export function ApplicantDetailResumeSection({
   const [open, setOpen] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
   const [textDraft, setTextDraft] = useState(applicant.cvText ?? "");
-  const [previewResumeId, setPreviewResumeId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const downloadMut = useMutation(
@@ -188,14 +143,6 @@ export function ApplicantDetailResumeSection({
   const hasText = Boolean(applicant.cvText?.trim());
   const pdfBusy =
     uploadMut.isPending || deleteMut.isPending || downloadMut.isPending;
-  const defaultPreviewResumeId =
-    resumes.find((resume) => resume.isPrimary)?.id ?? resumes[0]?.id ?? null;
-  const effectivePreviewResumeId =
-    previewResumeId && resumes.some((resume) => resume.id === previewResumeId)
-      ? previewResumeId
-      : defaultPreviewResumeId;
-  const activeResume =
-    resumes.find((resume) => resume.id === effectivePreviewResumeId) ?? null;
 
   return (
     <Collapsible
@@ -277,11 +224,9 @@ export function ApplicantDetailResumeSection({
               <div className="flex flex-col gap-3">
                 <div className="grid gap-2">
                   {resumes.map((resume) => (
-                    <button
+                    <div
                       key={resume.id}
-                      type="button"
-                      onClick={() => setPreviewResumeId(resume.id)}
-                      className="rounded-md border border-border/80 bg-background px-3 py-2 text-left transition-colors hover:bg-muted/30"
+                      className="rounded-md border border-border/80 bg-background px-3 py-2"
                     >
                       <div className="mb-1 flex items-center justify-between gap-2">
                         <p className="truncate text-sm font-medium">
@@ -305,37 +250,26 @@ export function ApplicantDetailResumeSection({
                           value={formatFileSize(resume.size)}
                         />
                       </div>
-                    </button>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            window.open(
+                              resume.url,
+                              "_blank",
+                              "noopener,noreferrer",
+                            )
+                          }
+                        >
+                          <DownloadIcon data-icon="inline-start" />
+                          เปิดไฟล์
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
-                {activeResume ? (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Preview: {activeResume.fileName}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          window.open(
-                            activeResume.url,
-                            "_blank",
-                            "noopener,noreferrer",
-                          )
-                        }
-                      >
-                        <DownloadIcon data-icon="inline-start" />
-                        เปิดไฟล์
-                      </Button>
-                    </div>
-                    <PdfPreview
-                      fileUrl={activeResume.url}
-                      fileName={activeResume.fileName}
-                    />
-                  </div>
-                ) : null}
               </div>
             ) : null}
           </div>
