@@ -14,7 +14,14 @@ import {
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
+import { mapProfileTextFromRaw } from "@/server/lib/applicant-profile-map-service";
 import { authPlugin } from "@/server/lib/auth-plugin";
+import {
+  extractScrapedMeta,
+  extractScrapedTitle,
+  stripHtml,
+} from "@/server/lib/html-scrape-helpers";
+import { scrapeCandidateProfileUrl } from "@/server/lib/profile-url-scrape";
 import {
   evaluateResumeAgainstJob,
   fileHasBytes,
@@ -228,63 +235,6 @@ function isPdfResumeFile(file: File): boolean {
   return (
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function decodeHtmlEntities(value: string): string {
-  return value
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&apos;/gi, "'")
-    .replace(/&nbsp;/gi, " ");
-}
-
-function extractScrapedTitle(html: string): string {
-  const ogTitle =
-    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>/i.exec(
-      html,
-    );
-  if (ogTitle?.[1]) {
-    return decodeHtmlEntities(ogTitle[1]).trim();
-  }
-  const titleTag = /<title[^>]*>([^<]+)<\/title>/i.exec(html);
-  if (titleTag?.[1]) {
-    return decodeHtmlEntities(titleTag[1]).trim();
-  }
-  return "";
-}
-
-function extractScrapedMeta(html: string, name: string): string {
-  const safe = name.replace(/[^a-z0-9:_-]/gi, "");
-  const ogPattern = new RegExp(
-    `<meta[^>]+property=["']og:${safe}["'][^>]+content=["']([^"']+)["'][^>]*>`,
-    "i",
-  );
-  const og = ogPattern.exec(html);
-  if (og?.[1]) {
-    return decodeHtmlEntities(og[1]).trim();
-  }
-  const namePattern = new RegExp(
-    `<meta[^>]+name=["']${safe}["'][^>]+content=["']([^"']+)["'][^>]*>`,
-    "i",
-  );
-  const m = namePattern.exec(html);
-  if (m?.[1]) {
-    return decodeHtmlEntities(m[1]).trim();
-  }
-  return "";
 }
 
 const KNOWN_SKILL_KEYWORDS: ReadonlyArray<string> = [
@@ -646,6 +596,69 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       detail: {
         tags: ["applicants"],
         summary: "ดึงข้อมูลจาก Job Posting URL",
+      },
+    },
+  )
+  .post(
+    "/scrape-profile-url",
+    async ({ body, set }) => {
+      const url = body.url.trim();
+      if (!URL.canParse(url)) {
+        set.status = 400;
+        return { error: "URL ไม่ถูกต้อง" };
+      }
+      try {
+        const { text, title } = await scrapeCandidateProfileUrl(url);
+        return { url, text, title };
+      } catch (error) {
+        const statusCode =
+          error &&
+          typeof error === "object" &&
+          "statusCode" in error &&
+          typeof (error as { statusCode: unknown }).statusCode === "number"
+            ? (error as { statusCode: number }).statusCode
+            : 502;
+        const message =
+          error instanceof Error ? error.message : "ดึงข้อมูลไม่สำเร็จ";
+        set.status = statusCode;
+        return { error: message };
+      }
+    },
+    {
+      body: t.Object({ url: t.String({ minLength: 1 }) }),
+      detail: {
+        tags: ["applicants"],
+        summary: "ดึงข้อความจาก URL โปรไฟล์ (LinkedIn / JobsDB)",
+      },
+    },
+  )
+  .post(
+    "/map-profile-text",
+    async ({ body, set }) => {
+      const profileText = body.profileText.trim();
+      const profileUrlRaw = body.profileUrl?.trim();
+      try {
+        const mapped = await mapProfileTextFromRaw({
+          profileText,
+          ...(profileUrlRaw && profileUrlRaw.length > 0
+            ? { profileUrl: profileUrlRaw }
+            : {}),
+        });
+        return { mapped };
+      } catch (error) {
+        const { status, body: errBody } = screeningErrorResponse(error);
+        set.status = status;
+        return errBody;
+      }
+    },
+    {
+      body: t.Object({
+        profileText: t.String({ minLength: 1 }),
+        profileUrl: t.Optional(t.String()),
+      }),
+      detail: {
+        tags: ["applicants"],
+        summary: "แมปข้อความโปรไฟล์เป็นฟิลด์ผู้สมัครด้วย AI",
       },
     },
   )

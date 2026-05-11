@@ -1,3 +1,4 @@
+import type { ApplicantProfileMap } from "@/features/applicants-tracker/lib/applicant-profile-map-schema";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
 import type { FitReport } from "@/features/screener/lib/fit-report-schemas";
 import type { ApplicantStage } from "@/generated/prisma/client";
@@ -196,6 +197,43 @@ export const applicantMutations = {
           latestRole: string;
           skills: Array<string>;
         };
+      },
+      onError: (e: unknown) => {
+        toast.error(mutationErrorMessage(e));
+      },
+    }),
+
+  scrapeProfileUrl: () =>
+    mutationOptions({
+      mutationFn: async (url: string) => {
+        const { data, error } = await api.api.applicants[
+          "scrape-profile-url"
+        ].post({ url }, { fetch: { credentials: "include" } });
+        if (error) throw error.value;
+        return data as { url: string; text: string; title: string };
+      },
+      onError: (e: unknown) => {
+        toast.error(mutationErrorMessage(e));
+      },
+    }),
+
+  mapProfileText: () =>
+    mutationOptions({
+      mutationFn: async (input: {
+        profileText: string;
+        profileUrl?: string;
+      }) => {
+        const { data, error } = await api.api.applicants[
+          "map-profile-text"
+        ].post(
+          {
+            profileText: input.profileText,
+            ...(input.profileUrl ? { profileUrl: input.profileUrl } : {}),
+          },
+          { fetch: { credentials: "include" } },
+        );
+        if (error) throw error.value;
+        return data as { mapped: ApplicantProfileMap };
       },
       onError: (e: unknown) => {
         toast.error(mutationErrorMessage(e));

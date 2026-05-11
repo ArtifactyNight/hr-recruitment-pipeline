@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -30,6 +31,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
+import type { ApplicantProfileMap } from "@/features/applicants-tracker/lib/applicant-profile-map-schema";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,7 +45,6 @@ import {
   Loader2Icon,
   MessageSquareQuoteIcon,
   PlusIcon,
-  ScanEyeIcon,
   SparklesIcon,
   StarIcon,
   Trash2Icon,
@@ -81,18 +82,6 @@ const addApplicantFormSchema = z.object({
   email: z.string().trim().min(1, "Enter email").email("Invalid email format"),
   phone: z.string(),
   source: z.enum(["LINKEDIN", "JOBSDB", "REFERRAL", "OTHER"]),
-  jobPostingUrl: z
-    .string()
-    .trim()
-    .superRefine((val, ctx) => {
-      if (val.length === 0) return;
-      if (!URL.canParse(val)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Invalid URL",
-        });
-      }
-    }),
   latestRole: z.string().trim(),
   skills: z.array(z.string().trim().min(1)),
   experiences: z
@@ -299,6 +288,9 @@ export function AddApplicantDialog({
   const prevFlowStepRef = useRef<string | null>(null);
   const [manualDragOver, setManualDragOver] = useState(false);
   const [aiDragOver, setAiDragOver] = useState(false);
+  const [manualProfileUrl, setManualProfileUrl] = useState("");
+  const [profileMapSourceUrl, setProfileMapSourceUrl] = useState("");
+  const [quickFillTab, setQuickFillTab] = useState<"link" | "text">("link");
 
   const {
     addFlowStep,
@@ -346,7 +338,10 @@ export function AddApplicantDialog({
     })),
   );
 
-  const scrapeJobUrlMut = useMutation(applicantMutations.scrapeJobUrl());
+  const scrapeProfileUrlMut = useMutation(
+    applicantMutations.scrapeProfileUrl(),
+  );
+  const mapProfileTextMut = useMutation(applicantMutations.mapProfileText());
 
   const addApplicantForm = useForm<AddApplicantFormValues>({
     resolver: zodResolver(addApplicantFormSchema),
@@ -357,7 +352,6 @@ export function AddApplicantDialog({
       email: "",
       phone: "",
       source: "OTHER",
-      jobPostingUrl: "",
       latestRole: "",
       skills: [],
       experiences: [],
@@ -389,7 +383,6 @@ export function AddApplicantDialog({
       email: s.addEmail,
       phone: s.addPhone,
       source: s.addSource,
-      jobPostingUrl: s.addJobPostingUrl,
       latestRole: s.addLatestRole,
       skills: s.addSkills,
       resumeText: s.addResumeText,
@@ -420,9 +413,6 @@ export function AddApplicantDialog({
       if (value.resumeText !== undefined) {
         s.setAddResumeText(value.resumeText);
       }
-      if (value.jobPostingUrl !== undefined) {
-        s.setAddJobPostingUrl(value.jobPostingUrl);
-      }
       if (value.latestRole !== undefined) {
         s.setAddLatestRole(value.latestRole);
       }
@@ -440,6 +430,9 @@ export function AddApplicantDialog({
       resetAddDialog();
       prevFlowStepRef.current = null;
       addApplicantForm.reset();
+      setManualProfileUrl("");
+      setProfileMapSourceUrl("");
+      setQuickFillTab("link");
     }
     onOpenChange(next);
   }
@@ -531,43 +524,103 @@ export function AddApplicantDialog({
     setAddSkills(data.skills.map((s) => s.trim()).filter(Boolean));
   }
 
-  async function handleScrapeJobUrl() {
-    const url = (getValues("jobPostingUrl") ?? "").trim();
-    if (!url) {
-      toast.error("Enter a job posting URL first");
-      return;
-    }
-    if (!URL.canParse(url)) {
-      toast.error("Invalid URL");
-      return;
-    }
-    try {
-      const result = await scrapeJobUrlMut.mutateAsync(url);
-      if (result.latestRole && !getValues("latestRole").trim()) {
-        setValue("latestRole", result.latestRole, { shouldDirty: true });
-      }
-      if (result.skills.length > 0) {
-        const current = getValues("skills");
-        const merged = Array.from(
-          new Set(
-            [...current, ...result.skills].map((s) => s.trim()).filter(Boolean),
-          ),
-        );
-        setValue("skills", merged, { shouldDirty: true });
-      }
-      toast.success(
-        result.title ? `Fetched: ${result.title}` : "Fetched job posting page",
-      );
-    } catch {
-      // toast already fired in mutation onError
-    }
-  }
-
   const resumeTextTrim = addResumeText.trim();
   const hasResumeFiles = addResumeFiles.length > 0;
   const hasResumeText = resumeTextTrim.length > 0;
   const formValid = addApplicantForm.formState.isValid;
-  const canManualSave = formValid && hasResumeFiles;
+  const canManualSave = formValid && (hasResumeFiles || hasResumeText);
+
+  function applyMappedProfile(mapped: ApplicantProfileMap) {
+    setValue("name", mapped.name, { shouldDirty: true });
+    setValue("email", mapped.email, { shouldDirty: true });
+    const phoneVal = mapped.phone;
+    if (
+      phoneVal !== undefined &&
+      phoneVal !== null &&
+      phoneVal.trim().length > 0
+    ) {
+      setValue("phone", phoneVal.trim(), { shouldDirty: true });
+    }
+    const latestVal = mapped.latestRole;
+    if (
+      latestVal !== undefined &&
+      latestVal !== null &&
+      latestVal.trim().length > 0
+    ) {
+      setValue("latestRole", latestVal.trim(), { shouldDirty: true });
+    }
+    setValue("skills", mapped.skills, { shouldDirty: true });
+    if (
+      mapped.sourceSuggestion !== undefined &&
+      mapped.sourceSuggestion !== null
+    ) {
+      setValue("source", mapped.sourceSuggestion, { shouldDirty: true });
+    }
+    const expRows = mapped.experiences.map((e) => ({
+      company: e.company,
+      role: e.role,
+      description: e.description ?? "",
+    }));
+    experienceFA.replace(expRows);
+    const eduRows = mapped.educations.map((e) => ({
+      school: e.school,
+      degree: e.degree,
+    }));
+    educationFA.replace(eduRows);
+  }
+
+  const profileAnalyzePending =
+    scrapeProfileUrlMut.isPending || mapProfileTextMut.isPending;
+
+  async function handleAnalyzeProfile() {
+    if (quickFillTab === "link") {
+      const url = manualProfileUrl.trim();
+      if (!url.length) {
+        toast.error("Enter a LinkedIn or JobsDB profile URL");
+        return;
+      }
+      if (!URL.canParse(url)) {
+        toast.error("Invalid URL");
+        return;
+      }
+      try {
+        const result = await scrapeProfileUrlMut.mutateAsync(url);
+        setValue("resumeText", result.text, { shouldDirty: true });
+        setProfileMapSourceUrl(url.trim());
+        const { mapped } = await mapProfileTextMut.mutateAsync({
+          profileText: result.text,
+          profileUrl: url.trim(),
+        });
+        applyMappedProfile(mapped);
+        toast.success(
+          result.title.length > 0
+            ? `Analyzed profile: ${result.title}`
+            : "Analyzed profile from URL",
+        );
+      } catch {
+        /* toast in mutation */
+      }
+      return;
+    }
+
+    const text = getValues("resumeText").trim();
+    if (!text.length) {
+      toast.error("Paste profile text first");
+      return;
+    }
+    try {
+      const { mapped } = await mapProfileTextMut.mutateAsync({
+        profileText: text,
+        ...(profileMapSourceUrl.length > 0
+          ? { profileUrl: profileMapSourceUrl }
+          : {}),
+      });
+      applyMappedProfile(mapped);
+      toast.success("Analyzed pasted profile");
+    } catch {
+      /* toast in mutation */
+    }
+  }
 
   const aiNeedsFile = addAiCvMode === "pdf" || addAiCvMode === "both";
   const aiNeedsText = addAiCvMode === "text" || addAiCvMode === "both";
@@ -689,60 +742,102 @@ export function AddApplicantDialog({
                 onManualSubmit();
               })}
             >
-              <FieldGroup>
-                <Controller
-                  name="jobPostingUrl"
-                  control={control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={shouldShowFieldError(fieldState)}>
-                      <FieldLabel htmlFor="add-applicant-job-url">
-                        Job posting URL
-                      </FieldLabel>
-                      <FieldContent>
-                        <div className="flex gap-2">
-                          <Input
-                            {...field}
-                            id="add-applicant-job-url"
-                            placeholder="https://jobs.example.com/posting/123"
-                            aria-invalid={shouldShowFieldError(fieldState)}
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleScrapeJobUrl}
-                            disabled={
-                              scrapeJobUrlMut.isPending ||
-                              !field.value ||
-                              fieldState.invalid
-                            }
-                            className="shrink-0"
-                          >
-                            {scrapeJobUrlMut.isPending ? (
-                              <Loader2Icon className="size-4 animate-spin" />
-                            ) : (
-                              <ScanEyeIcon className="size-4" />
-                            )}
-                            {scrapeJobUrlMut.isPending
-                              ? "Fetching..."
-                              : "Fetch"}
-                          </Button>
-                        </div>
-                        {shouldShowFieldError(fieldState) ? (
-                          <FieldError>{fieldState.error?.message}</FieldError>
-                        ) : null}
-                      </FieldContent>
-                    </Field>
-                  )}
-                />
+              <div className="rounded-lg border border-border bg-secondary/30 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <SparklesIcon className="size-4 text-primary" />
+                  <h3 className="text-sm font-semibold">Quick Fill with AI</h3>
+                </div>
 
+                <div className="mb-3 flex w-fit gap-1 rounded-lg bg-background p-0.5">
+                  {(["link", "text"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setQuickFillTab(tab)}
+                      className={cn(
+                        "rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all",
+                        quickFillTab === tab
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {tab === "link" ? "Link" : "Raw Text"}
+                    </button>
+                  ))}
+                </div>
+
+                {quickFillTab === "link" ? (
+                  <div className="mb-3 flex flex-col gap-2">
+                    <Input
+                      value={manualProfileUrl}
+                      onChange={(e) => setManualProfileUrl(e.target.value)}
+                      placeholder="https://www.linkedin.com/in/…"
+                      id="add-applicant-profile-url"
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      Supported links:{" "}
+                      <span className="font-medium text-primary">LinkedIn</span>
+                      {/* , <span className="font-medium text-primary">JobsDB</span> */}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-3 flex flex-col gap-2">
+                    <Controller
+                      name="resumeText"
+                      control={control}
+                      render={({ field }) => (
+                        <Textarea
+                          {...field}
+                          className="min-h-[140px] resize-none text-sm"
+                          placeholder="Paste profile or CV text…"
+                          id="add-applicant-resume-text-manual"
+                          onChange={(event) => {
+                            field.onChange(event.target.value);
+                            setProfileMapSourceUrl("");
+                          }}
+                        />
+                      )}
+                    />
+                  </div>
+                )}
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={
+                    profileAnalyzePending ||
+                    (quickFillTab === "link"
+                      ? !manualProfileUrl.trim()
+                      : !addResumeText.trim())
+                  }
+                  onClick={() => void handleAnalyzeProfile()}
+                >
+                  {profileAnalyzePending ? (
+                    <Loader2Icon className="size-4 animate-spin" />
+                  ) : (
+                    <SparklesIcon className="size-4" />
+                  )}
+                  {profileAnalyzePending ? "Analyzing…" : "Analyze with AI"}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3 py-1">
+                <Separator className="flex-1" />
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  Manual entry
+                </span>
+                <Separator className="flex-1" />
+              </div>
+
+              <FieldGroup>
                 <Controller
                   name="jobId"
                   control={control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={shouldShowFieldError(fieldState)}>
                       <FieldLabel htmlFor="add-applicant-job">
-                        Target Role <span className="text-destructive">*</span>
+                        Role <span className="text-destructive">*</span>
                       </FieldLabel>
                       <FieldContent>
                         <Select
@@ -916,6 +1011,10 @@ export function AddApplicantDialog({
                 <Field>
                   <FieldLabel>CV / Resume (PDF)</FieldLabel>
                   <FieldContent className="flex flex-col gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      Optional when profile text is filled in Quick Fill with AI
+                      above.
+                    </p>
                     <div
                       className={cn(
                         "cursor-pointer rounded-lg border-2 border-dashed p-5 text-center transition-all",

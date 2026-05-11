@@ -1,3 +1,35 @@
+### [2026-05-11 21:35] - Quick Fill with AI card UI (link / raw text)
+
+**Prompt:** Replace profile import UI with provided card + segmented Link / Raw Text controls.
+
+**Output:** Swapped shadcn `Tabs` for a bordered `bg-secondary/30` card titled “Quick Fill with AI” with `SparklesIcon`, pill-style tab buttons (`link` / `text`), conditional link hint + URL input vs textarea, and shared **Analyze with AI** button. State renamed to `quickFillTab`; removed unused `tabs` import.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-11 21:20] - Profile import: single Analyze with AI (URL scrape + map)
+
+**Prompt:** No Fetch button — paste URL and click Analyze with AI.
+
+**Output:** Removed separate Fetch control on Profile URL tab. One **Analyze with AI** button runs scrape then map when URL tab is active, or map-only on Paste text tab. Renamed loading copy to “Analyzing…”, default profile tab `url`, removed unused `ScanEyeIcon` import.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-11 21:05] - Manual add: drop job posting URL, reorder import vs manual
+
+**Prompt:** (1) remove job posting URL (2) move scrape above with separator between manual and scrape.
+
+**Output:** Removed job posting URL field, `scrapeJobUrl` usage, and `jobPostingUrl` from the add-applicant form schema / defaults / watch. Moved “Import from profile” (tabs + fetch + map AI) to the top of the manual sheet, added a labeled `Separator` row (“Manual entry”), then the existing `FieldGroup` for role, contact, skills, PDF, experience/education.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-11 20:30] - Manual add applicant: profile tabs + AI map
+
+**Prompt:** Profile URL / raw text tabs + AI field mapping (Manual flow); implement attached plan.
+
+**Output:** Added `applicantProfileMapSchema` and `mapProfileTextFromRaw` (AI SDK `generateText` + structured output). Added shared `html-scrape-helpers`, `profile-url-scrape` (LinkedIn/JobsDB host allowlist, fetch + optional Firecrawl via `FIRECRAWL_API_KEY`), and Elysia routes `POST /applicants/scrape-profile-url` and `POST /applicants/map-profile-text`. Extended mutations and Manual sheet UI with shadcn `Tabs` (Profile URL vs Paste text), Fetch + Map-with-AI wiring into RHF/store; manual save allows PDF or non-empty resume text.
+
+**Edited:** `src/features/applicants-tracker/lib/applicant-profile-map-schema.ts`, `src/server/lib/html-scrape-helpers.ts`, `src/server/lib/profile-url-scrape.ts`, `src/server/lib/applicant-profile-map-service.ts`, `src/server/routes/applicant-routes.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-11 19:47] - Remove inline resume PDF preview
 
 **Prompt:** remove preview (react-pdf) feature
