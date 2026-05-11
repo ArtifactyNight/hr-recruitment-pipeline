@@ -77,9 +77,9 @@ const educationItemSchema = z.object({
 });
 
 const addApplicantFormSchema = z.object({
-  jobId: z.string().min(1, "Select role"),
-  name: z.string().trim().min(1, "Enter candidate name"),
-  email: z.string().trim().min(1, "Enter email").email("Invalid email format"),
+  jobId: z.string().min(1, "กรุณาเลือกตำแหน่งงาน"),
+  name: z.string().trim().min(1, "กรุณากรอกชื่อผู้สมัคร"),
+  email: z.string().trim().min(1, "กรุณากรอกอีเมล").email("รูปแบบอีเมลไม่ถูกต้อง"),
   phone: z.string(),
   source: z.enum(["LINKEDIN", "JOBSDB", "REFERRAL", "OTHER"]),
   latestRole: z.string().trim(),
@@ -94,7 +94,7 @@ const addApplicantFormSchema = z.object({
             (r.company.length > 0 && r.role.length > 0),
         ),
       {
-        message: "Each experience needs company and role, or leave both empty",
+        message: "กรอกทั้งบริษัทและตำแหน่ง หรือเว้นว่างทั้งคู่",
       },
     ),
   educations: z
@@ -107,7 +107,7 @@ const addApplicantFormSchema = z.object({
             (r.school.length > 0 && r.degree.length > 0),
         ),
       {
-        message: "Each education needs school and degree, or leave both empty",
+        message: "กรอกทั้งสถาบันและวุฒิการศึกษา หรือเว้นว่างทั้งคู่",
       },
     ),
   resumeText: z.string(),
@@ -191,7 +191,7 @@ function SkillsTagInput({ value, onChange, inputId }: SkillsTagInputProps) {
               removeAt(value.length - 1);
             }
           }}
-          placeholder="Type a skill and press Enter"
+          placeholder="พิมพ์ทักษะแล้วกด Enter"
           className="flex-1"
         />
         <Button
@@ -202,7 +202,7 @@ function SkillsTagInput({ value, onChange, inputId }: SkillsTagInputProps) {
           className="shrink-0"
         >
           <PlusIcon className="size-4" />
-          Add
+          เพิ่ม
         </Button>
       </div>
       {value.length > 0 ? (
@@ -451,7 +451,7 @@ export function AddApplicantDialog({
         file.type === "application/pdf" ||
         file.name.toLowerCase().endsWith(".pdf");
       if (!isPdf) {
-        toast.error(`Skipped non-PDF: ${file.name}`);
+        toast.error(`ข้ามไฟล์ที่ไม่ใช่ PDF: ${file.name}`);
         continue;
       }
       out.push(file);
@@ -467,7 +467,7 @@ export function AddApplicantDialog({
     }
     appendAddResumeFiles(picked);
     for (const f of picked) {
-      toast.success(`Added: ${f.name}`);
+      toast.success(`เพิ่มไฟล์แล้ว: ${f.name}`);
     }
   }
 
@@ -479,7 +479,7 @@ export function AddApplicantDialog({
     }
     appendAddResumeFiles(picked);
     for (const f of picked) {
-      toast.success(`Added: ${f.name}`);
+      toast.success(`เพิ่มไฟล์แล้ว: ${f.name}`);
     }
   }
 
@@ -490,7 +490,7 @@ export function AddApplicantDialog({
       return;
     }
     setAddResumeFiles([picked[0]!]);
-    toast.success(`Selected: ${picked[0]!.name}`);
+    toast.success(`เลือกไฟล์แล้ว: ${picked[0]!.name}`);
   }
 
   function onAiDropResumeFile(event: React.DragEvent<HTMLDivElement>) {
@@ -500,7 +500,7 @@ export function AddApplicantDialog({
       return;
     }
     setAddResumeFiles([picked[0]!]);
-    toast.success(`Selected: ${picked[0]!.name}`);
+    toast.success(`เลือกไฟล์แล้ว: ${picked[0]!.name}`);
   }
 
   function goPick() {
@@ -580,7 +580,7 @@ export function AddApplicantDialog({
   const manualProfileUrlTrim = manualProfileUrl.trim();
   if (manualProfileUrlTrim.length > 0) {
     if (!URL.canParse(manualProfileUrlTrim)) {
-      manualProfileUrlError = "Invalid URL";
+      manualProfileUrlError = "URL ไม่ถูกต้อง";
     } else {
       const host = new URL(manualProfileUrlTrim).hostname.toLowerCase();
       if (
@@ -600,11 +600,11 @@ export function AddApplicantDialog({
     if (quickFillTab === "link") {
       const url = manualProfileUrl.trim();
       if (!url.length) {
-        toast.error("Enter a LinkedIn or JobsDB profile URL");
+        toast.error("กรุณากรอก URL โปรไฟล์ LinkedIn");
         return;
       }
       if (!URL.canParse(url)) {
-        toast.error("Invalid URL");
+        toast.error("URL ไม่ถูกต้อง");
         return;
       }
 
@@ -626,8 +626,8 @@ export function AddApplicantDialog({
         applyMappedProfile(result.mapped);
         toast.success(
           result.title.length > 0
-            ? `Analyzed profile: ${result.title}`
-            : "Analyzed profile from URL",
+            ? `วิเคราะห์โปรไฟล์แล้ว: ${result.title}`
+            : "วิเคราะห์โปรไฟล์จาก URL แล้ว",
         );
       } catch {
         /* toast in mutation */
@@ -637,7 +637,7 @@ export function AddApplicantDialog({
 
     const text = getValues("resumeText").trim();
     if (!text.length) {
-      toast.error("Paste profile text first");
+      toast.error("กรุณาวางข้อความโปรไฟล์ก่อน");
       return;
     }
     try {
@@ -648,7 +648,7 @@ export function AddApplicantDialog({
           : {}),
       });
       applyMappedProfile(mapped);
-      toast.success("Analyzed pasted profile");
+      toast.success("วิเคราะห์ข้อความที่วางแล้ว");
     } catch {
       /* toast in mutation */
     }
@@ -717,10 +717,10 @@ export function AddApplicantDialog({
               </button>
             ) : null}
             <SheetTitle className="text-base font-semibold">
-              {addFlowStep === "pick" && "Add Applicant"}
-              {addFlowStep === "manual" && "Manual Input"}
-              {addFlowStep === "ai_review" && "AI Resume Screener"}
-              {addFlowStep === "ai_result" && "AI Score Card"}
+              {addFlowStep === "pick" && "เพิ่มผู้สมัคร"}
+              {addFlowStep === "manual" && "กรอกข้อมูลเอง"}
+              {addFlowStep === "ai_review" && "คัดกรอง Resume ด้วย AI"}
+              {addFlowStep === "ai_result" && "ผลคะแนน AI"}
             </SheetTitle>
           </div>
         </SheetHeader>
@@ -729,7 +729,7 @@ export function AddApplicantDialog({
           {addFlowStep === "pick" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Choose how you want to add this candidate.
+                เลือกวิธีเพิ่มผู้สมัครใหม่
               </p>
 
               <button
@@ -743,10 +743,10 @@ export function AddApplicantDialog({
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-foreground">
-                    Manual Input
+                    กรอกข้อมูลเอง
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Fill candidate details and upload CV manually.
+                    กรอกข้อมูลผู้สมัครและอัปโหลด CV เอง
                   </p>
                 </div>
                 <ChevronRightIcon className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -763,10 +763,10 @@ export function AddApplicantDialog({
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-foreground">
-                    AI Analyze
+                    วิเคราะห์ด้วย AI
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Upload CV and let AI score the candidate fit.
+                    อัปโหลด CV แล้วให้ AI ประเมินความเหมาะสม
                   </p>
                 </div>
                 <ChevronRightIcon className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -785,7 +785,7 @@ export function AddApplicantDialog({
               <div className="rounded-lg border border-border bg-secondary/30 p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <SparklesIcon className="size-4 text-primary" />
-                  <h3 className="text-sm font-semibold">Quick Fill with AI</h3>
+                  <h3 className="text-sm font-semibold">กรอกอัตโนมัติด้วย AI</h3>
                 </div>
 
                 <div className="mb-3 flex w-fit gap-1 rounded-lg bg-background p-0.5">
@@ -801,7 +801,7 @@ export function AddApplicantDialog({
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {tab === "link" ? "Link" : "Raw Text"}
+                      {tab === "link" ? "ลิงก์" : "วางข้อความ"}
                     </button>
                   ))}
                 </div>
@@ -829,7 +829,7 @@ export function AddApplicantDialog({
                         <FieldError>{manualProfileUrlError}</FieldError>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          Supported links:{" "}
+                          ลิงก์ที่รองรับ:{" "}
                           <span className="font-medium text-primary">
                             LinkedIn
                           </span>
@@ -877,14 +877,14 @@ export function AddApplicantDialog({
                   ) : (
                     <SparklesIcon className="size-4" />
                   )}
-                  {profileAnalyzePending ? "Analyzing…" : "Analyze with AI"}
+                  {profileAnalyzePending ? "กำลังวิเคราะห์…" : "วิเคราะห์ด้วย AI"}
                 </Button>
               </div>
 
               <div className="flex items-center gap-3 py-1">
                 <Separator className="flex-1" />
                 <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                  Manual entry
+                  กรอกข้อมูลเอง
                 </span>
                 <Separator className="flex-1" />
               </div>
@@ -896,7 +896,7 @@ export function AddApplicantDialog({
                   render={({ field, fieldState }) => (
                     <Field data-invalid={shouldShowFieldError(fieldState)}>
                       <FieldLabel htmlFor="add-applicant-job">
-                        Role <span className="text-destructive">*</span>
+                        ตำแหน่งงาน <span className="text-destructive">*</span>
                       </FieldLabel>
                       <FieldContent>
                         <Select
@@ -909,7 +909,7 @@ export function AddApplicantDialog({
                             className="w-full"
                             aria-invalid={shouldShowFieldError(fieldState)}
                           >
-                            <SelectValue placeholder="Select role" />
+                            <SelectValue placeholder="เลือกตำแหน่ง" />
                           </SelectTrigger>
                           <SelectContent position="popper">
                             <SelectGroup>
@@ -936,13 +936,13 @@ export function AddApplicantDialog({
                     render={({ field, fieldState }) => (
                       <Field data-invalid={shouldShowFieldError(fieldState)}>
                         <FieldLabel htmlFor="add-applicant-name">
-                          Full Name <span className="text-destructive">*</span>
+                          ชื่อ-นามสกุล <span className="text-destructive">*</span>
                         </FieldLabel>
                         <FieldContent>
                           <Input
                             {...field}
                             id="add-applicant-name"
-                            placeholder="e.g. Thanawat Srisuk"
+                            placeholder="เช่น ธนวัฒน์ ศรีสุข"
                             aria-invalid={shouldShowFieldError(fieldState)}
                           />
                           {shouldShowFieldError(fieldState) ? (
@@ -958,7 +958,7 @@ export function AddApplicantDialog({
                     render={({ field, fieldState }) => (
                       <Field data-invalid={shouldShowFieldError(fieldState)}>
                         <FieldLabel htmlFor="add-applicant-email">
-                          Email <span className="text-destructive">*</span>
+                          อีเมล <span className="text-destructive">*</span>
                         </FieldLabel>
                         <FieldContent>
                           <Input
@@ -984,7 +984,7 @@ export function AddApplicantDialog({
                     render={({ field }) => (
                       <Field>
                         <FieldLabel htmlFor="add-applicant-phone">
-                          Phone
+                          เบอร์โทรศัพท์
                         </FieldLabel>
                         <FieldContent>
                           <Input
@@ -1002,7 +1002,7 @@ export function AddApplicantDialog({
                     control={control}
                     render={({ field }) => (
                       <Field>
-                        <FieldLabel>Source</FieldLabel>
+                        <FieldLabel>แหล่งที่มา</FieldLabel>
                         <FieldContent>
                           <div className="flex flex-wrap gap-2">
                             {sourceOptions.map((source) => (
@@ -1035,7 +1035,7 @@ export function AddApplicantDialog({
                   render={({ field }) => (
                     <Field>
                       <FieldLabel htmlFor="add-applicant-latest-role">
-                        Latest job role
+                        ตำแหน่งงานล่าสุด
                       </FieldLabel>
                       <FieldContent>
                         <Input
@@ -1054,7 +1054,7 @@ export function AddApplicantDialog({
                   render={({ field }) => (
                     <Field>
                       <FieldLabel htmlFor="add-applicant-skills">
-                        Skills
+                        ทักษะ
                       </FieldLabel>
                       <FieldContent>
                         <SkillsTagInput
@@ -1071,8 +1071,7 @@ export function AddApplicantDialog({
                   <FieldLabel>CV / Resume (PDF)</FieldLabel>
                   <FieldContent className="flex flex-col gap-2">
                     <p className="text-xs text-muted-foreground">
-                      Optional when profile text is filled in Quick Fill with AI
-                      above.
+                      ไม่จำเป็นถ้ากรอกข้อความโปรไฟล์ในส่วน กรอกอัตโนมัติด้วย AI ด้านบนแล้ว
                     </p>
                     <div
                       className={cn(
@@ -1104,7 +1103,7 @@ export function AddApplicantDialog({
                       {hasResumeFiles ? (
                         <p className="text-xs text-muted-foreground">
                           <span className="font-medium text-primary">
-                            Add more
+                            เพิ่มไฟล์
                           </span>{" "}
                           — click or drop PDFs
                         </p>
@@ -1113,12 +1112,12 @@ export function AddApplicantDialog({
                           <UploadIcon className="mx-auto mb-1.5 size-5 text-muted-foreground" />
                           <p className="text-xs text-muted-foreground">
                             <span className="font-medium text-primary">
-                              Click to upload
+                              คลิกเพื่ออัปโหลด
                             </span>{" "}
-                            or drag & drop
+                            หรือลากและวาง
                           </p>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            PDF only — multiple files allowed
+                            PDF เท่านั้น — รองรับหลายไฟล์
                           </p>
                         </>
                       )}
@@ -1156,7 +1155,7 @@ export function AddApplicantDialog({
                 <div className="flex flex-col gap-2 p-2 rounded-md border border-border">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-foreground">
-                      Experience
+                      ประสบการณ์
                     </span>
                     <Button
                       type="button"
@@ -1172,7 +1171,7 @@ export function AddApplicantDialog({
                       }
                     >
                       <PlusIcon className="size-4" />
-                      Add
+                      เพิ่ม
                     </Button>
                   </div>
                   {experienceFA.fields.map((row, index) => (
@@ -1184,7 +1183,7 @@ export function AddApplicantDialog({
                           render={({ field }) => (
                             <Input
                               {...field}
-                              placeholder="Company"
+                              placeholder="บริษัท"
                               className="min-w-0 flex-1"
                             />
                           )}
@@ -1195,7 +1194,7 @@ export function AddApplicantDialog({
                           render={({ field }) => (
                             <Input
                               {...field}
-                              placeholder="Role"
+                              placeholder="ตำแหน่ง"
                               className="min-w-0 flex-1"
                             />
                           )}
@@ -1216,7 +1215,7 @@ export function AddApplicantDialog({
                         render={({ field }) => (
                           <Textarea
                             {...field}
-                            placeholder="Description (optional)"
+                            placeholder="รายละเอียด (ถ้ามี)"
                             rows={2}
                             className="resize-none text-sm"
                           />
@@ -1234,7 +1233,7 @@ export function AddApplicantDialog({
                 <div className="flex flex-col gap-2 p-2 rounded-md border border-border">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-foreground">
-                      Education
+                      การศึกษา
                     </span>
                     <Button
                       type="button"
@@ -1246,7 +1245,7 @@ export function AddApplicantDialog({
                       }
                     >
                       <PlusIcon className="size-4" />
-                      Add
+                      เพิ่ม
                     </Button>
                   </div>
                   {educationFA.fields.map((row, index) => (
@@ -1260,7 +1259,7 @@ export function AddApplicantDialog({
                         render={({ field }) => (
                           <Input
                             {...field}
-                            placeholder="School"
+                            placeholder="สถาบัน"
                             className="min-w-0 flex-1"
                           />
                         )}
@@ -1271,7 +1270,7 @@ export function AddApplicantDialog({
                         render={({ field }) => (
                           <Input
                             {...field}
-                            placeholder="Degree"
+                            placeholder="วุฒิการศึกษา"
                             className="min-w-0 flex-1"
                           />
                         )}
@@ -1302,7 +1301,7 @@ export function AddApplicantDialog({
                   className="flex-1"
                   onClick={goPick}
                 >
-                  Back
+                  ย้อนกลับ
                 </Button>
                 <Button
                   type="submit"
@@ -1314,7 +1313,7 @@ export function AddApplicantDialog({
                   ) : (
                     <CheckCircle2Icon className="size-4" />
                   )}
-                  Save Candidate
+                  บันทึกผู้สมัคร
                 </Button>
               </div>
             </form>
@@ -1325,8 +1324,7 @@ export function AddApplicantDialog({
               <div className="flex gap-2.5 rounded-lg border border-border bg-secondary p-3">
                 <SparklesIcon className="mt-0.5 size-4 shrink-0 text-primary" />
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  AI scores the candidate on Skills Fit, Experience Fit, and
-                  Culture Fit, and generates pre-screen questions.
+                  AI ประเมินความเหมาะสมด้านทักษะ ประสบการณ์ และวัฒนธรรม พร้อมสร้างคำถามคัดกรองเบื้องต้น
                 </p>
               </div>
 
@@ -1336,7 +1334,7 @@ export function AddApplicantDialog({
                 render={({ field, fieldState }) => (
                   <Field data-invalid={shouldShowFieldError(fieldState)}>
                     <FieldLabel htmlFor="add-applicant-ai-job">
-                      Role
+                      ตำแหน่งงาน
                       <span className="text-destructive">*</span>
                     </FieldLabel>
                     <FieldContent>
@@ -1470,12 +1468,12 @@ export function AddApplicantDialog({
                         <UploadIcon className="mx-auto mb-1.5 size-5 text-muted-foreground" />
                         <p className="text-xs text-muted-foreground">
                           <span className="font-medium text-primary">
-                            Click to upload
+                            คลิกเพื่ออัปโหลด
                           </span>{" "}
-                          or drag & drop
+                          หรือลากและวาง
                         </p>
                         <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          PDF only
+                          PDF เท่านั้น
                         </p>
                       </>
                     )}
@@ -1490,7 +1488,7 @@ export function AddApplicantDialog({
                       <Textarea
                         {...field}
                         className="min-h-[120px] resize-none text-sm"
-                        placeholder="Paste candidate CV text..."
+                        placeholder="วางข้อความ CV ของผู้สมัคร..."
                         onChange={(event) => {
                           field.onChange(event.target.value);
                         }}
@@ -1507,7 +1505,7 @@ export function AddApplicantDialog({
                   className="flex-1"
                   onClick={goPick}
                 >
-                  Back
+                  ย้อนกลับ
                 </Button>
                 <Button
                   type="button"
@@ -1520,7 +1518,7 @@ export function AddApplicantDialog({
                   ) : (
                     <SparklesIcon className="size-4" />
                   )}
-                  Analyze with AI
+                  วิเคราะห์ด้วย AI
                 </Button>
               </div>
             </div>
@@ -1535,7 +1533,7 @@ export function AddApplicantDialog({
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {jobs.find((job) => job.id === addJobId)?.title ??
-                      "Unknown role"}
+                      "ไม่ระบุตำแหน่ง"}
                   </p>
                 </div>
                 <div
@@ -1555,7 +1553,7 @@ export function AddApplicantDialog({
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Overall Score
+                    คะแนนรวม
                   </p>
                   <p className="text-2xl font-bold text-foreground">
                     {formatOneDecimal(addAiReport.overallScore)}
@@ -1570,17 +1568,17 @@ export function AddApplicantDialog({
               <div className="space-y-3">
                 {[
                   {
-                    label: "Skills Fit",
+                    label: "ความเหมาะสมด้านทักษะ",
                     value: addAiReport.skillFit,
                     reason: addAiReport.skillReason,
                   },
                   {
-                    label: "Experience Fit",
+                    label: "ความเหมาะสมด้านประสบการณ์",
                     value: addAiReport.experienceFit,
                     reason: addAiReport.experienceReason,
                   },
                   {
-                    label: "Culture Fit",
+                    label: "ความเหมาะสมด้านวัฒนธรรม",
                     value: addAiReport.cultureFit,
                     reason: addAiReport.cultureReason,
                   },
@@ -1619,7 +1617,7 @@ export function AddApplicantDialog({
                 <div className="mb-2 flex items-center gap-1.5">
                   <StarIcon className="size-4 text-amber-500" />
                   <span className="text-sm font-semibold text-foreground">
-                    Key Strengths
+                    จุดแข็งหลัก
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1635,7 +1633,7 @@ export function AddApplicantDialog({
                     ))
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      No strengths returned by AI.
+                      AI ไม่พบจุดแข็งที่โดดเด่น
                     </p>
                   )}
                 </div>
@@ -1645,7 +1643,7 @@ export function AddApplicantDialog({
                 <div className="mb-2 flex items-center gap-1.5">
                   <MessageSquareQuoteIcon className="size-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">
-                    Suggested Pre-Screen Questions
+                    คำถามคัดกรองที่แนะนำ
                   </span>
                 </div>
                 <ol className="space-y-1.5">
@@ -1663,7 +1661,7 @@ export function AddApplicantDialog({
                     ))
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      No pre-screen questions returned by AI.
+                      AI ไม่มีคำถามคัดกรองที่แนะนำ
                     </p>
                   )}
                 </ol>
@@ -1673,7 +1671,7 @@ export function AddApplicantDialog({
                 <div className="mb-1.5 flex items-center gap-1.5">
                   <LightbulbIcon className="size-4 text-amber-500" />
                   <span className="text-xs font-semibold uppercase tracking-wide text-foreground">
-                    AI Summary
+                    สรุปจาก AI
                   </span>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
@@ -1688,7 +1686,7 @@ export function AddApplicantDialog({
                   className="flex-1"
                   onClick={() => handleOpenChange(false)}
                 >
-                  Discard
+                  ยกเลิก
                 </Button>
                 <Button
                   type="button"
@@ -1701,7 +1699,7 @@ export function AddApplicantDialog({
                   ) : (
                     <CheckCircle2Icon className="size-4" />
                   )}
-                  Save to Tracker
+                  บันทึกลงระบบ
                 </Button>
               </div>
             </div>
@@ -1709,7 +1707,7 @@ export function AddApplicantDialog({
 
           {addFlowStep === "ai_result" && !addAiReport ? (
             <div className="rounded-lg border border-border bg-secondary p-4 text-sm text-muted-foreground">
-              No AI result found. Please run analysis again.
+              ไม่พบผลลัพธ์จาก AI กรุณาวิเคราะห์ใหม่อีกครั้ง
             </div>
           ) : null}
         </div>
