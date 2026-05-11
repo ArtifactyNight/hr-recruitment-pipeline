@@ -721,3 +721,11 @@
 **Output:** Swapped `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle` for `Sheet`/`SheetContent`/`SheetHeader`/`SheetTitle`. Sheet slides in from the right (`side="right"`), width overridden to `data-[side=right]:sm:max-w-xl md:data-[side=right]:sm:max-w-2xl` so the form has breathing room (default sheet cap is `sm:max-w-sm`). Scroll container switched from `max-h-[75vh] overflow-y-auto` to `flex-1 overflow-y-auto` to fit the full-height sheet. Header padding compacted to `px-5 py-4` and gets `pr-8` to clear the built-in `SheetClose` × button. Component name `AddApplicantDialog` and file name kept intact to avoid touching `src/app/(dashboard)/candidates/page.tsx`. `tsc --noEmit` + lints clean.
 
 **Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-12 00:14] - scrape(link) dispatcher in scraping.ts
+
+**Prompt:** Implement linear `scrape(link)` in `src/server/lib/scraping.ts` — auto-detect LinkedIn / JobsDB / fallback. LinkedIn via Apify actor `LpVuK3Zozwuipa5bp` (`profileScraperMode: "Profile details no email ($4 per 1k)"`, `queries: [link]`), JobsDB commented stub, fallback via Firecrawl. No component wiring yet.
+
+**Output:** Single top-to-bottom function (no extracted helpers): parse URL (→ 400), lowercase `hostname`, `if linkedin / else if jobsdb / else firecrawl`. LinkedIn branch uses existing `apifyClient` from `@/lib/apify`, calls actor with `waitSecs: 120`, reads `dataset(run.defaultDatasetId).listItems()`, casts `items[0]` to `ScrapedLinkedinProfile` from `@/types/scraping`. JobsDB branch throws `501` with `// TODO` lines outlining the future actor call so the same place is easy to edit. Firecrawl branch dynamically imports `@mendable/firecrawl-js` (already pulled in transitively via `firecrawl-aisdk`), calls `fc.v1.scrapeUrl(link, { formats: ["markdown"], onlyMainContent: true })`, narrows the result the same way `profile-url-scrape.ts` does, and returns `{ kind: "other", url, data: { title, markdown } }`. Public surface is a discriminated union `ScrapeResult` (`linkedin` / `other`). All failures throw `Object.assign(new Error(msg), { statusCode })` matching the existing pattern. Lints clean.
+
+**Edited:** `src/server/lib/scraping.ts`, `cowork-log.md`

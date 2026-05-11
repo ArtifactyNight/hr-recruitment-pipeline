@@ -14,7 +14,6 @@ import {
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
-import { mapProfileTextFromRaw } from "@/server/lib/applicant-profile-map-service";
 import { authPlugin } from "@/server/lib/auth-plugin";
 import {
   extractScrapedMeta,
@@ -30,6 +29,7 @@ import {
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { mapProfileTextFromRaw } from "../lib/applicant-profile-map-service";
 
 const stageUnion = t.Union([
   t.Literal("APPLIED"),

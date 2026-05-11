@@ -35,3 +35,6 @@ Goal: Cowork Log is a file that records your Claude Cowork sessions during assig
 
 - Use `elysia` for Backend
 - Use `@tanstack/react-query` for mutation and query APIs
+
+## Code Style
+Write the code in a linear, easy-to-read flow. I prefer fewer functions and more self-contained logic within the main body. Prioritize simplicity over excessive abstraction.
