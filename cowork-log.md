@@ -1,3 +1,15 @@
+### 2026-05-12 20:45 - Screening preview accordion
+
+**Prompt:** Make screening preview collapsible using shadcn Accordion or display it in one column.
+**Output:** Added local shadcn Accordion UI wrapper and changed the applicant detail screening preview from three columns to a single collapsible accordion with item counts and one open section by default.
+**Edited:** `src/components/ui/accordion.tsx`, `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `cowork-log.md`
+
+### 2026-05-12 20:36 - Applicant screening preview
+
+**Prompt:** Implement Screening Preview Plan: save and preview questions, strengths, and gaps for applicants.
+**Output:** Typed existing `ScreeningResult` JSON arrays, exposed saved strengths/concerns/questions through applicant API payloads, mapped concerns to `gaps`, rendered a read-only AI Screening Preview in applicant details, and normalized saved screening text arrays for typed Prisma writes.
+**Edited:** `prisma/schema.prisma`, `src/types/types.ts`, `src/features/applicants-tracker/types.ts`, `src/server/routes/applicant.ts`, `src/lib/resume-screening-service.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-12] - Calendar day panel: View info button + dropdown label
 
 **Prompt:** Add view info button and show applicant-detail-sheet from fullscreen-calendar dropdown panel.
@@ -939,15 +951,3 @@ All four touched files lint-clean.
 **Prompt:** setup r2 with s3 sdk (.env R2\_\* vars)
 **Output:** Installed `@aws-sdk/client-s3`. Added `src/lib/r2-s3.ts`: `getR2S3Client()` (endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`, region `auto`), `getR2BucketName()`, `getR2PublicBaseUrl()`, `getR2PublicObjectUrl(key)` for public R2.dev/custom URLs.
 **Edited:** `src/lib/r2-s3.ts`, `package.json`, `bun.lock`, `cowork-log.md`
-
-### 2026-05-12 20:36 - Applicant screening preview
-
-**Prompt:** Implement Screening Preview Plan: save and preview questions, strengths, and gaps for applicants.
-**Output:** Typed existing `ScreeningResult` JSON arrays, exposed saved strengths/concerns/questions through applicant API payloads, mapped concerns to `gaps`, rendered a read-only AI Screening Preview in applicant details, and normalized saved screening text arrays for typed Prisma writes.
-**Edited:** `prisma/schema.prisma`, `src/types/types.ts`, `src/features/applicants-tracker/types.ts`, `src/server/routes/applicant.ts`, `src/lib/resume-screening-service.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `cowork-log.md`
-
-### 2026-05-12 20:45 - Screening preview accordion
-
-**Prompt:** Make screening preview collapsible using shadcn Accordion or display it in one column.
-**Output:** Added local shadcn Accordion UI wrapper and changed the applicant detail screening preview from three columns to a single collapsible accordion with item counts and one open section by default.
-**Edited:** `src/components/ui/accordion.tsx`, `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `cowork-log.md`
