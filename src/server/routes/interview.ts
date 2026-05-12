@@ -198,7 +198,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         const googleIds = events.map((e) => e.googleEventId);
         const interviewByGoogleId = new Map<
           string,
-          { id: string; status: string }
+          { id: string; status: string; applicantId: string }
         >();
         if (googleIds.length > 0) {
           const linked = await prisma.interview.findMany({
@@ -206,13 +206,19 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
               organizerUserId: user!.id,
               googleEventId: { in: googleIds },
             },
-            select: { id: true, googleEventId: true, status: true },
+            select: {
+              id: true,
+              googleEventId: true,
+              status: true,
+              applicantId: true,
+            },
           });
           for (const row of linked) {
             if (row.googleEventId) {
               interviewByGoogleId.set(row.googleEventId, {
                 id: row.id,
                 status: row.status,
+                applicantId: row.applicantId,
               });
             }
           }
@@ -223,6 +229,7 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
             ...e,
             interviewId: interview?.id ?? null,
             interviewDbStatus: interview?.status ?? null,
+            applicantId: interview?.applicantId ?? null,
           };
         });
         return { events: enriched };

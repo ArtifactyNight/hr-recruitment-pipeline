@@ -30,6 +30,7 @@ import {
   ClockIcon,
   ExternalLinkIcon,
   FileTextIcon,
+  InfoIcon,
   MoreVerticalIcon,
   SearchIcon,
   UserIcon,
@@ -104,6 +105,8 @@ export interface Event {
   id: string;
   /** HR interview row id when this event is linked in our DB */
   interviewId: string | null;
+  /** Applicant id when this calendar row is linked to an interview */
+  applicantId: string | null;
   /** DB InterviewStatus when linked; null for plain Google Calendar events */
   interviewDbStatus:
     | "SCHEDULED"
@@ -149,6 +152,8 @@ interface FullScreenCalendarProps {
     durationMinutes: number;
   }) => Promise<void>;
   postponeInterviewPending?: boolean;
+  /** Open applicant detail (e.g. sheet) for linked interviews */
+  onPreviewApplicant?: (applicantId: string) => void;
 }
 
 const colStartClasses = [
@@ -188,6 +193,7 @@ interface SelectedDayEventsPanelProps {
     durationMinutes: number;
   }) => Promise<void>;
   postponeInterviewPending?: boolean;
+  onPreviewApplicant?: (applicantId: string) => void;
 }
 
 function eventIsCancelled(event: Event): boolean {
@@ -209,6 +215,7 @@ function SelectedDayEventsPanel({
   cancelCalendarPending = false,
   onPostponeInterview,
   postponeInterviewPending = false,
+  onPreviewApplicant,
 }: SelectedDayEventsPanelProps) {
   const [, copyToClipboard] = useCopyToClipboard();
   const title = format(selectedDay, "EEEE d MMMM yyyy", { locale: th });
@@ -248,6 +255,8 @@ function SelectedDayEventsPanel({
                 Boolean(event.interviewId) &&
                 !cancelled &&
                 !cancelDisabledPast;
+              const showApplicantPreview =
+                Boolean(event.applicantId) && Boolean(onPreviewApplicant);
 
               return (
                 <div
@@ -378,13 +387,25 @@ function SelectedDayEventsPanel({
                       </div>
                     </div>
 
-                    <div className="absolute right-2 top-2">
+                    <div className="absolute right-2 top-2 flex max-w-[calc(100%-0.5rem)] items-center justify-end gap-1">
+                      {showApplicantPreview ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() =>
+                            onPreviewApplicant?.(event.applicantId!)
+                          }
+                        >
+                          <InfoIcon className="size-4 shrink-0" aria-hidden />
+                        </Button>
+                      ) : null}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-8"
+                            className="size-8 shrink-0"
                             disabled={cancelled}
                           >
                             <MoreVerticalIcon
@@ -395,6 +416,20 @@ function SelectedDayEventsPanel({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {showApplicantPreview ? (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                onPreviewApplicant?.(event.applicantId!)
+                              }
+                            >
+                              <InfoIcon data-icon="inline-start" />
+                              ดูข้อมูล
+                            </DropdownMenuItem>
+                          ) : null}
+                          {showApplicantPreview &&
+                          (showMeetActions || canPostpone || showCancelSlot) ? (
+                            <DropdownMenuSeparator />
+                          ) : null}
                           {showMeetActions ? (
                             <>
                               <DropdownMenuItem asChild>
@@ -545,6 +580,7 @@ export function FullScreenCalendar({
   cancelCalendarPending = false,
   onPostponeInterview,
   postponeInterviewPending = false,
+  onPreviewApplicant,
 }: FullScreenCalendarProps) {
   const today = startOfToday();
   const [selectedDay, setSelectedDay] = React.useState(today);
@@ -902,6 +938,7 @@ export function FullScreenCalendar({
           cancelCalendarPending={cancelCalendarPending}
           onPostponeInterview={onPostponeInterview}
           postponeInterviewPending={postponeInterviewPending}
+          onPreviewApplicant={onPreviewApplicant}
         />
       </Card>
     </div>

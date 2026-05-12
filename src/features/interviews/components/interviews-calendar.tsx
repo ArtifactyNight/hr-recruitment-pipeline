@@ -8,24 +8,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { applicantMutations } from "@/features/applicants-tracker/api/mutations";
+import { ApplicantDetailSheet } from "@/features/applicants-tracker/components/applicant-detail-sheet";
 import {
   ApplicantScheduleInterviewDialog,
   emptyScheduleInterviewFormState,
   scheduleInterviewFormStateForDate,
+  type ScheduleInterviewSubmitInput,
 } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
+import { DeleteApplicantAlert } from "@/features/applicants-tracker/components/delete-applicant-alert";
 import { interviewMutations } from "@/features/interviews/api/mutations";
 import { interviewQueries } from "@/features/interviews/api/queries";
+import { interviewKeys } from "@/features/interviews/api/query-keys";
 import {
   FullScreenCalendar,
   type CalendarData,
   type Event as CalendarEvent,
 } from "@/features/interviews/components/fullscreen-calendar";
 import { useInterviewsCalendarStore } from "@/features/interviews/store/interviews-calendar-store";
+import type { ApplicantStage } from "@/generated/prisma/client";
 import type { GoogleCalendarListEvent } from "@/types/google-calendar-list-event";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, startOfDay } from "date-fns";
 import { th } from "date-fns/locale";
-import { useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 
@@ -59,6 +66,7 @@ function groupGoogleCalendarEventsToCalendarData(
     const ev: CalendarEvent = {
       id: row.googleEventId,
       interviewId: row.interviewId,
+      applicantId: row.applicantId ?? null,
       interviewDbStatus: row.interviewDbStatus,
       durationMinutes: row.durationMinutes,
       name: row.title,
@@ -124,6 +132,7 @@ function ApplicantPickerField({
 }
 
 export function InterviewsCalendar() {
+  const router = useRouter();
   const {
     fetchRange,
     setFetchRange,
@@ -137,6 +146,7 @@ export function InterviewsCalendar() {
   } = useInterviewsCalendarStore(useShallow((s) => s));
 
   const queryClient = useQueryClient();
+  const applicantsQueryKey = interviewKeys.calendarSchedule();
   const calendarQuery = useQuery(interviewQueries.calendarEvents(fetchRange));
   const applicantsQuery = useQuery(
     interviewQueries.calendarScheduleApplicants(),
@@ -148,8 +158,32 @@ export function InterviewsCalendar() {
   const scheduleInterviewMut = useMutation(
     interviewMutations.schedule(queryClient),
   );
+  const patchApplicantMut = useMutation(
+    applicantMutations.patch(applicantsQueryKey, queryClient),
+  );
+  const deleteApplicantMut = useMutation(
+    applicantMutations.delete(applicantsQueryKey, queryClient),
+  );
+  const screenApplicantMut = useMutation(
+    applicantMutations.screen(queryClient),
+  );
+  const scheduleApplicantInterviewMut = useMutation(
+    applicantMutations.scheduleInterview(queryClient),
+  );
+
+  const [previewApplicant, setPreviewApplicant] =
+    useState<TrackerApplicant | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TrackerApplicant | null>(
+    null,
+  );
 
   const scheduleApplicants = applicantsQuery.data?.applicants ?? [];
+
+  const sheetApplicant = useMemo(() => {
+    if (!previewApplicant) return null;
+    const fresh = scheduleApplicants.find((a) => a.id === previewApplicant.id);
+    return fresh ?? previewApplicant;
+  }, [previewApplicant, scheduleApplicants]);
 
   const effectiveSelectedApplicantId = useMemo(() => {
     const selectedStillAvailable = scheduleApplicants.some(
@@ -203,6 +237,18 @@ export function InterviewsCalendar() {
       : "โหลดปฏิทินไม่สำเร็จ"
     : null;
 
+  const openApplicantPreview = useCallback(
+    (applicantId: string) => {
+      const row = scheduleApplicants.find((a) => a.id === applicantId);
+      if (!row) {
+        toast.error("ไม่พบข้อมูลผู้สมัคร");
+        return;
+      }
+      setPreviewApplicant(row);
+    },
+    [scheduleApplicants],
+  );
+
   return (
     <div className="mt-6 space-y-3">
       {apiError ? (
@@ -223,6 +269,108 @@ export function InterviewsCalendar() {
           await patchInterviewMut.mutateAsync(input);
         }}
         postponeInterviewPending={patchInterviewMut.isPending}
+        onPreviewApplicant={openApplicantPreview}
+      />
+      <ApplicantDetailSheet
+        key={sheetApplicant?.id ?? "closed"}
+        applicant={sheetApplicant}
+        onOpenChange={(open) => {
+          if (!open) setPreviewApplicant(null);
+        }}
+        patchPending={patchApplicantMut.isPending}
+        screenAiPending={screenApplicantMut.isPending}
+        notesSaving={
+          patchApplicantMut.isPending &&
+          patchApplicantMut.variables != null &&
+          patchApplicantMut.variables.notes !== undefined
+        }
+        scheduleInterviewPending={scheduleApplicantInterviewMut.isPending}
+        applicantsQueryKey={applicantsQueryKey}
+        onCvPatch={(patch) => {
+          if (!sheetApplicant) return;
+          setPreviewApplicant({ ...sheetApplicant, ...patch });
+        }}
+        onScheduleInterview={async (input: ScheduleInterviewSubmitInput) => {
+          await scheduleApplicantInterviewMut.mutateAsync(input, {
+            onSuccess: () => {
+              setPreviewApplicant(null);
+              router.push("/interviews");
+            },
+          });
+        }}
+        onStageSelect={(stage: ApplicantStage) => {
+          if (!sheetApplicant) return;
+          patchApplicantMut.mutate(
+            { id: sheetApplicant.id, stage },
+            {
+              onSuccess: () => {
+                setPreviewApplicant({ ...sheetApplicant, stage });
+              },
+            },
+          );
+        }}
+        onSaveNotes={(text) => {
+          if (!sheetApplicant) return;
+          patchApplicantMut.mutate(
+            { id: sheetApplicant.id, notes: text },
+            {
+              onSuccess: () => {
+                const trimmed = text.trim();
+                setPreviewApplicant({
+                  ...sheetApplicant,
+                  notes: trimmed === "" ? null : trimmed,
+                });
+                toast.success("บันทึกหมายเหตุแล้ว");
+              },
+            },
+          );
+        }}
+        onRequestDelete={() => {
+          if (sheetApplicant) setDeleteTarget(sheetApplicant);
+        }}
+        onScreenWithAi={() => {
+          if (!sheetApplicant) return;
+          screenApplicantMut.mutate(sheetApplicant.id, {
+            onSuccess: (data) => {
+              const applicant = (data as { applicant?: unknown } | null)
+                ?.applicant;
+              if (
+                applicant &&
+                typeof applicant === "object" &&
+                "id" in applicant
+              ) {
+                setPreviewApplicant(applicant as TrackerApplicant);
+              }
+            },
+          });
+        }}
+        onPatchInfo={(patch) => {
+          if (!sheetApplicant) return;
+          patchApplicantMut.mutate(
+            { id: sheetApplicant.id, ...patch },
+            {
+              onSuccess: () => {
+                setPreviewApplicant({ ...sheetApplicant, ...patch });
+              },
+            },
+          );
+        }}
+      />
+      <DeleteApplicantAlert
+        open={!!deleteTarget}
+        applicantName={deleteTarget?.name ?? null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onConfirm={() => {
+          if (deleteTarget)
+            deleteApplicantMut.mutate(deleteTarget.id, {
+              onSuccess: () => {
+                setDeleteTarget(null);
+                setPreviewApplicant(null);
+              },
+            });
+        }}
       />
       <ApplicantScheduleInterviewDialog
         applicantId={effectiveSelectedApplicantId}

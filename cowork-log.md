@@ -1,3 +1,19 @@
+### [2026-05-12] - Calendar day panel: View info button + dropdown label
+
+**Prompt:** Add view info button and show applicant-detail-sheet from fullscreen-calendar dropdown panel.
+
+**Output:** Selected-day event cards get an outline **ดูข้อมูล** button (Info icon) beside ⋮ when `applicantId` + `onPreviewApplicant`; opens same `ApplicantDetailSheet` flow as parent. Dropdown first item aligned to **ดูข้อมูล** + Info icon (replacing User + longer Thai label). Button stays usable when the event is cancelled so HR can still open the sheet.
+
+**Edited:** `fullscreen-calendar.tsx`, `cowork-log.md`
+
+### [2026-05-12] - Calendar sidebar: open ApplicantDetailSheet from dropdown
+
+**Prompt:** Implement applicant-detail-sheet in SelectedDayEventsPanel dropdown like click-to-preview dialog.
+
+**Output:** `GET /interviews/calendar-events` enrichment now includes `applicantId` from linked `Interview`. `GoogleCalendarListEvent`, `Event`, mapper, and Google list stub carry `applicantId`. `SelectedDayEventsPanel` dropdown adds “ดูรายละเอียดผู้สมัคร” when linked + `onPreviewApplicant`. `InterviewsCalendar` wires sheet + delete alert + applicant mutations (same behavior as tracker page).
+
+**Edited:** `interview.ts`, `google-calendar-list-event.ts`, `google-calendar-service.ts`, `fullscreen-calendar.tsx`, `interviews-calendar.tsx`, `cowork-log.md`
+
 ### [2026-05-12] - AI screening preview dialog footer close
 
 **Prompt:** Add close button on dialog footer.

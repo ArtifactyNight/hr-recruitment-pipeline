@@ -4,6 +4,8 @@ export type GoogleCalendarListEvent = {
   googleEventId: string;
   /** Row in our DB when this Google event is an interview you organized; otherwise null. */
   interviewId: string | null;
+  /** Applicant linked to that interview when present. */
+  applicantId: string | null;
   /** DB InterviewStatus when linked to our interview row; otherwise null. */
   interviewDbStatus:
     | "SCHEDULED"

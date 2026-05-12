@@ -380,6 +380,7 @@ export async function listPrimaryCalendarEvents(opts: {
     out.push({
       googleEventId: ev.id,
       interviewId: null,
+      applicantId: null,
       durationMinutes,
       title: ev.summary?.trim() ? ev.summary.trim() : "(ไม่มีหัวข้อ)",
       startIso: win.startIso,
