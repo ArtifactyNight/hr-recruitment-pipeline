@@ -475,7 +475,7 @@ export function ApplicantScheduleInterviewDialog({
               data-invalid={formState.errors.extraNotes ? true : undefined}
             >
               <FieldLabel htmlFor={`notes-${applicantId}`}>
-                หมายเหตุ (ถ้ามี)
+                ข้อความที่ต้องการแนบไปยัง Google Meet
               </FieldLabel>
               <FieldContent>
                 <Textarea
