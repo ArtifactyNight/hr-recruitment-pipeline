@@ -1,3 +1,11 @@
+### [2026-05-12] - README Tech Stack: evlog
+
+**Prompt:** Add evlog to Tech Stack in README.md
+
+**Output:** Added Tech Stack table row: Observability → evlog (wide events, structured logging, Next/Elysia adapters, optional AI telemetry).
+
+**Edited:** `README.md`, `cowork-log.md`
+
 ### [2026-05-12] - evlog AI observability (AI SDK)
 
 **Prompt:** Add AI observability with evlog: `createAILogger` from `evlog/ai`, wrap model, `createEvlogIntegration` on `experimental_telemetry`, optional embed/cost map; install `ai`.

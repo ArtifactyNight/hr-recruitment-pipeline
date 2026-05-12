@@ -25,6 +25,7 @@ The stack is already decided. Do not introduce new dependencies without a clear 
 | Database      | PostgreSQL + Prisma 7                           | Relational data, type-safe queries, migration support                                                                                  |
 | Auth          | Better Auth - Google OAuth                      | Full auth stack (sessions, token storage, refresh) self-hosted; Google token stored in your DB so Calendar API is a plain Prisma query |
 | Data fetching | TanStack Query v5 + Eden Treaty                 | Eden derives typed client from Elysia's type signature; TanStack Query handles caching, optimistic updates, background refetch         |
+| Logging & Observability | evlog                                           | Wide events and structured logging (Next.js / Elysia adapters); optional AI SDK telemetry hooks                                          |
 | State         | Zustand v5                                      | Low-friction client UI state (dialogs, form steps, filters) - server state belongs in TanStack Query, not here                         |
 | AI screening  | Google Generative AI (Gemini) via Vercel AI SDK | Structured output for fit scoring                                                                                                      |
 | File storage  | Cloudflare R2                                   | PDF resume uploads via presigned URLs                                                                                                  |
