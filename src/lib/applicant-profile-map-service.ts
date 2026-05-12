@@ -2,6 +2,7 @@ import {
   applicantProfileMapSchema,
   type ApplicantProfileMap,
 } from "@/features/applicants-tracker/schemas";
+import { evlogTelemetryForAi, tryCreateRequestAILogger } from "@/lib/ai-evlog";
 import { google } from "@ai-sdk/google";
 import { generateText, Output, zodSchema } from "ai";
 import { createFallback } from "ai-fallback";
@@ -92,13 +93,22 @@ export async function mapProfileTextFromRaw(
     ? `\nSOURCE_URL: ${input.profileUrl.trim()}`
     : "";
 
+  const aiLogger = tryCreateRequestAILogger();
+  const llmModel = aiLogger ? aiLogger.wrap(model) : model;
+  const experimentalTelemetry = aiLogger
+    ? evlogTelemetryForAi(aiLogger)
+    : undefined;
+
   try {
     const { output } = await generateText({
-      model,
+      model: llmModel,
       system: PROFILE_MAP_SYSTEM,
       output: Output.object({
         schema: zodSchema(applicantProfileMapSchema),
       }),
+      ...(experimentalTelemetry
+        ? { experimental_telemetry: experimentalTelemetry }
+        : {}),
       messages: [
         {
           role: "user",

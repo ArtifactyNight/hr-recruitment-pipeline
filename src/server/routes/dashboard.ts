@@ -1,6 +1,6 @@
 import type { ApplicantStage } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
-import { authPlugin } from "@/lib/auth-plugin";
+import { authPlugin } from "@/server/plugins/auth-plugin";
 import { Elysia } from "elysia";
 
 const PIPELINE_STAGES: ApplicantStage[] = [
@@ -134,12 +134,15 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
       }
       for (const row of monthlyApplicantRows) {
         const key = `${row.appliedAt.getFullYear()}-${String(row.appliedAt.getMonth() + 1).padStart(2, "0")}`;
-        if (monthlyMap.has(key)) monthlyMap.set(key, (monthlyMap.get(key) ?? 0) + 1);
+        if (monthlyMap.has(key))
+          monthlyMap.set(key, (monthlyMap.get(key) ?? 0) + 1);
       }
-      const monthlyTrend = Array.from(monthlyMap.entries()).map(([month, count]) => ({
-        month,
-        count,
-      }));
+      const monthlyTrend = Array.from(monthlyMap.entries()).map(
+        ([month, count]) => ({
+          month,
+          count,
+        }),
+      );
 
       return {
         totalApplicants,

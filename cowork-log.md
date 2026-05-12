@@ -1,3 +1,11 @@
+### [2026-05-12] - evlog AI observability (AI SDK)
+
+**Prompt:** Add AI observability with evlog: `createAILogger` from `evlog/ai`, wrap model, `createEvlogIntegration` on `experimental_telemetry`, optional embed/cost map; install `ai`.
+
+**Output:** `ai` was already a dependency. Added `src/lib/ai-evlog.ts` with `tryCreateRequestAILogger()` (`createAILogger(useLogger(), { cost: gemini… })` via `evlog/elysia` + `evlog/ai`) and `evlogTelemetryForAi()` returning `{ isEnabled: true, integrations: [createEvlogIntegration(ai)] }`. Wired `resume-screening-service` and `applicant-profile-map-service` to use `ai.wrap(fallbackModel)` and spread `experimental_telemetry` on both `generateText` paths; outside Elysia request context, falls back to unwrapped model and no telemetry. No `embed()` usage in repo yet—`ai.captureEmbed` not added.
+
+**Edited:** `src/lib/ai-evlog.ts`, `src/lib/resume-screening-service.ts`, `src/lib/applicant-profile-map-service.ts`, `cowork-log.md`
+
 ### [2026-05-12 12:16] - Integrate evlog (Next App Router)
 
 **Prompt:** Install evlog, detect framework, set env.service to app name, useLogger + log.set in a route handler, createError for invalid input, curl locally and confirm one wide event in terminal.

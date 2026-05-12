@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { authPlugin } from "@/lib/auth-plugin";
+import { authPlugin } from "@/server/plugins/auth-plugin";
 import { Elysia, t } from "elysia";
 
 export const jobRoutes = new Elysia({ prefix: "/jobs" })

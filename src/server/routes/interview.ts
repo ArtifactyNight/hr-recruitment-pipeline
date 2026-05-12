@@ -4,7 +4,7 @@ import {
   NO_GOOGLE_OAUTH_TOKEN,
 } from "@/lib/get-google-token";
 import prisma from "@/lib/prisma";
-import { authPlugin } from "@/lib/auth-plugin";
+import { authPlugin } from "@/server/plugins/auth-plugin";
 import { addHours, subHours } from "date-fns";
 import { Elysia, t } from "elysia";
 

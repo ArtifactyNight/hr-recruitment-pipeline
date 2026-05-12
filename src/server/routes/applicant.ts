@@ -6,7 +6,13 @@ import {
   type InterviewStatus,
   Prisma,
 } from "@/generated/prisma/client";
+import { mapProfileTextFromRaw } from "@/lib/applicant-profile-map-service";
 import prisma from "@/lib/prisma";
+import {
+  extractScrapedMeta,
+  extractScrapedTitle,
+  stripHtml,
+} from "@/lib/profile-url-scrape";
 import {
   deleteResumeFromR2,
   getResumePdfBytesFromR2,
@@ -15,19 +21,13 @@ import {
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
-import { mapProfileTextFromRaw } from "@/lib/applicant-profile-map-service";
-import { authPlugin } from "@/lib/auth-plugin";
-import {
-  extractScrapedMeta,
-  extractScrapedTitle,
-  stripHtml,
-} from "@/lib/profile-url-scrape";
 import {
   evaluateResumeAgainstJob,
   fileHasBytes,
   fitReportToScreeningScalars,
 } from "@/lib/resume-screening-service";
 import { scrape } from "@/lib/scraping";
+import { authPlugin } from "@/server/plugins/auth-plugin";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -715,7 +715,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
       body: t.Object({ url: t.String({ minLength: 1 }) }),
       detail: {
         tags: ["applicants"],
-        summary: "Fetch profile data (LinkedIn structured / Firecrawl fallback)",
+        summary:
+          "Fetch profile data (LinkedIn structured / Firecrawl fallback)",
       },
     },
   )

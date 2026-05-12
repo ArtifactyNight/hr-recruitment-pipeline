@@ -4,6 +4,7 @@ import {
   screeningEvaluateSchema,
 } from "@/features/screener/schemas";
 import type { Prisma } from "@/generated/prisma/client";
+import { evlogTelemetryForAi, tryCreateRequestAILogger } from "@/lib/ai-evlog";
 import prisma from "@/lib/prisma";
 import { google } from "@ai-sdk/google";
 import { generateText, Output, zodSchema } from "ai";
@@ -224,6 +225,12 @@ export async function evaluateResumeAgainstJob(
   const systemScreener = buildScreenerSystemPrompt(strictness);
   const prompt = jdPrompt(job.title, job.description, job.requirements);
 
+  const aiLogger = tryCreateRequestAILogger();
+  const llmModel = aiLogger ? aiLogger.wrap(model) : model;
+  const experimentalTelemetry = aiLogger
+    ? evlogTelemetryForAi(aiLogger)
+    : undefined;
+
   try {
     if (hasFile || hasPdfBuffer) {
       let buffer: Buffer;
@@ -241,11 +248,14 @@ export async function evaluateResumeAgainstJob(
       }
 
       const { output } = await generateText({
-        model,
+        model: llmModel,
         system: systemScreener,
         output: Output.object({
           schema: zodSchema(screeningEvaluateSchema),
         }),
+        ...(experimentalTelemetry
+          ? { experimental_telemetry: experimentalTelemetry }
+          : {}),
         messages: [
           {
             role: "user",
@@ -286,11 +296,14 @@ export async function evaluateResumeAgainstJob(
     }
 
     const { output } = await generateText({
-      model,
+      model: llmModel,
       system: systemScreener,
       output: Output.object({
         schema: zodSchema(screeningEvaluateSchema),
       }),
+      ...(experimentalTelemetry
+        ? { experimental_telemetry: experimentalTelemetry }
+        : {}),
       messages: [
         {
           role: "user",

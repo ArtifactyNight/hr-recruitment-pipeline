@@ -1,13 +1,10 @@
 import { Elysia } from "elysia";
 
-import { applicantRoutes } from "@/server/routes/applicant-routes";
-import { dashboardRoutes } from "@/server/routes/dashboard-routes";
-import {
-  interviewRoutes,
-  interviewerRoutes,
-} from "@/server/routes/interview-routes";
-import { jobRoutes } from "@/server/routes/job-routes";
-import { screenerRoutes } from "@/server/routes/screener-routes";
+import { applicantRoutes } from "@/server/routes/applicant";
+import { dashboardRoutes } from "@/server/routes/dashboard";
+import { interviewRoutes, interviewerRoutes } from "@/server/routes/interview";
+import { jobRoutes } from "@/server/routes/job";
+import { screenerRoutes } from "@/server/routes/screener";
 import { openapi } from "@elysia/openapi";
 import { evlog } from "evlog/elysia";
 

@@ -5,12 +5,12 @@ import {
   putResumePdfToR2,
   resumeObjectKeyForApplicant,
 } from "@/lib/r2";
-import { authPlugin } from "@/lib/auth-plugin";
 import {
   evaluateResumeAgainstJob,
   fileHasBytes,
   fitReportToScreeningScalars,
 } from "@/lib/resume-screening-service";
+import { authPlugin } from "@/server/plugins/auth-plugin";
 import { randomUUID } from "node:crypto";
 
 import { Elysia, t } from "elysia";
@@ -202,7 +202,8 @@ export const screenerRoutes = new Elysia({ prefix: "/screener" })
       }),
       detail: {
         tags: ["screener"],
-        summary: "Add applicant and screener result - supports PDF attachment (multipart)",
+        summary:
+          "Add applicant and screener result - supports PDF attachment (multipart)",
       },
     },
   );
