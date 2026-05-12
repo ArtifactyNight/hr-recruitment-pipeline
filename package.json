@@ -44,6 +44,7 @@
     "dotenv": "^17.4.2",
     "elysia": "^1.4.28",
     "embla-carousel-react": "^8.6.0",
+    "evlog": "^2.17.0",
     "firecrawl-aisdk": "^0.12.0",
     "google-auth-library": "^10.6.2",
     "input-otp": "^1.4.2",

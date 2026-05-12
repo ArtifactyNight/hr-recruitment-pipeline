@@ -9,9 +9,11 @@ import {
 import { jobRoutes } from "@/server/routes/job-routes";
 import { screenerRoutes } from "@/server/routes/screener-routes";
 import { openapi } from "@elysia/openapi";
+import { evlog } from "evlog/elysia";
 
 export const elysiaApp = new Elysia({ prefix: "/api" })
   .use(openapi())
+  .use(evlog())
   .get("/", () => ({
     ok: true,
     message: "Service API is ready",

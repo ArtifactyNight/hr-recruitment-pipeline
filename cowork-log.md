@@ -1,3 +1,11 @@
+### [2026-05-12 12:16] - Integrate evlog (Next App Router)
+
+**Prompt:** Install evlog, detect framework, set env.service to app name, useLogger + log.set in a route handler, createError for invalid input, curl locally and confirm one wide event in terminal.
+
+**Output:** Project is Next.js 16 (Elysia mounted at `/api/[[...slugs]]`); used `createEvlog` from `evlog/next` per docs—not `evlog/elysia` on the Elysia tree (that path is for standalone Elysia). Added `src/lib/evlog.ts` with `env.service: hr-recruitment-pipeline` and `src/app/api/evlog-demo/route.ts` with `withEvlog`, `useLogger()` (Next API is zero-arg; handler param is `event: Request`), `log.set({ route, demo })`, and `createError` when `hello` query missing. `curl http://127.0.0.1:3010/api/evlog-demo` returned 400 JSON and dev log showed one pretty wide event (`[hr-recruitment-pipeline]` GET /api/evlog-demo 400 + context + error).
+
+**Edited:** `package.json`, `bun.lock`, `src/lib/evlog.ts`, `src/app/api/evlog-demo/route.ts`, `cowork-log.md`
+
 ### [2026-05-11 22:10] - AI Resume Screener: Analyze button gated on full form
 
 **Prompt:** AI Resume Screener — cannot click Analyze after role, strictness, CV upload.
