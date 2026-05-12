@@ -1,3 +1,19 @@
+### [2026-05-12] - Multi-interview applicants: API + tracker + detail + schedule overlap
+
+**Prompt:** Implement grilled spec — unlimited meets per applicant; `interviews[]` + computed `interview`; tracker incoming/+N/last; detail preview + sections; schedule overlap warn; Thai relative times; 60s clock.
+
+**Output:** `applicantInterviewSubset` loads all organizer interviews (asc); `mapApplicantInterviewPayload` + `computePrimaryInterview`. Types gain `interviews`. Tracker card uses `trackerCardMeetSummary` + `useNowMs`. Detail: `ApplicantDetailMeetPreview`, interview section upcoming/past with `formatDistance*` + in-progress badge. Schedule dialog: `existingInterviews` + `applicantInterviewOverlapMessage`. Calendar picker lists all applicants. Footer always shows schedule.
+
+**Edited:** `applicant.ts`, `types.ts`, `applicant-interview-helpers.ts`, `use-now-ms.ts`, `tracker-card.tsx`, `applicant-detail-*`, `applicant-schedule-interview-dialog.tsx`, `interviews-calendar.tsx`, `mutations.ts`, `cowork-log.md`
+
+### [2026-05-12] - Grill-me: multi-interview applicant UX + API
+
+**Prompt:** `/grill-me` — unlimited meets per applicant; tracker incoming/+N; detail list sections; schedule overlap warn; relative badges (A+C); dual API fields; 60s tick; Thai locale.
+
+**Output:** Locked spec: next incoming + `+N more`; incoming until end of slot; no-upcoming → last meet ago; dialog upcoming↑ past↓; overlap warn allow; per-row countdown + in-progress in window; `interviews` + computed `interview`; interval ~60s; `date-fns` `th`.
+
+**Edited:** `cowork-log.md`
+
 ### [2026-05-12] - Tracker card: Meet creation status badge
 
 **Prompt:** `tracker-card.tsx` — show whether Google Meet was created (scheduled interview link) or not.

@@ -149,28 +149,30 @@ export function InterviewsCalendar() {
     interviewMutations.schedule(queryClient),
   );
 
-  const scheduleCandidates = useMemo(() => {
-    return (applicantsQuery.data?.applicants ?? []).filter(
-      (applicant) => applicant.interview === null,
-    );
-  }, [applicantsQuery.data?.applicants]);
+  const scheduleApplicants = applicantsQuery.data?.applicants ?? [];
 
   const effectiveSelectedApplicantId = useMemo(() => {
-    const selectedStillAvailable = scheduleCandidates.some(
+    const selectedStillAvailable = scheduleApplicants.some(
       (applicant) => applicant.id === selectedApplicantId,
     );
     if (selectedStillAvailable) return selectedApplicantId;
-    return scheduleCandidates[0]?.id ?? "";
-  }, [scheduleCandidates, selectedApplicantId]);
+    return scheduleApplicants[0]?.id ?? "";
+  }, [scheduleApplicants, selectedApplicantId]);
+
+  const selectedApplicantForOverlap = useMemo(() => {
+    return scheduleApplicants.find(
+      (a) => a.id === effectiveSelectedApplicantId,
+    );
+  }, [scheduleApplicants, effectiveSelectedApplicantId]);
 
   const openScheduleForDate = useCallback(
     (date: Date) => {
       setScheduleForm(scheduleInterviewFormStateForDate(date));
-      setSelectedApplicantId(scheduleCandidates[0]?.id ?? "");
+      setSelectedApplicantId(scheduleApplicants[0]?.id ?? "");
       setScheduleOpen(true);
     },
     [
-      scheduleCandidates,
+      scheduleApplicants,
       setScheduleForm,
       setSelectedApplicantId,
       setScheduleOpen,
@@ -236,9 +238,10 @@ export function InterviewsCalendar() {
             },
           });
         }}
+        existingInterviews={selectedApplicantForOverlap?.interviews ?? []}
         beforeFields={
           <ApplicantPickerField
-            applicants={scheduleCandidates}
+            applicants={scheduleApplicants}
             selectedApplicantId={effectiveSelectedApplicantId}
             loading={applicantsQuery.isLoading}
             onApplicantChange={setSelectedApplicantId}
@@ -247,7 +250,7 @@ export function InterviewsCalendar() {
         submitDisabled={
           !effectiveSelectedApplicantId ||
           applicantsQuery.isLoading ||
-          scheduleCandidates.length === 0
+          scheduleApplicants.length === 0
         }
       />
     </div>

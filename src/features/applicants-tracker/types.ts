@@ -52,6 +52,9 @@ export type TrackerApplicant = {
     createdAt: string;
   }>;
   tags: Array<string>;
+  /** All interviews for this applicant (current organizer). Sorted ascending by start time. */
+  interviews: Array<TrackerApplicantInterview>;
+  /** Next incoming meet, or last ended when none upcoming — derived for backwards compatibility. */
   interview: TrackerApplicantInterview | null;
 };
 

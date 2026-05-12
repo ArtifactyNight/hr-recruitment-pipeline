@@ -18,11 +18,13 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { applicantInterviewOverlapMessage } from "@/features/applicants-tracker/applicant-interview-helpers";
 import {
   parseInterviewerEmails,
   scheduleInterviewFormSchema,
   type ScheduleInterviewFormValues,
 } from "@/features/applicants-tracker/schemas";
+import type { TrackerApplicantInterview } from "@/features/applicants-tracker/types";
 import { api } from "@/lib/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
@@ -55,6 +57,8 @@ export type ApplicantScheduleInterviewDialogProps = {
   schedulePending: boolean;
   initialFormState: ScheduleInterviewFormState;
   onScheduleInterview: (input: ScheduleInterviewSubmitInput) => Promise<void>;
+  /** Warn when new slot overlaps existing interviews for this applicant (non-blocking). */
+  existingInterviews?: Array<TrackerApplicantInterview>;
   beforeFields?: ReactNode;
   submitDisabled?: boolean;
 };
@@ -158,6 +162,7 @@ export function ApplicantScheduleInterviewDialog({
   schedulePending,
   initialFormState,
   onScheduleInterview,
+  existingInterviews = [],
   beforeFields,
   submitDisabled = false,
 }: ApplicantScheduleInterviewDialogProps) {
@@ -278,6 +283,18 @@ export function ApplicantScheduleInterviewDialog({
     };
   }, [open, debouncedSlot]);
 
+  const overlapHint = useMemo(() => {
+    const parsed = slotFieldsSchema.safeParse(debouncedSlot);
+    if (!parsed.success) return null;
+    const slotStartMsValue = new Date(parsed.data.datetimeLocal).getTime();
+    if (Number.isNaN(slotStartMsValue)) return null;
+    return applicantInterviewOverlapMessage(
+      existingInterviews,
+      slotStartMsValue,
+      parsed.data.durationMinutes,
+    );
+  }, [debouncedSlot, existingInterviews]);
+
   const submitBlockedBySlot =
     slotPrecheck.status === "checking" ||
     slotPrecheck.status === "conflict" ||
@@ -386,6 +403,13 @@ export function ApplicantScheduleInterviewDialog({
                   <p className="text-muted-foreground flex items-center gap-2 text-sm">
                     <Loader2Icon className="size-4 shrink-0 animate-spin" />
                     กำลังตรวจสอบช่วงเวลา…
+                  </p>
+                ) : null}
+                {overlapHint &&
+                slotPrecheck.status !== "conflict" &&
+                slotPrecheck.status !== "error" ? (
+                  <p className="text-amber-800 dark:text-amber-200 text-sm">
+                    {overlapHint}
                   </p>
                 ) : null}
                 {slotPrecheck.status === "conflict" ||

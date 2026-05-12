@@ -1,10 +1,21 @@
 "use client";
 
+import {
+  isInterviewInProgress,
+  partitionInterviewsForDetail,
+  slotEndMs,
+} from "@/features/applicants-tracker/applicant-interview-helpers";
 import type {
   TrackerApplicant,
   TrackerApplicantInterview,
 } from "@/features/applicants-tracker/types";
-import { addMinutes, format } from "date-fns";
+import { useNowMs } from "@/features/applicants-tracker/use-now-ms";
+import {
+  addMinutes,
+  format,
+  formatDistance,
+  formatDistanceToNow,
+} from "date-fns";
 import { th } from "date-fns/locale";
 import { ExternalLinkIcon, VideoIcon } from "lucide-react";
 
@@ -40,7 +51,62 @@ function InterviewStatusBadge({
       </span>
     );
   }
+  if (interview.status === "COMPLETED") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        เสร็จแล้ว
+      </span>
+    );
+  }
   return null;
+}
+
+function InterviewTimingBadge({
+  interview,
+  nowMs,
+  variant,
+}: {
+  interview: TrackerApplicantInterview;
+  nowMs: number;
+  variant: "upcoming" | "past";
+}) {
+  const start = new Date(interview.scheduledAt);
+  const endMs = slotEndMs(interview);
+
+  if (variant === "upcoming" && isInterviewInProgress(interview, nowMs)) {
+    const left = formatDistance(new Date(nowMs), new Date(endMs), {
+      locale: th,
+      addSuffix: false,
+    });
+    return (
+      <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-900 dark:text-emerald-100">
+        กำลังสัมภาษณ์ · อีก {left}
+      </span>
+    );
+  }
+
+  if (variant === "upcoming") {
+    const label = formatDistanceToNow(start, {
+      locale: th,
+      addSuffix: true,
+    });
+    return (
+      <span className="inline-flex items-center rounded-full bg-sky-500/12 px-2 py-0.5 text-xs font-medium text-sky-900 dark:text-sky-100">
+        {label}
+      </span>
+    );
+  }
+
+  const endDate = new Date(endMs);
+  const ago = formatDistance(endDate, new Date(nowMs), {
+    locale: th,
+    addSuffix: true,
+  });
+  return (
+    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+      {ago}
+    </span>
+  );
 }
 
 type ApplicantDetailInterviewSectionProps = {
@@ -63,13 +129,48 @@ function formatInterviewersLine(
 export function ApplicantDetailInterviewSection({
   applicant,
 }: ApplicantDetailInterviewSectionProps) {
-  const iv = applicant.interview;
+  const nowMs = useNowMs(60_000);
+  const { upcoming, past } = partitionInterviewsForDetail(
+    applicant.interviews,
+    nowMs,
+  );
 
-  if (!iv) return null;
+  if (applicant.interviews.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
-      <InterviewMeetCard applicantName={applicant.name} interview={iv} />
+    <div className="flex flex-col gap-4">
+      {upcoming.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+            กำลังจะถึง
+          </p>
+          {upcoming.map((iv) => (
+            <InterviewMeetCard
+              key={iv.id}
+              applicantName={applicant.name}
+              interview={iv}
+              nowMs={nowMs}
+              variant="upcoming"
+            />
+          ))}
+        </div>
+      ) : null}
+      {past.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            ย้อนหลัง
+          </p>
+          {past.map((iv) => (
+            <InterviewMeetCard
+              key={iv.id}
+              applicantName={applicant.name}
+              interview={iv}
+              nowMs={nowMs}
+              variant="past"
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -77,9 +178,13 @@ export function ApplicantDetailInterviewSection({
 function InterviewMeetCard({
   applicantName,
   interview,
+  nowMs,
+  variant,
 }: {
   applicantName: string;
-  interview: NonNullable<TrackerApplicant["interview"]>;
+  interview: TrackerApplicantInterview;
+  nowMs: number;
+  variant: "upcoming" | "past";
 }) {
   const start = new Date(interview.scheduledAt);
   const end = addMinutes(start, interview.durationMinutes);
@@ -103,6 +208,11 @@ function InterviewMeetCard({
             <p className="font-semibold text-foreground">
               สัมภาษณ์ - {applicantName}
             </p>
+            <InterviewTimingBadge
+              interview={interview}
+              nowMs={nowMs}
+              variant={variant}
+            />
             <InterviewStatusBadge interview={interview} />
           </div>
           <p className="text-sm text-muted-foreground">

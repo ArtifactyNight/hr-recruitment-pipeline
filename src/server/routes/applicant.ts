@@ -1,4 +1,6 @@
+import { computePrimaryInterview } from "@/features/applicants-tracker/applicant-interview-helpers";
 import type { ApplicantProfileMap } from "@/features/applicants-tracker/schemas";
+import type { TrackerApplicantInterview } from "@/features/applicants-tracker/types";
 import { fitReportSchema } from "@/features/screener/schemas";
 import {
   type ApplicantSource,
@@ -73,11 +75,9 @@ function applicantInterviewSubset(
 ): Prisma.InterviewFindManyArgs {
   return {
     where: {
-      status: { in: ["SCHEDULED", "RESCHEDULED"] },
       organizerUserId,
     },
-    orderBy: { scheduledAt: "desc" },
-    take: 1,
+    orderBy: { scheduledAt: "asc" },
     select: {
       id: true,
       scheduledAt: true,
@@ -107,7 +107,7 @@ type ApplicantInterviewMapRow = {
   }>;
 };
 
-function mapApplicantInterview(interviews: Array<ApplicantInterviewMapRow>): {
+function mapInterviewRow(iv: ApplicantInterviewMapRow): {
   id: string;
   scheduledAt: string;
   durationMinutes: number;
@@ -120,9 +120,7 @@ function mapApplicantInterview(interviews: Array<ApplicantInterviewMapRow>): {
     email: string;
     title: string | null;
   }>;
-} | null {
-  const iv = interviews[0];
-  if (!iv) return null;
+} {
   return {
     id: iv.id,
     scheduledAt: iv.scheduledAt.toISOString(),
@@ -137,6 +135,19 @@ function mapApplicantInterview(interviews: Array<ApplicantInterviewMapRow>): {
       title: i.title ?? null,
     })),
   };
+}
+
+function mapApplicantInterviewPayload(
+  interviews: Array<ApplicantInterviewMapRow>,
+): {
+  interviews: Array<TrackerApplicantInterview>;
+  interview: TrackerApplicantInterview | null;
+} {
+  const mapped = interviews.map(
+    mapInterviewRow,
+  ) as Array<TrackerApplicantInterview>;
+  const interview = computePrimaryInterview(mapped, Date.now());
+  return { interviews: mapped, interview };
 }
 
 function applicantListFields(
@@ -366,6 +377,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
 
       let list = applicants.map((row) => {
         const fromScreening = applicantListFields(row.screeningResult);
+        const ivPayload = mapApplicantInterviewPayload(
+          row.interviews as unknown as Array<ApplicantInterviewMapRow>,
+        );
         return {
           id: row.id,
           name: row.name,
@@ -393,9 +407,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           stage: row.stage,
           jobDescriptionId: row.jobDescription.id,
           positionTitle: row.jobDescription.title,
-          interview: mapApplicantInterview(
-            row.interviews as unknown as Array<ApplicantInterviewMapRow>,
-          ),
+          interviews: ivPayload.interviews,
+          interview: ivPayload.interview,
           ...fromScreening,
         };
       });
@@ -848,6 +861,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         }
 
         const fromScreening = applicantListFields(current.screeningResult);
+        const ivPayload = mapApplicantInterviewPayload(
+          current.interviews as unknown as Array<ApplicantInterviewMapRow>,
+        );
         return {
           applicant: {
             id: current.id,
@@ -869,9 +885,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             stage: current.stage,
             jobDescriptionId: current.jobDescription.id,
             positionTitle: current.jobDescription.title,
-            interview: mapApplicantInterview(
-              current.interviews as unknown as Array<ApplicantInterviewMapRow>,
-            ),
+            interviews: ivPayload.interviews,
+            interview: ivPayload.interview,
             ...fromScreening,
           },
         };
@@ -1169,6 +1184,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           },
         });
         const fromScreening = applicantListFields(updated.screeningResult);
+        const ivPayload = mapApplicantInterviewPayload(
+          updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
+        );
         return {
           applicant: {
             id: updated.id,
@@ -1184,9 +1202,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             stage: updated.stage,
             jobDescriptionId: updated.jobDescription.id,
             positionTitle: updated.jobDescription.title,
-            interview: mapApplicantInterview(
-              updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
-            ),
+            interviews: ivPayload.interviews,
+            interview: ivPayload.interview,
             ...fromScreening,
           },
         };
@@ -1316,6 +1333,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           return { error: "ไม่พบผู้สมัคร" };
         }
         const fromScreening = applicantListFields(updated.screeningResult);
+        const ivPayload = mapApplicantInterviewPayload(
+          updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
+        );
         return {
           applicant: {
             id: updated.id,
@@ -1331,9 +1351,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             stage: updated.stage,
             jobDescriptionId: updated.jobDescription.id,
             positionTitle: updated.jobDescription.title,
-            interview: mapApplicantInterview(
-              updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
-            ),
+            interviews: ivPayload.interviews,
+            interview: ivPayload.interview,
             ...fromScreening,
           },
         };

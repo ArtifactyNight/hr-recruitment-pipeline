@@ -340,6 +340,7 @@ export const applicantMutations = {
           educations: state.addEducations,
           resumes: [],
           tags: [],
+          interviews: [],
           interview: null,
         };
         queryClient.setQueryData<ListResponse>(queryKey, (old) =>
