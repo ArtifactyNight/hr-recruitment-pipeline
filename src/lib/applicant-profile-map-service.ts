@@ -79,6 +79,74 @@ type MapProfileTextFromRawInput = {
   profileUrl?: string;
 };
 
+export async function mapProfileFromFile(
+  file: File,
+): Promise<ApplicantProfileMap> {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const mediaType = file.type || "application/pdf";
+  const filename = file.name || "resume.pdf";
+
+  const aiLogger = tryCreateRequestAILogger();
+  const llmModel = aiLogger ? aiLogger.wrap(model) : model;
+  const experimentalTelemetry = aiLogger
+    ? evlogTelemetryForAi(aiLogger)
+    : undefined;
+
+  try {
+    const { output } = await generateText({
+      model: llmModel,
+      system: PROFILE_MAP_SYSTEM,
+      output: Output.object({
+        schema: zodSchema(applicantProfileMapSchema),
+      }),
+      ...(experimentalTelemetry
+        ? { experimental_telemetry: experimentalTelemetry }
+        : {}),
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "file",
+              data: buffer,
+              mediaType: mediaType as "application/pdf",
+              filename,
+            },
+            {
+              type: "text",
+              text: "Extract the candidate profile from the attached CV/resume file.",
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!output) {
+      throw Object.assign(new Error("ไม่ได้รับผลลัพธ์จาก AI"), {
+        statusCode: 502,
+      });
+    }
+
+    const parsed = applicantProfileMapSchema.parse(output);
+    return normalizeMappedProfile(parsed);
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "statusCode" in error &&
+      typeof (error as { statusCode: unknown }).statusCode === "number"
+    ) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาด";
+    throw Object.assign(new Error("แมปข้อมูลโปรไฟล์จากไฟล์ไม่สำเร็จ"), {
+      statusCode: 502,
+      detail: message,
+    });
+  }
+}
+
 export async function mapProfileTextFromRaw(
   input: MapProfileTextFromRawInput,
 ): Promise<ApplicantProfileMap> {

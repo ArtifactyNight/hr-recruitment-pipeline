@@ -6,7 +6,10 @@ import {
   type InterviewStatus,
   Prisma,
 } from "@/generated/prisma/client";
-import { mapProfileTextFromRaw } from "@/lib/applicant-profile-map-service";
+import {
+  mapProfileFromFile,
+  mapProfileTextFromRaw,
+} from "@/lib/applicant-profile-map-service";
 import prisma from "@/lib/prisma";
 import {
   extractScrapedMeta,
@@ -181,56 +184,19 @@ const educationItemSchema = z.object({
   degree: z.string().trim().min(1),
 });
 
-const withResumePayloadSchema = z.object({
+const submitPayloadSchema = z.object({
   name: z.string().min(1),
   email: z.email(),
   phone: z.string().optional(),
   jobDescriptionId: z.string().min(1),
   source: applicantSourceSchema.optional(),
   cvText: z.string().optional(),
-  jobPostingUrl: z
-    .string()
-    .trim()
-    .optional()
-    .superRefine((val, ctx) => {
-      if (val === undefined || val.length === 0) return;
-      if (!URL.canParse(val)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Invalid URL",
-        });
-      }
-    }),
   latestRole: z.string().trim().optional(),
   skills: z.array(z.string().trim().min(1)).optional().default([]),
   experiences: z.array(experienceItemSchema).optional().default([]),
   educations: z.array(educationItemSchema).optional().default([]),
+  report: fitReportSchema.optional(),
 });
-
-const withScreeningPayloadSchema = z.object({
-  jobDescriptionId: z.string().min(1),
-  name: z.string().min(1),
-  email: z.email(),
-  phone: z.string().optional(),
-  source: applicantSourceSchema.optional(),
-  report: fitReportSchema,
-  resumeText: z.string().optional(),
-});
-
-function collectResumeUploadFiles(body: { files?: unknown }): Array<File> {
-  const out: Array<File> = [];
-  const multi = body.files;
-  if (Array.isArray(multi)) {
-    for (const f of multi) {
-      if (fileHasBytes(f)) {
-        out.push(f);
-      }
-    }
-  } else if (fileHasBytes(multi)) {
-    out.push(multi);
-  }
-  return out;
-}
 
 function isPdfResumeFile(file: File): boolean {
   return (
@@ -464,88 +430,6 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         source: t.Optional(sourceUnion),
       }),
       detail: { tags: ["applicants"], summary: "List applicants" },
-    },
-  )
-  .post(
-    "/",
-    async ({ body, set, user }) => {
-      const job = await prisma.jobDescription.findFirst({
-        where: { id: body.jobDescriptionId, isActive: true },
-      });
-      if (!job) {
-        set.status = 404;
-        return { error: "ไม่พบตำแหน่งนี้" };
-      }
-      const cvRaw = body.cvText?.trim() ?? "";
-      const created = await prisma.applicant.create({
-        data: {
-          name: body.name.trim(),
-          email: body.email.trim(),
-          phone: body.phone?.trim() || null,
-          jobDescriptionId: body.jobDescriptionId,
-          source: body.source ?? "OTHER",
-          stage: (body.stage ?? "APPLIED") as ApplicantStage,
-          ...(cvRaw.length > 0 ? { cvText: cvRaw } : {}),
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          notes: true,
-          cvText: true,
-          cvFileKey: true,
-          cvFileName: true,
-          appliedAt: true,
-          source: true,
-          stage: true,
-          jobDescription: { select: { id: true, title: true } },
-          screeningResult: {
-            select: {
-              overallScore: true,
-              skillFit: true,
-              experienceFit: true,
-              cultureFit: true,
-              strengths: true,
-            },
-          },
-          interviews: applicantInterviewSubset(user!.id),
-        },
-      });
-      const fromScreening = applicantListFields(created.screeningResult);
-      return {
-        applicant: {
-          id: created.id,
-          name: created.name,
-          email: created.email,
-          phone: created.phone,
-          notes: created.notes,
-          cvText: created.cvText,
-          cvFileKey: created.cvFileKey,
-          cvFileName: created.cvFileName,
-          appliedAt: created.appliedAt.toISOString(),
-          source: created.source,
-          stage: created.stage,
-          jobDescriptionId: created.jobDescription.id,
-          positionTitle: created.jobDescription.title,
-          interview: mapApplicantInterview(
-            created.interviews as unknown as Array<ApplicantInterviewMapRow>,
-          ),
-          ...fromScreening,
-        },
-      };
-    },
-    {
-      body: t.Object({
-        name: t.String({ minLength: 1 }),
-        email: t.String({ minLength: 3 }),
-        phone: t.Optional(t.String()),
-        jobDescriptionId: t.String({ minLength: 1 }),
-        source: t.Optional(sourceUnion),
-        stage: t.Optional(stageUnion),
-        cvText: t.Optional(t.String()),
-      }),
-      detail: { tags: ["applicants"], summary: "Add applicant" },
     },
   )
   .post(
@@ -795,7 +679,34 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
   )
   .post(
-    "/with-resume",
+    "/parse-pdf-profile",
+    async ({ body, set }) => {
+      const file = body.file;
+      if (!fileHasBytes(file)) {
+        set.status = 400;
+        return { error: "ต้องแนบไฟล์ PDF" };
+      }
+      try {
+        const mapped = await mapProfileFromFile(file as File);
+        return { mapped };
+      } catch (error) {
+        const { status, body: errBody } = screeningErrorResponse(error);
+        set.status = status;
+        return errBody;
+      }
+    },
+    {
+      body: t.Object({
+        file: t.File({ maxSize: 8 * 1024 * 1024 }),
+      }),
+      detail: {
+        tags: ["applicants"],
+        summary: "Extract profile data from PDF CV with AI",
+      },
+    },
+  )
+  .post(
+    "/submit",
     async ({ body, set, user }) => {
       let raw: unknown = body.payload;
       if (typeof body.payload === "string") {
@@ -806,24 +717,18 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           return { error: "payload ไม่ใช่ JSON ที่อ่านได้" };
         }
       }
-      const parsed = withResumePayloadSchema.safeParse(raw);
+      const parsed = submitPayloadSchema.safeParse(raw);
       if (!parsed.success) {
         set.status = 400;
-        return { error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() };
+        return { error: "ข้อมูลไม่ถูกต้อง" };
       }
-      const uploadFiles = collectResumeUploadFiles(body);
-      const cvTrim = parsed.data.cvText?.trim() ?? "";
-      if (uploadFiles.length === 0 && cvTrim.length === 0) {
+      const uploadFile = body.file;
+      const hasFile = fileHasBytes(uploadFile);
+      if (hasFile && !isPdfResumeFile(uploadFile as File)) {
         set.status = 400;
-        return { error: "ต้องแนบ PDF หรือวางข้อความ resume" };
+        return { error: "อนุญาตเฉพาะไฟล์ PDF" };
       }
-      for (const f of uploadFiles) {
-        if (!isPdfResumeFile(f)) {
-          set.status = 400;
-          return { error: "อนุญาตเฉพาะไฟล์ PDF" };
-        }
-      }
-      if (uploadFiles.length > 0 && !isR2Configured()) {
+      if (hasFile && !isR2Configured()) {
         set.status = 503;
         return {
           error: "ยังไม่ได้ตั้งค่า Cloudflare R2 (จำเป็นสำหรับอัปโหลด PDF)",
@@ -836,7 +741,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
         set.status = 404;
         return { error: "ไม่พบตำแหน่งนี้" };
       }
-      const jobPostingTrim = parsed.data.jobPostingUrl?.trim() ?? "";
+      const hasReport = parsed.data.report !== undefined;
+      const cvTrim = parsed.data.cvText?.trim() ?? "";
       const latestRoleTrim = parsed.data.latestRole?.trim() ?? "";
       const skills = parsed.data.skills
         .map((s) => s.trim())
@@ -854,6 +760,34 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
           school: e.school.trim(),
           degree: e.degree.trim(),
         }));
+      const dbSelect = {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        notes: true,
+        cvText: true,
+        cvFileKey: true,
+        cvFileName: true,
+        latestRole: true,
+        skills: true,
+        experiences: true,
+        educations: true,
+        appliedAt: true,
+        source: true,
+        stage: true,
+        jobDescription: { select: { id: true, title: true } },
+        screeningResult: {
+          select: {
+            overallScore: true,
+            skillFit: true,
+            experienceFit: true,
+            cultureFit: true,
+            strengths: true,
+          },
+        },
+        interviews: applicantInterviewSubset(user!.id),
+      } as const;
       try {
         const applicant = await prisma.applicant.create({
           data: {
@@ -862,103 +796,52 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             phone: parsed.data.phone?.trim() || null,
             jobDescriptionId: parsed.data.jobDescriptionId,
             source: parsed.data.source ?? "OTHER",
-            stage: "APPLIED",
+            stage: hasReport ? "SCREENING" : "APPLIED",
             ...(cvTrim.length > 0 ? { cvText: cvTrim } : {}),
-            ...(jobPostingTrim.length > 0
-              ? { jobPostingUrl: jobPostingTrim }
-              : {}),
-            ...(latestRoleTrim.length > 0
-              ? { latestRole: latestRoleTrim }
-              : {}),
+            ...(latestRoleTrim.length > 0 ? { latestRole: latestRoleTrim } : {}),
             skills,
             experiences: experiencesJson,
             educations: educationsJson,
+            ...(hasReport
+              ? {
+                  screeningResult: {
+                    create: fitReportToScreeningScalars(parsed.data.report!),
+                  },
+                }
+              : {}),
           },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            notes: true,
-            cvText: true,
-            cvFileKey: true,
-            cvFileName: true,
-            appliedAt: true,
-            source: true,
-            stage: true,
-            jobDescription: { select: { id: true, title: true } },
-            screeningResult: {
-              select: {
-                overallScore: true,
-                skillFit: true,
-                experienceFit: true,
-                cultureFit: true,
-                strengths: true,
-              },
-            },
-            interviews: applicantInterviewSubset(user!.id),
-          },
+          select: dbSelect,
         });
 
         let current = applicant;
-        if (uploadFiles.length > 0) {
-          let primaryKey: string | null = null;
-          let primaryName: string | null = null;
-          for (const file of uploadFiles) {
-            const bytes = await file.arrayBuffer();
-            const objectKey = resumeObjectKeyForApplicant(
-              applicant.id,
-              randomUUID(),
-            );
-            await putResumePdfToR2({
-              objectKey,
-              body: new Uint8Array(bytes),
-              contentType: file.type || "application/pdf",
-            });
-            await prisma.applicantResume.create({
-              data: {
-                applicantId: applicant.id,
-                fileKey: objectKey,
-                fileName: file.name?.trim() || "resume.pdf",
-                size: bytes.byteLength,
-                mimeType: file.type || "application/pdf",
-              },
-            });
-            if (!primaryKey) {
-              primaryKey = objectKey;
-              primaryName = file.name?.trim() || "resume.pdf";
-            }
-          }
+        if (hasFile) {
+          const pdfFile = uploadFile as File;
+          const bytes = await pdfFile.arrayBuffer();
+          const objectKey = resumeObjectKeyForApplicant(
+            applicant.id,
+            randomUUID(),
+          );
+          await putResumePdfToR2({
+            objectKey,
+            body: new Uint8Array(bytes),
+            contentType: pdfFile.type || "application/pdf",
+          });
+          await prisma.applicantResume.create({
+            data: {
+              applicantId: applicant.id,
+              fileKey: objectKey,
+              fileName: pdfFile.name?.trim() || "resume.pdf",
+              size: bytes.byteLength,
+              mimeType: pdfFile.type || "application/pdf",
+            },
+          });
           current = await prisma.applicant.update({
             where: { id: applicant.id },
             data: {
-              cvFileKey: primaryKey!,
-              cvFileName: primaryName!,
+              cvFileKey: objectKey,
+              cvFileName: pdfFile.name?.trim() || "resume.pdf",
             },
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true,
-              notes: true,
-              cvText: true,
-              cvFileKey: true,
-              cvFileName: true,
-              appliedAt: true,
-              source: true,
-              stage: true,
-              jobDescription: { select: { id: true, title: true } },
-              screeningResult: {
-                select: {
-                  overallScore: true,
-                  skillFit: true,
-                  experienceFit: true,
-                  cultureFit: true,
-                  strengths: true,
-                },
-              },
-              interviews: applicantInterviewSubset(user!.id),
-            },
+            select: dbSelect,
           });
         }
 
@@ -973,6 +856,12 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             cvText: current.cvText,
             cvFileKey: current.cvFileKey,
             cvFileName: current.cvFileName,
+            latestRole: current.latestRole,
+            skills: current.skills as Array<string>,
+            experiences:
+              current.experiences as Array<PrismaJson.ApplicantExperience>,
+            educations:
+              current.educations as Array<PrismaJson.ApplicantEducation>,
             appliedAt: current.appliedAt.toISOString(),
             source: current.source,
             stage: current.stage,
@@ -993,236 +882,12 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
     {
       body: t.Object({
-        payload: t.Union([
-          t.String({ minLength: 2 }),
-          t.Object({
-            name: t.String({ minLength: 1 }),
-            email: t.String({ format: "email" }),
-            phone: t.Optional(t.String()),
-            jobDescriptionId: t.String({ minLength: 1 }),
-            source: t.Optional(
-              t.Union([
-                t.Literal("LINKEDIN"),
-                t.Literal("JOBSDB"),
-                t.Literal("REFERRAL"),
-                t.Literal("OTHER"),
-              ]),
-            ),
-            cvText: t.Optional(t.String()),
-            jobPostingUrl: t.Optional(t.String()),
-            latestRole: t.Optional(t.String()),
-            skills: t.Optional(t.Array(t.String({ minLength: 1 }))),
-            experiences: t.Optional(
-              t.Array(
-                t.Object({
-                  company: t.String({ minLength: 1 }),
-                  role: t.String({ minLength: 1 }),
-                  description: t.Optional(t.String()),
-                }),
-              ),
-            ),
-            educations: t.Optional(
-              t.Array(
-                t.Object({
-                  school: t.String({ minLength: 1 }),
-                  degree: t.String({ minLength: 1 }),
-                }),
-              ),
-            ),
-          }),
-        ]),
-        files: t.Optional(
-          t.Union([
-            t.Array(t.File({ maxSize: 8 * 1024 * 1024 })),
-            t.Object({}),
-          ]),
-        ),
-      }),
-      detail: {
-        tags: ["applicants"],
-        summary: "Add applicant with resume (PDF and/or text)",
-      },
-    },
-  )
-  .post(
-    "/with-screening",
-    async ({ body, set, user }) => {
-      const { file, ...payloadFields } = body;
-      const parsed = withScreeningPayloadSchema.safeParse(payloadFields);
-      if (!parsed.success) {
-        set.status = 400;
-        return { error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() };
-      }
-      const hasFile = fileHasBytes(file);
-      const resumeTrim = parsed.data.resumeText?.trim() ?? "";
-      if (!hasFile && resumeTrim.length === 0) {
-        set.status = 400;
-        return { error: "ต้องแนบ PDF หรือวางข้อความ resume" };
-      }
-      if (hasFile && !isR2Configured()) {
-        set.status = 503;
-        return {
-          error: "ยังไม่ได้ตั้งค่า Cloudflare R2 (จำเป็นสำหรับอัปโหลด PDF)",
-        };
-      }
-      const job = await prisma.jobDescription.findFirst({
-        where: { id: parsed.data.jobDescriptionId, isActive: true },
-      });
-      if (!job) {
-        set.status = 404;
-        return { error: "ไม่พบตำแหน่งนี้" };
-      }
-      const report = parsed.data.report;
-      const screeningData = fitReportToScreeningScalars(report);
-      try {
-        const applicant = await prisma.applicant.create({
-          data: {
-            name: parsed.data.name.trim(),
-            email: parsed.data.email.trim(),
-            phone: parsed.data.phone?.trim() || null,
-            jobDescriptionId: parsed.data.jobDescriptionId,
-            source: parsed.data.source ?? "OTHER",
-            stage: "SCREENING",
-            ...(resumeTrim.length > 0 ? { cvText: resumeTrim } : {}),
-            screeningResult: {
-              create: screeningData,
-            },
-          },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            notes: true,
-            cvText: true,
-            cvFileKey: true,
-            cvFileName: true,
-            appliedAt: true,
-            source: true,
-            stage: true,
-            jobDescription: { select: { id: true, title: true } },
-            screeningResult: {
-              select: {
-                overallScore: true,
-                skillFit: true,
-                experienceFit: true,
-                cultureFit: true,
-                strengths: true,
-              },
-            },
-            interviews: applicantInterviewSubset(user!.id),
-          },
-        });
-
-        if (!hasFile) {
-          const fromScreening = applicantListFields(applicant.screeningResult);
-          return {
-            applicant: {
-              id: applicant.id,
-              name: applicant.name,
-              email: applicant.email,
-              phone: applicant.phone,
-              notes: applicant.notes,
-              cvText: applicant.cvText,
-              cvFileKey: applicant.cvFileKey,
-              cvFileName: applicant.cvFileName,
-              appliedAt: applicant.appliedAt.toISOString(),
-              source: applicant.source,
-              stage: applicant.stage,
-              jobDescriptionId: applicant.jobDescription.id,
-              positionTitle: applicant.jobDescription.title,
-              interview: mapApplicantInterview(
-                applicant.interviews as unknown as Array<ApplicantInterviewMapRow>,
-              ),
-              ...fromScreening,
-            },
-          };
-        }
-
-        const bytes = await file!.arrayBuffer();
-        const objectKey = resumeObjectKeyForApplicant(
-          applicant.id,
-          randomUUID(),
-        );
-        await putResumePdfToR2({
-          objectKey,
-          body: new Uint8Array(bytes),
-          contentType: file.type || "application/pdf",
-        });
-        const updated = await prisma.applicant.update({
-          where: { id: applicant.id },
-          data: {
-            cvFileKey: objectKey,
-            cvFileName: file.name?.trim() || "resume.pdf",
-          },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            notes: true,
-            cvText: true,
-            cvFileKey: true,
-            cvFileName: true,
-            appliedAt: true,
-            source: true,
-            stage: true,
-            jobDescription: { select: { id: true, title: true } },
-            screeningResult: {
-              select: {
-                overallScore: true,
-                skillFit: true,
-                experienceFit: true,
-                cultureFit: true,
-                strengths: true,
-              },
-            },
-            interviews: applicantInterviewSubset(user!.id),
-          },
-        });
-        const fromScreening = applicantListFields(updated.screeningResult);
-        return {
-          applicant: {
-            id: updated.id,
-            name: updated.name,
-            email: updated.email,
-            phone: updated.phone,
-            notes: updated.notes,
-            cvText: updated.cvText,
-            cvFileKey: updated.cvFileKey,
-            cvFileName: updated.cvFileName,
-            appliedAt: updated.appliedAt.toISOString(),
-            source: updated.source,
-            stage: updated.stage,
-            jobDescriptionId: updated.jobDescription.id,
-            positionTitle: updated.jobDescription.title,
-            interview: mapApplicantInterview(
-              updated.interviews as unknown as Array<ApplicantInterviewMapRow>,
-            ),
-            ...fromScreening,
-          },
-        };
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "บันทึกไม่สำเร็จ";
-        set.status = 500;
-        return { error: message };
-      }
-    },
-    {
-      body: t.Object({
-        jobDescriptionId: t.String({ minLength: 1 }),
-        name: t.String({ minLength: 1 }),
-        email: t.String(),
-        phone: t.Optional(t.String()),
-        source: t.Optional(sourceUnion),
-        report: t.Any(),
-        resumeText: t.Optional(t.String()),
+        payload: t.String({ minLength: 2 }),
         file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
       }),
       detail: {
         tags: ["applicants"],
-        summary: "Add applicant with AI screening result",
+        summary: "Add applicant (unified — with or without AI report)",
       },
     },
   )

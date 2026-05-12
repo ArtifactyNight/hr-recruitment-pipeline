@@ -1,3 +1,19 @@
+### [2026-05-12] - Add Applicant Dialog: shadcn Tabs for AI autofill (URL / Text / File)
+
+**Prompt:** use shadcn tabs for the quick-fill tab strip at add-applicant-dialog.tsx ~764–786.
+
+**Output:** Replaced manual `<button>` tab strip and ternary panel switching with controlled `Tabs` + `TabsList` + `TabsTrigger` + three `TabsContent` panels; kept `quickFillTab` state synced via `value` / `onValueChange`. Restyled triggers with `data-active:bg-primary` etc. to match prior pill look. Minor class order tweak on the amber hint `<p>`.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-12] - Add Applicant Dialog: rework to single-form flow with PDF autofill and inline AI scoring
+
+**Prompt:** Rework AddApplicantDialog — remove multi-step flow, add File tab to autofill (AI parses PDF for profile data + attaches as CV), move AI scoring inline at bottom of form as a card, show result below card, localStorage draft persistence. Single `POST /applicants/submit` replaces 3 old routes; if report exists → create ScreeningResult + stage SCREENING, else stage APPLIED.
+
+**Output:** Redesigned entire add-applicant flow: (1) single-page form replaces pick/manual/ai_review/ai_result steps; (2) autofill section has URL/Text/File tabs — File tab uses `parsePdfProfile` mutation to parse PDF into profile fields and attaches it as CV; (3) AI scoring card at bottom with strictness slider + Analyze button; (4) result expands below card inline; (5) localStorage draft auto-saves on every field change, restores with dismissible banner on re-open; (6) new `POST /submit` server route consolidates all three old creation routes; (7) `parse-pdf-profile` route added using `mapProfileFromFile`. Removed dead code: `withResumePayloadSchema`, `withScreeningPayloadSchema`, `collectResumeUploadFiles`, `AddApplicantAiCvMode`.
+
+**Edited:** `src/lib/applicant-profile-map-service.ts`, `src/server/routes/applicant.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/app/(dashboard)/candidates/page.tsx`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-12] - ApplicantPickerField: fix select inside schedule dialog
 
 **Prompt:** ApplicantPickerField can't select

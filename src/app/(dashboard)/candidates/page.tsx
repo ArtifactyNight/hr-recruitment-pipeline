@@ -47,7 +47,6 @@ export default function CandidatesPage() {
     setAddJobId,
     resetAddDialog,
     setAddAiReport,
-    setAddFlowStep,
     setAddName,
     setAddEmail,
   } = useApplicantTrackerStore(
@@ -69,7 +68,6 @@ export default function CandidatesPage() {
       setAddJobId: s.setAddJobId,
       resetAddDialog: s.resetAddDialog,
       setAddAiReport: s.setAddAiReport,
-      setAddFlowStep: s.setAddFlowStep,
       setAddName: s.setAddName,
       setAddEmail: s.setAddEmail,
     })),
@@ -112,10 +110,9 @@ export default function CandidatesPage() {
     applicantMutations.screen(queryClient),
   );
   const analyzeDraftMut = useMutation(applicantMutations.analyzeDraft());
-  const manualCreateMut = useMutation(
-    applicantMutations.create(applicantsQueryKey, queryClient, jobs),
+  const submitMut = useMutation(
+    applicantMutations.submit(applicantsQueryKey, queryClient, jobs),
   );
-  const aiConfirmMut = useMutation(applicantMutations.aiConfirm(queryClient));
   const scheduleInterviewMut = useMutation(
     applicantMutations.scheduleInterview(queryClient),
   );
@@ -189,10 +186,10 @@ export default function CandidatesPage() {
         onOpenChange={setAddOpen}
         jobs={jobs}
         jobsLoading={jobsQuery.isLoading}
-        isSaving={manualCreateMut.isPending || aiConfirmMut.isPending}
+        isSaving={submitMut.isPending}
         isAnalyzing={analyzeDraftMut.isPending}
-        onManualSubmit={() =>
-          manualCreateMut.mutate(undefined, {
+        onSubmit={() =>
+          submitMut.mutate(undefined, {
             onSuccess: () => {
               setAddOpen(false);
               resetAddDialog();
@@ -226,16 +223,7 @@ export default function CandidatesPage() {
               setAddAiReport(report);
               setAddName(detectedName.trim() || s.addName.trim() || "ผู้สมัคร");
               setAddEmail(detectedEmail.trim() || s.addEmail.trim());
-              setAddFlowStep("ai_result");
-              toast.success("วิเคราะห์เสร็จแล้ว - ตรวจข้อมูลแล้วบันทึก");
-            },
-          })
-        }
-        onAiConfirmSubmit={() =>
-          aiConfirmMut.mutate(undefined, {
-            onSuccess: () => {
-              setAddOpen(false);
-              resetAddDialog();
+              toast.success("วิเคราะห์เสร็จแล้ว");
             },
           })
         }

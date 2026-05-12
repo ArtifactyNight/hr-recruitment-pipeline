@@ -7,14 +7,8 @@ type AddSource = "LINKEDIN" | "JOBSDB" | "REFERRAL" | "OTHER";
 
 export type ApplicantTrackerView = "board" | "table";
 
-/** Add-applicant dialog: pick mode → manual form or AI review → AI confirm */
-export type AddApplicantFlowStep =
-  | "pick"
-  | "manual"
-  | "ai_review"
-  | "ai_result";
+export type AddAutofillTab = "url" | "text" | "file";
 
-export type AddApplicantAiCvMode = "pdf" | "text" | "both";
 
 export type AddExperienceDraft = {
   company: string;
@@ -42,8 +36,8 @@ interface ApplicantTrackerState {
   setAddOpen: (v: boolean) => void;
   setDeleteTarget: (v: TrackerApplicant | null) => void;
 
-  addFlowStep: AddApplicantFlowStep;
-  setAddFlowStep: (v: AddApplicantFlowStep) => void;
+  addAutofillTab: AddAutofillTab;
+  setAddAutofillTab: (v: AddAutofillTab) => void;
 
   addResumeText: string;
   setAddResumeText: (v: string) => void;
@@ -52,8 +46,6 @@ interface ApplicantTrackerState {
   appendAddResumeFiles: (files: Array<File>) => void;
   removeAddResumeFileAt: (index: number) => void;
 
-  addAiCvMode: AddApplicantAiCvMode;
-  setAddAiCvMode: (v: AddApplicantAiCvMode) => void;
   addAiStrictness: number;
   setAddAiStrictness: (v: number) => void;
 
@@ -112,8 +104,8 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
     setAddOpen: (v) => set({ addOpen: v }),
     setDeleteTarget: (v) => set({ deleteTarget: v }),
 
-    addFlowStep: "pick",
-    setAddFlowStep: (v) => set({ addFlowStep: v }),
+    addAutofillTab: "url",
+    setAddAutofillTab: (v) => set({ addAutofillTab: v }),
 
     addResumeText: "",
     setAddResumeText: (v) => set({ addResumeText: v }),
@@ -126,8 +118,6 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
         addResumeFiles: s.addResumeFiles.filter((_, i) => i !== index),
       })),
 
-    addAiCvMode: "pdf",
-    setAddAiCvMode: (v) => set({ addAiCvMode: v }),
     addAiStrictness: 1,
     setAddAiStrictness: (v) => set({ addAiStrictness: v }),
 
@@ -172,10 +162,9 @@ export const useApplicantTrackerStore = create<ApplicantTrackerState>(
       }),
     resetAddDialog: () =>
       set({
-        addFlowStep: "pick",
+        addAutofillTab: "url",
         addResumeText: "",
         addResumeFiles: [],
-        addAiCvMode: "pdf",
         addAiStrictness: 1,
         addJobPostingUrl: "",
         addLatestRole: "",

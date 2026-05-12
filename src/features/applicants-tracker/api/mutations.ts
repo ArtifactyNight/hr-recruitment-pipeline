@@ -1,6 +1,5 @@
 import type { ApplicantProfileMap } from "@/features/applicants-tracker/schemas";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
-import type { FitReport } from "@/features/screener/schemas";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { api } from "@/lib/api";
 import type { QueryClient } from "@tanstack/react-query";
@@ -268,7 +267,21 @@ export const applicantMutations = {
       },
     }),
 
-  create: (
+  parsePdfProfile: () =>
+    mutationOptions({
+      mutationFn: async (file: File) => {
+        const { data, error } = await api.api.applicants[
+          "parse-pdf-profile"
+        ].post({ file }, { fetch: { credentials: "include" } });
+        if (error) throw error.value;
+        return data as { mapped: ApplicantProfileMap };
+      },
+      onError: (e: unknown) => {
+        toast.error(mutationErrorMessage(e));
+      },
+    }),
+
+  submit: (
     queryKey: readonly unknown[],
     queryClient: QueryClient,
     jobs: Array<{ id: string; title: string }>,
@@ -276,39 +289,23 @@ export const applicantMutations = {
     mutationOptions({
       mutationFn: async () => {
         const state = useApplicantTrackerStore.getState();
-        const files = state.addResumeFiles;
+        const file = state.addResumeFiles[0];
         const cvTrim = state.addResumeText.trim();
-        if (files.length > 0) {
-          const payload = JSON.stringify({
-            name: state.addName.trim(),
-            email: state.addEmail.trim(),
-            phone: state.addPhone.trim() || undefined,
-            jobDescriptionId: state.addJobId,
-            source: state.addSource,
-            cvText: cvTrim.length > 0 ? cvTrim : undefined,
-            jobPostingUrl: state.addJobPostingUrl.trim() || undefined,
-            latestRole: state.addLatestRole.trim() || undefined,
-            skills: state.addSkills,
-            experiences: state.addExperiences,
-            educations: state.addEducations,
-          });
-          const { data, error } = await api.api.applicants["with-resume"].post(
-            { payload, files },
-            { fetch: { credentials: "include" } },
-          );
-          if (error) throw error.value;
-          return data;
-        }
-        const { data, error } = await api.api.applicants.post(
-          {
-            name: state.addName.trim(),
-            email: state.addEmail.trim(),
-            phone: state.addPhone.trim() || undefined,
-            jobDescriptionId: state.addJobId,
-            source: state.addSource,
-            stage: "APPLIED",
-            cvText: cvTrim.length > 0 ? cvTrim : undefined,
-          },
+        const payload = JSON.stringify({
+          name: state.addName.trim(),
+          email: state.addEmail.trim(),
+          phone: state.addPhone.trim() || undefined,
+          jobDescriptionId: state.addJobId,
+          source: state.addSource,
+          cvText: cvTrim.length > 0 ? cvTrim : undefined,
+          latestRole: state.addLatestRole.trim() || undefined,
+          skills: state.addSkills,
+          experiences: state.addExperiences,
+          educations: state.addEducations,
+          report: state.addAiReport ?? undefined,
+        });
+        const { data, error } = await api.api.applicants.submit.post(
+          { payload, file },
           { fetch: { credentials: "include" } },
         );
         if (error) throw error.value;
@@ -325,18 +322,18 @@ export const applicantMutations = {
           phone: state.addPhone.trim() || null,
           appliedAt: new Date().toISOString(),
           source: state.addSource,
-          stage: "APPLIED",
+          stage: state.addAiReport ? "SCREENING" : "APPLIED",
           jobDescriptionId: state.addJobId,
           positionTitle: jobs.find((j) => j.id === state.addJobId)?.title ?? "",
-          overallScore: null,
-          skillFit: null,
-          experienceFit: null,
-          cultureFit: null,
+          overallScore: state.addAiReport?.overallScore ?? null,
+          skillFit: state.addAiReport?.skillFit ?? null,
+          experienceFit: state.addAiReport?.experienceFit ?? null,
+          cultureFit: state.addAiReport?.cultureFit ?? null,
           notes: null,
           cvText: state.addResumeText.trim() || null,
           cvFileKey: null,
           cvFileName: state.addResumeFiles[0]?.name ?? null,
-          jobPostingUrl: state.addJobPostingUrl.trim() || null,
+          jobPostingUrl: null,
           latestRole: state.addLatestRole.trim() || null,
           skills: state.addSkills,
           experiences: state.addExperiences,
@@ -359,42 +356,6 @@ export const applicantMutations = {
         ctx: { prev?: ListResponse } | undefined,
       ) => {
         if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
-        toast.error(mutationErrorMessage(e));
-      },
-      onSettled: () => {
-        void queryClient.invalidateQueries({ queryKey: ["applicants"] });
-      },
-    }),
-
-  aiConfirm: (queryClient: QueryClient) =>
-    mutationOptions({
-      mutationFn: async () => {
-        const state = useApplicantTrackerStore.getState();
-        if (!state.addAiReport) {
-          throw new Error("ไม่มีผลวิเคราะห์");
-        }
-        const resumeTrim = state.addResumeText.trim();
-        const firstResume = state.addResumeFiles[0];
-        const { data, error } = await api.api.applicants["with-screening"].post(
-          {
-            jobDescriptionId: state.addJobId,
-            name: state.addName.trim(),
-            email: state.addEmail.trim(),
-            phone: state.addPhone.trim() || undefined,
-            source: state.addSource,
-            report: state.addAiReport as FitReport,
-            resumeText: resumeTrim.length > 0 ? resumeTrim : undefined,
-            file: firstResume,
-          },
-          { fetch: { credentials: "include" } },
-        );
-        if (error) throw error.value;
-        return data;
-      },
-      onSuccess: () => {
-        toast.success("เพิ่มผู้สมัครพร้อมผล AI แล้ว");
-      },
-      onError: (e: unknown) => {
         toast.error(mutationErrorMessage(e));
       },
       onSettled: () => {
