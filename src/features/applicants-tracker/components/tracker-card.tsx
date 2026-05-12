@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { RiStarFill } from "@remixicon/react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { ClockIcon, TagIcon } from "lucide-react";
+import { ClockIcon, TagIcon, VideoIcon } from "lucide-react";
 import Image from "next/image";
 
 type TrackerCardProps = {
@@ -36,6 +36,9 @@ export function TrackerCard({
   const src = sourceLabel(row.source);
   const score = row.overallScore;
   const positionLine = row.positionTitle?.trim() || "ไม่มีตำแหน่ง";
+  const meetLink = row.interview?.googleMeetLink?.trim() ?? "";
+  const hasMeet = meetLink.length > 0;
+  const hasInterview = row.interview != null;
 
   const cardContent = (
     <Card
@@ -66,14 +69,41 @@ export function TrackerCard({
                 <p className="text-muted-foreground line-clamp-1 text-xs">
                   {positionLine}
                 </p>
-                {score == null ? (
-                  <Badge
-                    variant="secondary"
-                    className="pointer-events-none mt-0.5 w-fit text-[10px] font-normal"
-                  >
-                    ยังไม่วิเคราะห์ AI
-                  </Badge>
-                ) : null}
+                <div className="mt-0.5 flex flex-wrap gap-1">
+                  {score == null ? (
+                    <Badge
+                      variant="secondary"
+                      className="pointer-events-none w-fit text-[10px] font-normal"
+                    >
+                      ยังไม่วิเคราะห์ AI
+                    </Badge>
+                  ) : null}
+                  {hasMeet ? (
+                    <Badge
+                      variant="outline"
+                      className="pointer-events-none inline-flex w-fit items-center gap-1 border-emerald-600/40 bg-emerald-500/10 text-[10px] font-normal text-emerald-800 dark:text-emerald-200"
+                    >
+                      <VideoIcon className="size-3 opacity-90" />
+                      มี Meet แล้ว
+                    </Badge>
+                  ) : hasInterview ? (
+                    <Badge
+                      variant="outline"
+                      className="pointer-events-none inline-flex w-fit items-center gap-1 border-amber-600/35 bg-amber-500/10 text-[10px] font-normal text-amber-900 dark:text-amber-100"
+                    >
+                      <VideoIcon className="size-3 opacity-90" />
+                      ยังไม่มี Meet
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="pointer-events-none inline-flex w-fit items-center gap-1 text-[10px] font-normal text-muted-foreground"
+                    >
+                      <VideoIcon className="size-3 opacity-80" />
+                      ยังไม่นัดสัมภาษณ์
+                    </Badge>
+                  )}
+                </div>
               </div>
               <div className="flex shrink-0 items-center gap-0.5">
                 <Badge

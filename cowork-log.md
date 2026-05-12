@@ -1,3 +1,19 @@
+### [2026-05-12] - Tracker card: Meet creation status badge
+
+**Prompt:** `tracker-card.tsx` — show whether Google Meet was created (scheduled interview link) or not.
+
+**Output:** Derived `hasMeet` from `row.interview?.googleMeetLink`, `hasInterview` from `row.interview`. Badges: emerald “มี Meet แล้ว”, amber “ยังไม่มี Meet” when interview exists but no link, muted “ยังไม่นัดสัมภาษณ์” when no interview. Wrapped with AI badge in a flex row; `VideoIcon` from lucide.
+
+**Edited:** `src/features/applicants-tracker/components/tracker-card.tsx`, `cowork-log.md`
+
+### [2026-05-12] - POST /applicants/submit: accept object payload (multipart coercion)
+
+**Prompt:** Validation error — `payload` expected string but received parsed object (Eden multipart / Elysia).
+
+**Output:** Body schema now `t.Union([t.String({ minLength: 2 }), t.Record(t.String(), t.Unknown())])` so coerced JSON objects pass TypeBox; zod `submitPayloadSchema` remains the source of truth. Matches prior cowork note about multipart JSON fields being parsed before validation.
+
+**Edited:** `src/server/routes/applicant.ts`, `cowork-log.md`
+
 ### [2026-05-12] - Add Applicant Dialog: shadcn Tabs for AI autofill (URL / Text / File)
 
 **Prompt:** use shadcn tabs for the quick-fill tab strip at add-applicant-dialog.tsx ~764–786.

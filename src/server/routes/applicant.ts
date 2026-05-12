@@ -798,7 +798,9 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             source: parsed.data.source ?? "OTHER",
             stage: hasReport ? "SCREENING" : "APPLIED",
             ...(cvTrim.length > 0 ? { cvText: cvTrim } : {}),
-            ...(latestRoleTrim.length > 0 ? { latestRole: latestRoleTrim } : {}),
+            ...(latestRoleTrim.length > 0
+              ? { latestRole: latestRoleTrim }
+              : {}),
             skills,
             experiences: experiencesJson,
             educations: educationsJson,
@@ -882,7 +884,12 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
     },
     {
       body: t.Object({
-        payload: t.String({ minLength: 2 }),
+        // Multipart: Eden may coerce a JSON string field into an object before validation.
+        // Handler accepts both and runs submitPayloadSchema (zod) afterward.
+        payload: t.Union([
+          t.String({ minLength: 2 }),
+          t.Record(t.String(), t.Unknown()),
+        ]),
         file: t.Optional(t.File({ maxSize: 8 * 1024 * 1024 })),
       }),
       detail: {
