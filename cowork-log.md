@@ -1,3 +1,11 @@
+### [2026-05-12] - Add applicant AI: strengths list like screening questions
+
+**Prompt:** make strengths section (จุดแข็งหลัก) list like คำถามคัดกรอง
+
+**Output:** Replaced Badge chip layout with numbered `<ol>` matching `คำถามคัดกรองที่แนะนำ`: `space-y-1.5`, each row `flex gap-2` + primary circular index + `text-xs text-muted-foreground` body.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-12] - Cowork log: newest-first reorder
 
 **Prompt:** reorder cowork-log.md latest should be above
@@ -815,6 +823,12 @@ All four touched files lint-clean.
 **Prompt:** applicant detail dialog show ai score below pipeline
 **Output:** Extended `/api/applicants` list/create/patch to return `skillFit`, `experienceFit`, `cultureFit` with `overallScore`/`tags` via `applicantListFields()`. Updated `TrackerApplicant` and optimistic temp rows. Added `ApplicantDetailAiScores` (cream card, SVG ring for overall/10, breakdown ทักษะ/ประสบการณ์/วัฒนธรรม) under pipeline buttons in detail dialog; hidden when no screening data.
 **Edited:** `src/server/applicant-routes.ts`, `src/features/applicants-tracker/lib/applicant-tracker-model.ts`, `src/features/applicants-tracker/components/applicant-tracker.tsx`, `cowork-log.md`
+
+### 2026-05-12 - Add applicant Sheet + Select
+
+**Prompt:** cant select user in add-applicant-dialog
+**Output:** Radix `Select` portals outside `Sheet` (Dialog), so dropdown clicks were treated as outside the sheet (closes / blocks selection). Added `onInteractOutside` guard for `[data-slot="select-content"]` on `SheetContent` and `className="z-100"` on both job `SelectContent` instances so the list stays above the sheet overlay.
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
 
 ### 2026-05-08 - R2 + AWS S3 SDK
 

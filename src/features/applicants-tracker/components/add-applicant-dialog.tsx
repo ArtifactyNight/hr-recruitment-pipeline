@@ -43,10 +43,8 @@ import {
   FileTextIcon,
   LightbulbIcon,
   Loader2Icon,
-  MessageSquareQuoteIcon,
   PlusIcon,
   SparklesIcon,
-  StarIcon,
   Trash2Icon,
   UploadIcon,
   UserRoundIcon,
@@ -131,6 +129,19 @@ const sourceOptions: Array<{
 
 function shouldShowFieldError(fieldState: ControllerFieldState): boolean {
   return fieldState.invalid && (fieldState.isTouched || fieldState.isDirty);
+}
+
+/** Select portals outside the Sheet; without this, the sheet treats dropdown clicks as outside. */
+function onSheetInteractOutsideSelect(
+  event: CustomEvent<{ originalEvent: FocusEvent | PointerEvent }>,
+): void {
+  const target = event.detail.originalEvent.target;
+  if (
+    target instanceof Element &&
+    target.closest('[data-slot="select-content"]')
+  ) {
+    event.preventDefault();
+  }
 }
 
 function scoreColor(score: number): string {
@@ -702,6 +713,7 @@ export function AddApplicantDialog({
         className={cn(
           "gap-0 p-0 sm:max-w-xl data-[side=right]:sm:max-w-xl md:data-[side=right]:sm:max-w-2xl",
         )}
+        onInteractOutside={onSheetInteractOutsideSelect}
       >
         <SheetHeader className="border-b px-5 py-4">
           <div className="flex items-center gap-2 pr-8">
@@ -919,7 +931,7 @@ export function AddApplicantDialog({
                           >
                             <SelectValue placeholder="เลือกตำแหน่ง" />
                           </SelectTrigger>
-                          <SelectContent position="popper">
+                          <SelectContent className="z-100">
                             <SelectGroup>
                               {jobs.map((job) => (
                                 <SelectItem key={job.id} value={job.id}>
@@ -1361,7 +1373,7 @@ export function AddApplicantDialog({
                         >
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
-                        <SelectContent position="popper">
+                        <SelectContent className="z-100">
                           <SelectGroup>
                             {jobs.map((job) => (
                               <SelectItem key={job.id} value={job.id}>
@@ -1626,34 +1638,34 @@ export function AddApplicantDialog({
 
               <div>
                 <div className="mb-2 flex items-center gap-1.5">
-                  <StarIcon className="size-4 text-amber-500" />
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-base font-semibold text-foreground">
                     จุดแข็งหลัก
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <ol className="space-y-1.5">
                   {addAiReport.strengths.length > 0 ? (
-                    addAiReport.strengths.map((strength) => (
-                      <Badge
+                    addAiReport.strengths.map((strength, index) => (
+                      <li
                         key={strength}
-                        variant="secondary"
-                        className="text-xs"
+                        className="flex gap-2 text-sm leading-relaxed"
                       >
+                        <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-xs bg-primary text-[10px] font-bold text-primary-foreground">
+                          {index + 1}
+                        </span>
                         {strength}
-                      </Badge>
+                      </li>
                     ))
                   ) : (
                     <p className="text-xs text-muted-foreground">
                       AI ไม่พบจุดแข็งที่โดดเด่น
                     </p>
                   )}
-                </div>
+                </ol>
               </div>
 
               <div>
                 <div className="mb-2 flex items-center gap-1.5">
-                  <MessageSquareQuoteIcon className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-base font-semibold text-foreground">
                     คำถามคัดกรองที่แนะนำ
                   </span>
                 </div>
@@ -1662,9 +1674,9 @@ export function AddApplicantDialog({
                     addAiReport.suggestedQuestions.map((question, index) => (
                       <li
                         key={question}
-                        className="flex gap-2 text-xs leading-relaxed text-muted-foreground"
+                        className="flex gap-2 text-sm leading-relaxed"
                       >
-                        <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                        <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-xs bg-primary text-[10px] font-bold text-primary-foreground">
                           {index + 1}
                         </span>
                         {question}
@@ -1685,7 +1697,7 @@ export function AddApplicantDialog({
                     สรุปจาก AI
                   </span>
                 </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">
+                <p className="text-xs leading-relaxed">
                   {addAiReport.panelSummary}
                 </p>
               </div>
