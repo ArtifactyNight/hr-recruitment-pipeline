@@ -141,9 +141,6 @@ export function ApplicantDetailInterviewSection({
     <div className="flex flex-col gap-4">
       {upcoming.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
-            กำลังจะถึง
-          </p>
           {upcoming.map((iv) => (
             <InterviewMeetCard
               key={iv.id}

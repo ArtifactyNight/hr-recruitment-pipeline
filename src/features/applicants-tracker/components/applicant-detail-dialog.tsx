@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/sheet";
 import { ApplicantDetailAiScores } from "@/features/applicants-tracker/components/applicant-detail-ai-scores";
 import { ApplicantDetailInterviewSection } from "@/features/applicants-tracker/components/applicant-detail-interview-section";
-import { ApplicantDetailMeetPreview } from "@/features/applicants-tracker/components/applicant-detail-meet-preview";
 import { ApplicantDetailNotesSection } from "@/features/applicants-tracker/components/applicant-detail-notes-section";
 import { ApplicantDetailResumeSection } from "@/features/applicants-tracker/components/applicant-detail-resume-section";
 import {
@@ -893,7 +892,7 @@ export function ApplicantDetailDialog({
                     applicantsQueryKey={applicantsQueryKey}
                     onCvPatch={onCvPatch}
                   />
-                  <ApplicantDetailMeetPreview applicant={applicant} />
+                  {/* <ApplicantDetailMeetPreview applicant={applicant} /> */}
                   <ApplicantDetailInterviewSection applicant={applicant} />
                   <ApplicantDetailNotesSection
                     key={applicant.id}
