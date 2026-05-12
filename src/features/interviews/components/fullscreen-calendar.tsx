@@ -34,6 +34,7 @@ import {
   SearchIcon,
   UserIcon,
   UsersIcon,
+  VideoIcon,
 } from "lucide-react";
 import * as React from "react";
 
@@ -76,7 +77,7 @@ function InterviewDbStatusBadge({ event }: { event: Event }) {
   if (isOverdue) {
     return (
       <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-        เกินกำหsนด
+        เกินกำหนด
       </span>
     );
   }
@@ -229,7 +230,7 @@ function SelectedDayEventsPanel({
   return (
     <>
       <CardHeader>
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -326,6 +327,37 @@ function SelectedDayEventsPanel({
                               {event.attendeeAccepted}
                             </span>
                           </div>
+                          {hasMeet ? (
+                            <div className="flex gap-2 text-muted-foreground">
+                              <VideoIcon
+                                className="size-3.5 shrink-0 translate-y-px text-muted-foreground"
+                                aria-hidden
+                              />
+                              <span className="min-w-0 flex-1 text-foreground">
+                                <span className="font-medium text-muted-foreground">
+                                  Google Meet ·{" "}
+                                </span>
+                                {cancelled ? (
+                                  <span
+                                    className={cn(
+                                      "wrap-break-word text-muted-foreground line-through",
+                                    )}
+                                  >
+                                    {meetUrl}
+                                  </span>
+                                ) : (
+                                  <Link
+                                    href={meetUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="wrap-break-word text-primary underline-offset-2 hover:underline"
+                                  >
+                                    {meetUrl}
+                                  </Link>
+                                )}
+                              </span>
+                            </div>
+                          ) : null}
                           {event.notesPlain ? (
                             <div className="flex gap-2 text-muted-foreground">
                               <FileTextIcon
@@ -479,7 +511,7 @@ function SelectedDayEventsPanel({
                 void confirmCancelCalendarEvent();
               }}
             >
-              ยืนยันยกเลิกนัด
+              ยกเลิกนัด
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

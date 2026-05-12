@@ -766,6 +766,14 @@ Net effect: experience rows actually populate the dialog form on save; resume te
 
 **Edited:** `package.json`, `bun.lock`, `src/app/layout.tsx`, `src/components/ui/hot-toast.tsx`, 14 toast call sites, deleted `src/components/ui/sonner.tsx`, `cowork-log.md`
 
+### [2026-05-12] - SelectedDayEventsPanel: visible Google Meet URL
+
+**Prompt:** show google meet link in SelectedDayEventsPanel
+
+**Output:** In `fullscreen-calendar.tsx` `SelectedDayEventsPanel`, added a details row (Video icon + “Google Meet ·”) after ผู้เข้าร่วม: full `meetUrl` as `Link` when not cancelled; cancelled events show strikethrough muted text. Dropdown join/copy unchanged. Fixed typo `เกินกำหsนด` → `เกินกำหนด` in `InterviewDbStatusBadge`.
+
+**Edited:** `src/features/interviews/components/fullscreen-calendar.tsx`, `cowork-log.md`
+
 ### [2026-05-12 00:46] - Client-side URL validation for Quick Fill link
 
 **Prompt:** Validate the Quick Fill link input client-side using shadcn Field validation.
@@ -795,3 +803,11 @@ All four touched files lint-clean.
 **Output:** Single top-to-bottom function (no extracted helpers): parse URL (→ 400), lowercase `hostname`, `if linkedin / else if jobsdb / else firecrawl`. LinkedIn branch uses existing `apifyClient` from `@/lib/apify`, calls actor with `waitSecs: 120`, reads `dataset(run.defaultDatasetId).listItems()`, casts `items[0]` to `ScrapedLinkedinProfile` from `@/types/scraping`. JobsDB branch throws `501` with `// TODO` lines outlining the future actor call so the same place is easy to edit. Firecrawl branch dynamically imports `@mendable/firecrawl-js` (already pulled in transitively via `firecrawl-aisdk`), calls `fc.v1.scrapeUrl(link, { formats: ["markdown"], onlyMainContent: true })`, narrows the result the same way `profile-url-scrape.ts` does, and returns `{ kind: "other", url, data: { title, markdown } }`. Public surface is a discriminated union `ScrapeResult` (`linkedin` / `other`). All failures throw `Object.assign(new Error(msg), { statusCode })` matching the existing pattern. Lints clean.
 
 **Edited:** `src/server/lib/scraping.ts`, `cowork-log.md`
+
+### [2026-05-12] - Pre-submit interview slot validation (useWatch + check-slot API)
+
+**Prompt:** Implement plan: `POST /interviews/check-slot`, refactor schedule dialog to react-hook-form + `useWatch` + debounced slot precheck before submit.
+
+**Output:** Added `evaluateInterviewSlotAvailability` helper and `POST /interviews/check-slot` in [src/server/routes/interview.ts](src/server/routes/interview.ts); create + patch now call the helper. [applicant-schedule-interview-dialog.tsx](src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx) uses `useForm`/`zodResolver`, `useWatch` on datetime + duration, `useDebounceValue` 500ms, Eden `check-slot` with `AbortController` + monotonic request id to ignore stale responses; submit disabled on conflict/checking/error; final `check-slot` before `onScheduleInterview`. Props: `initialFormState` replaces lifted `formState`/`setFormState`. Callers: [applicant-detail-dialog.tsx](src/features/applicants-tracker/components/applicant-detail-dialog.tsx), [interviews-calendar.tsx](src/features/interviews/components/interviews-calendar.tsx). [schemas.ts](src/features/applicants-tracker/schemas.ts): `durationMinutes` is `z.number()` for RHF resolver typing.
+
+**Edited:** `src/server/routes/interview.ts`, `src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx`, `src/features/applicants-tracker/schemas.ts`, `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `src/features/interviews/components/interviews-calendar.tsx`, `cowork-log.md`

@@ -24,6 +24,56 @@ import type { InterviewCalendarUiSnapshot } from "@/types/interview-calendar-sna
 
 const TZ = "Asia/Bangkok";
 
+/** DB + primary-calendar busy check (shared by create, reschedule, and check-slot). */
+async function evaluateInterviewSlotAvailability(opts: {
+  organizerUserId: string;
+  gToken: string;
+  slotStart: Date;
+  durationMinutes: number;
+  excludeInterviewId?: string | undefined;
+}): Promise<
+  | { available: true }
+  | {
+      available: false;
+      code: "DB_CONFLICT" | "GOOGLE_BUSY";
+      error: string;
+    }
+> {
+  const duration = Math.min(
+    480,
+    Math.max(15, Math.floor(opts.durationMinutes)),
+  );
+  const dbHit = await findDbInterviewConflict({
+    organizerUserId: opts.organizerUserId,
+    slotStart: opts.slotStart,
+    durationMinutes: duration,
+    excludeInterviewId: opts.excludeInterviewId,
+  });
+  if (dbHit) {
+    return {
+      available: false,
+      code: "DB_CONFLICT",
+      error: "มีนัดที่ทับในระบบแล้ว กรุณาเลือกเวลาอื่น",
+    };
+  }
+  const slotEnd = new Date(opts.slotStart.getTime() + duration * 60_000);
+  const fb = await hasPrimaryCalendarBusyOverlap({
+    accessToken: opts.gToken,
+    rangeStartIso: subHours(opts.slotStart, 24).toISOString(),
+    rangeEndIso: addHours(slotEnd, 24).toISOString(),
+    slotStart: opts.slotStart,
+    slotEnd,
+  });
+  if (fb) {
+    return {
+      available: false,
+      code: "GOOGLE_BUSY",
+      error: "ปฏิทินหลักของคุณไม่ว่างในช่วงนี้ (Google Calendar)",
+    };
+  }
+  return { available: true };
+}
+
 function googleCalendarErrorText(e: unknown): string {
   if (e instanceof Error) return e.message;
   const g = e as { response?: { data?: { error?: { message?: string } } } };
@@ -261,6 +311,56 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
       }),
     },
   )
+  .post(
+    "/check-slot",
+    async ({ body, user, set }) => {
+      let gToken: string;
+      try {
+        ({ token: gToken } = await getGoogleTokenForUserId(user!.id));
+      } catch (e) {
+        if (
+          typeof e === "object" &&
+          e !== null &&
+          "message" in e &&
+          (e as { message: unknown }).message === NO_GOOGLE_OAUTH_TOKEN
+        ) {
+          set.status = 403;
+          return {
+            error: "ไม่มีโทเค็น Google - ลงชื่อเข้าด้วย Google อีกครั้ง",
+          };
+        }
+        throw e;
+      }
+
+      const slotStart = new Date(body.scheduledAt);
+      if (Number.isNaN(slotStart.getTime())) {
+        set.status = 400;
+        return { error: "เวลาไม่ถูกต้อง" };
+      }
+      const rawDuration = body.durationMinutes ?? 60;
+
+      const result = await evaluateInterviewSlotAvailability({
+        organizerUserId: user!.id,
+        gToken,
+        slotStart,
+        durationMinutes: rawDuration,
+      });
+      if (!result.available) {
+        return {
+          available: false as const,
+          code: result.code,
+          error: result.error,
+        };
+      }
+      return { available: true as const };
+    },
+    {
+      body: t.Object({
+        scheduledAt: t.String(),
+        durationMinutes: t.Optional(t.Number()),
+      }),
+    },
+  )
   .get(
     "/:id",
     async ({ params, user, set }) => {
@@ -333,7 +433,10 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         set.status = 400;
         return { error: "เวลาไม่ถูกต้อง" };
       }
-      const duration = body.durationMinutes ?? 60;
+      const duration = Math.min(
+        480,
+        Math.max(15, Math.floor(body.durationMinutes ?? 60)),
+      );
 
       const applicant = await prisma.applicant.findUnique({
         where: { id: body.applicantId },
@@ -375,35 +478,21 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         }
       }
 
-      const dbHit = await findDbInterviewConflict({
+      const slotAvail = await evaluateInterviewSlotAvailability({
         organizerUserId: user!.id,
+        gToken,
         slotStart,
         durationMinutes: duration,
       });
-      if (dbHit) {
+      if (!slotAvail.available) {
         set.status = 409;
         return {
-          error: "มีนัดที่ทับในระบบแล้ว กรุณาเลือกเวลาอื่น",
-          code: "DB_CONFLICT" as const,
+          error: slotAvail.error,
+          code: slotAvail.code,
         };
       }
 
       const slotEnd = new Date(slotStart.getTime() + duration * 60_000);
-      const fb = await hasPrimaryCalendarBusyOverlap({
-        accessToken: gToken,
-        rangeStartIso: subHours(slotStart, 24).toISOString(),
-        rangeEndIso: addHours(slotEnd, 24).toISOString(),
-        slotStart,
-        slotEnd,
-      });
-      if (fb) {
-        set.status = 409;
-        return {
-          error: "ปฏิทินหลักของคุณไม่ว่างในช่วงนี้ (Google Calendar)",
-          code: "GOOGLE_BUSY" as const,
-        };
-      }
-
       const description = body.extraNotes;
 
       const ivRows = await prisma.interviewer.findMany({
@@ -582,32 +671,18 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         body.scheduledAt !== undefined ||
         body.durationMinutes !== undefined
       ) {
-        const dbHit = await findDbInterviewConflict({
+        const patchSlot = await evaluateInterviewSlotAvailability({
           organizerUserId: user!.id,
+          gToken,
           slotStart: nextStart,
           durationMinutes: nextDuration,
           excludeInterviewId: existing.id,
         });
-        if (dbHit) {
+        if (!patchSlot.available) {
           set.status = 409;
           return {
-            error: "มีนัดที่ทับในระบบแล้ว",
-            code: "DB_CONFLICT" as const,
-          };
-        }
-        const slotEnd = new Date(nextStart.getTime() + nextDuration * 60_000);
-        const fb = await hasPrimaryCalendarBusyOverlap({
-          accessToken: gToken,
-          rangeStartIso: subHours(nextStart, 24).toISOString(),
-          rangeEndIso: addHours(slotEnd, 24).toISOString(),
-          slotStart: nextStart,
-          slotEnd,
-        });
-        if (fb) {
-          set.status = 409;
-          return {
-            error: "ปฏิทินหลักของคุณไม่ว่างในช่วงนี้",
-            code: "GOOGLE_BUSY" as const,
+            error: patchSlot.error,
+            code: patchSlot.code,
           };
         }
       }

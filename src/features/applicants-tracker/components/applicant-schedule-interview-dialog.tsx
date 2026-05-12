@@ -12,6 +12,7 @@ import {
   Field,
   FieldContent,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -20,16 +21,24 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   parseInterviewerEmails,
   scheduleInterviewFormSchema,
+  type ScheduleInterviewFormValues,
 } from "@/features/applicants-tracker/schemas";
+import { api } from "@/lib/api";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { Loader2Icon } from "lucide-react";
 import {
+  startTransition,
   useCallback,
-  type Dispatch,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
   type ReactNode,
-  type SetStateAction,
 } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
+import { useDebounceValue } from "usehooks-ts";
 
 export type ScheduleInterviewSubmitInput = {
   applicantId: string;
@@ -44,8 +53,7 @@ export type ApplicantScheduleInterviewDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   schedulePending: boolean;
-  formState: ScheduleInterviewFormState;
-  setFormState: Dispatch<SetStateAction<ScheduleInterviewFormState>>;
+  initialFormState: ScheduleInterviewFormState;
   onScheduleInterview: (input: ScheduleInterviewSubmitInput) => Promise<void>;
   beforeFields?: ReactNode;
   submitDisabled?: boolean;
@@ -57,6 +65,11 @@ export type ScheduleInterviewFormState = {
   interviewerEmailsRaw: string;
   extraNotes: string;
 };
+
+const slotFieldsSchema = scheduleInterviewFormSchema.pick({
+  datetimeLocal: true,
+  durationMinutes: true,
+});
 
 function datetimeLocalValue(date: Date): string {
   return format(date, "yyyy-MM-dd'T'HH:mm");
@@ -118,68 +131,214 @@ export function scheduleInterviewFormStateForDate(
   };
 }
 
+function formValuesFromState(
+  state: ScheduleInterviewFormState,
+): ScheduleInterviewFormValues {
+  const dur = Number(state.durationMinutes);
+  return {
+    datetimeLocal: state.datetimeLocal,
+    durationMinutes: Number.isFinite(dur) ? dur : 60,
+    interviewerEmailsRaw: state.interviewerEmailsRaw ?? "",
+    extraNotes:
+      state.extraNotes.trim() === "" ? undefined : state.extraNotes.trim(),
+  };
+}
+
+type SlotPrecheck =
+  | { status: "idle" }
+  | { status: "checking" }
+  | { status: "available" }
+  | { status: "conflict"; message: string }
+  | { status: "error"; message: string };
+
 export function ApplicantScheduleInterviewDialog({
   applicantId,
   open,
   onOpenChange,
   schedulePending,
-  formState,
-  setFormState,
+  initialFormState,
   onScheduleInterview,
   beforeFields,
   submitDisabled = false,
 }: ApplicantScheduleInterviewDialogProps) {
-  const submitSchedule = useCallback(async () => {
-    const parsedForm = scheduleInterviewFormSchema.safeParse({
-      datetimeLocal: formState.datetimeLocal,
-      durationMinutes: formState.durationMinutes,
-      interviewerEmailsRaw: formState.interviewerEmailsRaw,
-      extraNotes:
-        formState.extraNotes.trim() === ""
-          ? undefined
-          : formState.extraNotes.trim(),
-    });
-    if (!parsedForm.success) {
-      const msg = parsedForm.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง";
-      toast.error(msg);
-      return;
-    }
+  const form = useForm<ScheduleInterviewFormValues>({
+    resolver: zodResolver(scheduleInterviewFormSchema),
+    defaultValues: formValuesFromState(initialFormState),
+  });
 
-    const slot = new Date(parsedForm.data.datetimeLocal);
-    if (Number.isNaN(slot.getTime())) {
-      toast.error("วันเวลาไม่ถูกต้อง");
-      return;
-    }
+  const { register, handleSubmit, reset, control, formState } = form;
 
-    const emailsResult = parseInterviewerEmails(
-      parsedForm.data.interviewerEmailsRaw,
-    );
-    if (!emailsResult.ok) {
-      toast.error(emailsResult.message);
-      return;
-    }
+  useEffect(() => {
+    if (!open) return;
+    reset(formValuesFromState(initialFormState));
+  }, [open, initialFormState, reset]);
 
-    try {
-      await onScheduleInterview({
-        applicantId,
-        scheduledAt: slot.toISOString(),
-        durationMinutes: parsedForm.data.durationMinutes,
-        interviewerEmails: emailsResult.emails,
-        extraNotes: parsedForm.data.extraNotes,
+  const [datetimeLocalW, durationMinutesW] = useWatch({
+    control,
+    name: ["datetimeLocal", "durationMinutes"],
+  });
+
+  const slotDraft = useMemo(
+    () => ({
+      datetimeLocal: datetimeLocalW ?? "",
+      durationMinutes:
+        typeof durationMinutesW === "number" && !Number.isNaN(durationMinutesW)
+          ? durationMinutesW
+          : Number(durationMinutesW),
+    }),
+    [datetimeLocalW, durationMinutesW],
+  );
+
+  const [debouncedSlot] = useDebounceValue(slotDraft, 500);
+
+  const checkReqId = useRef(0);
+  const [slotPrecheck, setSlotPrecheck] = useState<SlotPrecheck>({
+    status: "idle",
+  });
+
+  useEffect(() => {
+    if (!open) {
+      checkReqId.current += 1;
+      startTransition(() => {
+        setSlotPrecheck({ status: "idle" });
       });
-      onOpenChange(false);
-    } catch {
-      /* toast from parent mutation */
+      return;
     }
-  }, [
-    applicantId,
-    formState.datetimeLocal,
-    formState.durationMinutes,
-    formState.extraNotes,
-    formState.interviewerEmailsRaw,
-    onScheduleInterview,
-    onOpenChange,
-  ]);
+
+    const parsedSlot = slotFieldsSchema.safeParse(debouncedSlot);
+    if (!parsedSlot.success) {
+      startTransition(() => {
+        setSlotPrecheck({ status: "idle" });
+      });
+      return;
+    }
+
+    const ac = new AbortController();
+    const myId = ++checkReqId.current;
+    startTransition(() => {
+      setSlotPrecheck({ status: "checking" });
+    });
+
+    const slotStart = new Date(parsedSlot.data.datetimeLocal);
+    void (async () => {
+      try {
+        const { data, error } = await api.api.interviews["check-slot"].post(
+          {
+            scheduledAt: slotStart.toISOString(),
+            durationMinutes: parsedSlot.data.durationMinutes,
+          },
+          { fetch: { credentials: "include", signal: ac.signal } },
+        );
+
+        if (myId !== checkReqId.current) return;
+
+        if (error) {
+          const v = error.value as { error?: string } | undefined;
+          startTransition(() => {
+            setSlotPrecheck({
+              status: "error",
+              message:
+                typeof v?.error === "string"
+                  ? v.error
+                  : "ไม่สามารถตรวจสอบช่วงเวลาได้",
+            });
+          });
+          return;
+        }
+
+        const body = data as
+          | { available: true }
+          | { available: false; error: string }
+          | null;
+
+        if (body && body.available === false) {
+          startTransition(() => {
+            setSlotPrecheck({ status: "conflict", message: body.error });
+          });
+          return;
+        }
+
+        startTransition(() => {
+          setSlotPrecheck({ status: "available" });
+        });
+      } catch (e) {
+        if (ac.signal.aborted || myId !== checkReqId.current) return;
+        startTransition(() => {
+          setSlotPrecheck({
+            status: "error",
+            message:
+              e instanceof Error ? e.message : "ไม่สามารถตรวจสอบช่วงเวลาได้",
+          });
+        });
+      }
+    })();
+
+    return () => {
+      ac.abort();
+    };
+  }, [open, debouncedSlot]);
+
+  const submitBlockedBySlot =
+    slotPrecheck.status === "checking" ||
+    slotPrecheck.status === "conflict" ||
+    slotPrecheck.status === "error";
+
+  const onValid = useCallback(
+    async (values: ScheduleInterviewFormValues) => {
+      const emailsResult = parseInterviewerEmails(values.interviewerEmailsRaw);
+      if (!emailsResult.ok) {
+        toast.error(emailsResult.message);
+        return;
+      }
+
+      const slot = new Date(values.datetimeLocal);
+      if (Number.isNaN(slot.getTime())) {
+        toast.error("วันเวลาไม่ถูกต้อง");
+        return;
+      }
+
+      try {
+        const { data, error } = await api.api.interviews["check-slot"].post(
+          {
+            scheduledAt: slot.toISOString(),
+            durationMinutes: values.durationMinutes,
+          },
+          { fetch: { credentials: "include" } },
+        );
+
+        if (error) {
+          const v = error.value as { error?: string } | undefined;
+          toast.error(
+            typeof v?.error === "string" ? v.error : "ตรวจสอบช่วงเวลาไม่สำเร็จ",
+          );
+          return;
+        }
+
+        const body = data as
+          | { available: true }
+          | { available: false; error: string }
+          | null;
+
+        if (body && body.available === false) {
+          toast.error(body.error);
+          setSlotPrecheck({ status: "conflict", message: body.error });
+          return;
+        }
+
+        await onScheduleInterview({
+          applicantId,
+          scheduledAt: slot.toISOString(),
+          durationMinutes: values.durationMinutes,
+          interviewerEmails: emailsResult.emails,
+          extraNotes: values.extraNotes,
+        });
+        onOpenChange(false);
+      } catch {
+        /* toast from parent mutation */
+      }
+    },
+    [applicantId, onOpenChange, onScheduleInterview],
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -190,113 +349,145 @@ export function ApplicantScheduleInterviewDialog({
         <DialogHeader>
           <DialogTitle>กำหนดนัดสัมภาษณ์</DialogTitle>
         </DialogHeader>
-        <FieldGroup className="gap-4 py-1">
-          {beforeFields}
-          <Field>
-            <FieldLabel htmlFor={`schedule-at-${applicantId}`}>
-              วันและเวลา
-            </FieldLabel>
-            <FieldContent>
-              <Input
-                id={`schedule-at-${applicantId}`}
-                type="datetime-local"
-                value={formState.datetimeLocal}
-                onChange={(e) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    datetimeLocal: e.target.value,
-                  }))
-                }
-                disabled={schedulePending}
-                aria-invalid={formState.datetimeLocal === "" ? true : undefined}
-              />
-              <FieldDescription>
-                ระบบจะตรวจชนกับนัดในระบบและปฏิทิน Google ของคุณ
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor={`duration-${applicantId}`}>
-              ระยะเวลา (นาที)
-            </FieldLabel>
-            <FieldContent>
-              <Input
-                id={`duration-${applicantId}`}
-                type="number"
-                min={15}
-                max={480}
-                step={15}
-                value={formState.durationMinutes}
-                onChange={(e) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    durationMinutes: e.target.value,
-                  }))
-                }
-                disabled={schedulePending}
-              />
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor={`iv-emails-${applicantId}`}>
-              อีเมลผู้สัมภาษณ์ (ถ้ามี)
-            </FieldLabel>
-            <FieldContent>
-              <Textarea
-                id={`iv-emails-${applicantId}`}
-                placeholder={
-                  "คั่นด้วยเว้นวรรค เครื่องหมายจุลภาค หรือบรรทัดใหม่"
-                }
-                value={formState.interviewerEmailsRaw}
-                onChange={(e) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    interviewerEmailsRaw: e.target.value,
-                  }))
-                }
-                disabled={schedulePending}
-                rows={2}
-              />
-            </FieldContent>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor={`notes-${applicantId}`}>
-              หมายเหตุ (ถ้ามี)
-            </FieldLabel>
-            <FieldContent>
-              <Textarea
-                id={`notes-${applicantId}`}
-                value={formState.extraNotes}
-                onChange={(e) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    extraNotes: e.target.value,
-                  }))
-                }
-                disabled={schedulePending}
-                rows={2}
-              />
-            </FieldContent>
-          </Field>
-        </FieldGroup>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={schedulePending}
-            onClick={() => onOpenChange(false)}
-          >
-            ยกเลิก
-          </Button>
-          <Button
-            type="button"
-            disabled={schedulePending || submitDisabled}
-            onClick={() => void submitSchedule()}
-          >
-            {schedulePending ? <Loader2Icon className="animate-spin" /> : null}
-            บันทึกนัด
-          </Button>
-        </DialogFooter>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit(onValid)(e);
+          }}
+        >
+          <FieldGroup className="gap-4 py-1">
+            {beforeFields}
+            <Field
+              data-invalid={
+                formState.errors.datetimeLocal ||
+                slotPrecheck.status === "conflict" ||
+                slotPrecheck.status === "error"
+                  ? true
+                  : undefined
+              }
+            >
+              <FieldLabel htmlFor={`schedule-at-${applicantId}`}>
+                วันและเวลา
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id={`schedule-at-${applicantId}`}
+                  type="datetime-local"
+                  {...register("datetimeLocal")}
+                  disabled={schedulePending}
+                  aria-invalid={
+                    formState.errors.datetimeLocal ? true : undefined
+                  }
+                />
+                <FieldDescription>
+                  ระบบจะตรวจชนกับนัดในระบบและปฏิทิน Google ของคุณ
+                </FieldDescription>
+                {slotPrecheck.status === "checking" ? (
+                  <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                    <Loader2Icon className="size-4 shrink-0 animate-spin" />
+                    กำลังตรวจสอบช่วงเวลา…
+                  </p>
+                ) : null}
+                {slotPrecheck.status === "conflict" ||
+                slotPrecheck.status === "error" ? (
+                  <FieldError>{slotPrecheck.message}</FieldError>
+                ) : null}
+                {formState.errors.datetimeLocal?.message ? (
+                  <FieldError>
+                    {formState.errors.datetimeLocal.message}
+                  </FieldError>
+                ) : null}
+              </FieldContent>
+            </Field>
+            <Field
+              data-invalid={formState.errors.durationMinutes ? true : undefined}
+            >
+              <FieldLabel htmlFor={`duration-${applicantId}`}>
+                ระยะเวลา (นาที)
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id={`duration-${applicantId}`}
+                  type="number"
+                  min={15}
+                  max={480}
+                  step={15}
+                  {...register("durationMinutes", { valueAsNumber: true })}
+                  disabled={schedulePending}
+                />
+                {formState.errors.durationMinutes?.message ? (
+                  <FieldError>
+                    {formState.errors.durationMinutes.message}
+                  </FieldError>
+                ) : null}
+              </FieldContent>
+            </Field>
+            <Field
+              data-invalid={
+                formState.errors.interviewerEmailsRaw ? true : undefined
+              }
+            >
+              <FieldLabel htmlFor={`iv-emails-${applicantId}`}>
+                อีเมลผู้สัมภาษณ์ (ถ้ามี)
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id={`iv-emails-${applicantId}`}
+                  placeholder={
+                    "คั่นด้วยเว้นวรรค เครื่องหมายจุลภาค หรือบรรทัดใหม่"
+                  }
+                  {...register("interviewerEmailsRaw")}
+                  disabled={schedulePending}
+                  rows={2}
+                />
+                {formState.errors.interviewerEmailsRaw?.message ? (
+                  <FieldError>
+                    {formState.errors.interviewerEmailsRaw.message}
+                  </FieldError>
+                ) : null}
+              </FieldContent>
+            </Field>
+            <Field
+              data-invalid={formState.errors.extraNotes ? true : undefined}
+            >
+              <FieldLabel htmlFor={`notes-${applicantId}`}>
+                หมายเหตุ (ถ้ามี)
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id={`notes-${applicantId}`}
+                  {...register("extraNotes")}
+                  disabled={schedulePending}
+                  rows={2}
+                />
+                {formState.errors.extraNotes?.message ? (
+                  <FieldError>{formState.errors.extraNotes.message}</FieldError>
+                ) : null}
+              </FieldContent>
+            </Field>
+          </FieldGroup>
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={schedulePending}
+              onClick={() => onOpenChange(false)}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                schedulePending || submitDisabled || submitBlockedBySlot
+              }
+            >
+              {schedulePending ? (
+                <Loader2Icon className="animate-spin" />
+              ) : null}
+              บันทึกนัด
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

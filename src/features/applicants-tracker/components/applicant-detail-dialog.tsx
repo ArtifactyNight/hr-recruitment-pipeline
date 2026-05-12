@@ -851,8 +851,7 @@ export function ApplicantDetailDialog({
           open={scheduleOpen}
           onOpenChange={setScheduleOpen}
           schedulePending={scheduleInterviewPending}
-          formState={scheduleForm}
-          setFormState={setScheduleForm}
+          initialFormState={scheduleForm}
           onScheduleInterview={onScheduleInterview}
         />
       ) : null}

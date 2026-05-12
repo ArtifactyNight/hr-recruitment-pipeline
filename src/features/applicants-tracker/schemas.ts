@@ -35,7 +35,7 @@ export type ApplicantProfileMap = z.infer<typeof applicantProfileMapSchema>;
 
 export const scheduleInterviewFormSchema = z.object({
   datetimeLocal: z.string().min(1, "เลือกวันและเวลา"),
-  durationMinutes: z.coerce.number().int().min(15).max(480),
+  durationMinutes: z.number().int().min(15).max(480),
   interviewerEmailsRaw: z.string().optional(),
   extraNotes: z.string().max(16_000).optional(),
 });

@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -123,9 +118,6 @@ function ApplicantPickerField({
             ))}
           </SelectContent>
         </Select>
-        <FieldDescription>
-          แสดงเฉพาะผู้สมัครที่ยังไม่มีนัดสัมภาษณ์ที่กำลังใช้งาน
-        </FieldDescription>
       </FieldContent>
     </Field>
   );
@@ -235,12 +227,7 @@ export function InterviewsCalendar() {
         open={scheduleOpen}
         onOpenChange={onScheduleDialogOpenChange}
         schedulePending={scheduleInterviewMut.isPending}
-        formState={scheduleForm}
-        setFormState={(value) => {
-          setScheduleForm(
-            typeof value === "function" ? value(scheduleForm) : value,
-          );
-        }}
+        initialFormState={scheduleForm}
         onScheduleInterview={async (input) => {
           await scheduleInterviewMut.mutateAsync(input, {
             onSuccess: () => {
