@@ -131,8 +131,7 @@ export function ApplicantDetailAiScores({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs text-muted-foreground"
+                  size="xs"
                   disabled={screenAiPending || !hasResumeEvidence}
                   onClick={onScreenWithAi}
                 >
@@ -147,11 +146,11 @@ export function ApplicantDetailAiScores({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
-                className="h-7 px-2 text-xs"
+                size="xs"
                 onClick={() => setScreeningPreviewOpen(true)}
               >
-                <InfoIcon className="size-4 shrink-0" aria-hidden />
+                <InfoIcon className="size-3 shrink-0" aria-hidden />
+                ดูรายละเอียดเพิ่มเติม
               </Button>
             </div>
           </div>
