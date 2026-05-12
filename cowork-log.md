@@ -1,3 +1,11 @@
+### [2026-05-12] - ApplicantPickerField: fix select inside schedule dialog
+
+**Prompt:** ApplicantPickerField can't select
+
+**Output:** Schedule dialog uses `DialogContent` at `z-100` while portaled `SelectContent` defaulted to `z-50`, so the dropdown drew under the dialog. Added `className="z-110"` on the picker `SelectContent`. Select `value`: map `""` to `undefined` for Radix controlled mode.
+
+**Edited:** `src/features/interviews/components/interviews-calendar.tsx`, `cowork-log.md`
+
 ### [2026-05-12] - Add applicant AI: strengths list like screening questions
 
 **Prompt:** make strengths section (จุดแข็งหลัก) list like คำถามคัดกรอง

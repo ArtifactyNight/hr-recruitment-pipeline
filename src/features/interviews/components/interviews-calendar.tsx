@@ -101,7 +101,7 @@ function ApplicantPickerField({
       <FieldLabel htmlFor="calendar-schedule-applicant">ผู้สมัคร</FieldLabel>
       <FieldContent>
         <Select
-          value={selectedApplicantId}
+          value={selectedApplicantId === "" ? undefined : selectedApplicantId}
           onValueChange={onApplicantChange}
           disabled={loading || applicants.length === 0}
         >
@@ -110,7 +110,7 @@ function ApplicantPickerField({
               placeholder={loading ? "กำลังโหลดผู้สมัคร..." : "เลือกผู้สมัคร"}
             />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="z-110">
             {applicants.map((applicant) => (
               <SelectItem key={applicant.id} value={applicant.id}>
                 {applicant.name} · {applicant.positionTitle}
