@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { format, parseISO } from "date-fns";
 import { Loader2Icon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { z } from "zod";
 
 const postponeInterviewFormSchema = z.object({

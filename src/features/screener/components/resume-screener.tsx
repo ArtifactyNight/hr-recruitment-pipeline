@@ -5,11 +5,11 @@ import { useCallback, useMemo, type ChangeEvent } from "react";
 import { screenerMutations } from "@/features/screener/api/mutations";
 import { screenerQueries } from "@/features/screener/api/queries";
 import type { FitReport } from "@/features/screener/schemas";
-import { formatReportText } from "@/features/screener/utils";
 import { useResumeScreenerStore } from "@/features/screener/store/resume-screener-store";
 import { useScreenerDialogStore } from "@/features/screener/store/screener-dialog-store";
+import { formatReportText } from "@/features/screener/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { useCopyToClipboard } from "usehooks-ts";
 import { useShallow } from "zustand/react/shallow";
 
@@ -123,11 +123,11 @@ export function ResumeScreener() {
   const onAnalyze = useCallback(async () => {
     const text = resumeText.trim();
     if (!selectedFile && !text) {
-      toast.message("อัปโหลดไฟล์ หรือวางข้อความ resume");
+      toast("อัปโหลดไฟล์ หรือวางข้อความ resume");
       return;
     }
     if (!selectedJobId) {
-      toast.message("เลือกตำแหน่งงาน");
+      toast("เลือกตำแหน่งงาน");
       return;
     }
     try {
@@ -206,13 +206,13 @@ export function ResumeScreener() {
 
   const onSubmitTracker = useCallback(async () => {
     if (!report || !trackerJobId) {
-      toast.message("ต้องมีผลวิเคราะห์ก่อน");
+      toast("ต้องมีผลวิเคราะห์ก่อน");
       return;
     }
     const nameT = trackerDraftName.trim();
     const emailT = trackerDraftEmail.trim();
     if (!nameT || !emailT) {
-      toast.message("กรอกชื่อและอีเมล");
+      toast("กรอกชื่อและอีเมล");
       return;
     }
     try {
@@ -258,7 +258,7 @@ export function ResumeScreener() {
       setDetectedName("");
       setDetectedEmail("");
       setReportDialogOpen(false);
-      toast.message(`ใช้ไฟล์ ${file.name} - กดวิเคราะห์เพื่อส่ง PDF เข้า AI`);
+      toast(`ใช้ไฟล์ ${file.name} - กดวิเคราะห์เพื่อส่ง PDF เข้า AI`);
     },
     [
       setDetectedEmail,

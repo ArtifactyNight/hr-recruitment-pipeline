@@ -1,10 +1,11 @@
 import { QueryProvider } from "@/components/query-provider";
-import { Toaster } from "@/components/ui/sonner";
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import { Geist_Mono, IBM_Plex_Sans_Thai } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
+import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 const mono = Geist_Mono({
@@ -45,7 +46,7 @@ export default function RootLayout({
         <QueryProvider>
           <NextTopLoader />
           <TooltipProvider>{children}</TooltipProvider>
-          <Toaster richColors />
+          <Toaster />
         </QueryProvider>
       </body>
     </html>

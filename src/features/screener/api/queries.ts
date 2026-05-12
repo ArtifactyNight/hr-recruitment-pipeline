@@ -1,7 +1,7 @@
 import type { JobDetailResponse } from "@/features/screener/types";
 import { api } from "@/lib/api";
 import { queryOptions } from "@tanstack/react-query";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { screenerKeys } from "./query-keys";
 
 export const screenerQueries = {

@@ -31,7 +31,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, startOfDay } from "date-fns";
 import { th } from "date-fns/locale";
 import { useCallback, useMemo } from "react";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 
 import type { TrackerApplicant } from "@/features/applicants-tracker/types";

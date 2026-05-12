@@ -14,14 +14,14 @@ import type { ScheduleInterviewSubmitInput } from "@/features/applicants-tracker
 import { ApplicantTrackerControls } from "@/features/applicants-tracker/components/applicant-tracker-controls";
 import { ApplicantTrackerTable } from "@/features/applicants-tracker/components/applicant-tracker-table";
 import { DeleteApplicantAlert } from "@/features/applicants-tracker/components/delete-applicant-alert";
-import type { TrackerApplicant } from "@/features/applicants-tracker/types";
 import { useApplicantTrackerStore } from "@/features/applicants-tracker/store/applicant-tracker-store";
+import type { TrackerApplicant } from "@/features/applicants-tracker/types";
 import { screenerQueries } from "@/features/screener/api/queries";
 import type { FitReport } from "@/features/screener/schemas";
 import type { ApplicantStage } from "@/generated/prisma/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { useDebounceValue } from "usehooks-ts";
 import { useShallow } from "zustand/react/shallow";
 

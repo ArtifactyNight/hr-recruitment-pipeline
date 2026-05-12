@@ -29,7 +29,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 export type ScheduleInterviewSubmitInput = {
   applicantId: string;

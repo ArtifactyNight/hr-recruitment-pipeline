@@ -2,7 +2,7 @@ import type { FitReport } from "@/features/screener/schemas";
 import { api } from "@/lib/api";
 import type { QueryClient } from "@tanstack/react-query";
 import { mutationOptions } from "@tanstack/react-query";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 export const screenerMutations = {
   evaluate: () =>

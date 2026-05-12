@@ -51,7 +51,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { useCopyToClipboard } from "usehooks-ts";
 
 import {

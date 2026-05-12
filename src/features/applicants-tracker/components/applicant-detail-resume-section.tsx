@@ -23,7 +23,7 @@ import {
   UploadIcon,
   XIcon,
 } from "lucide-react";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 type ApplicantDetailResumeSectionProps = {
   applicant: TrackerApplicant;

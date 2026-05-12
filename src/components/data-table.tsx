@@ -35,8 +35,8 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import * as React from "react";
+import toast from "react-hot-toast";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
-import { toast } from "sonner";
 import { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";

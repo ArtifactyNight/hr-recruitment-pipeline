@@ -58,7 +58,7 @@ import {
   useForm,
   type ControllerFieldState,
 } from "react-hook-form";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { z } from "zod";
 import { useShallow } from "zustand/react/shallow";
 
@@ -79,7 +79,11 @@ const educationItemSchema = z.object({
 const addApplicantFormSchema = z.object({
   jobId: z.string().min(1, "กรุณาเลือกตำแหน่งงาน"),
   name: z.string().trim().min(1, "กรุณากรอกชื่อผู้สมัคร"),
-  email: z.string().trim().min(1, "กรุณากรอกอีเมล").email("รูปแบบอีเมลไม่ถูกต้อง"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "กรุณากรอกอีเมล")
+    .email("รูปแบบอีเมลไม่ถูกต้อง"),
   phone: z.string(),
   source: z.enum(["LINKEDIN", "JOBSDB", "REFERRAL", "OTHER"]),
   latestRole: z.string().trim(),
@@ -785,7 +789,9 @@ export function AddApplicantDialog({
               <div className="rounded-lg border border-border bg-secondary/30 p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <SparklesIcon className="size-4 text-primary" />
-                  <h3 className="text-sm font-semibold">กรอกอัตโนมัติด้วย AI</h3>
+                  <h3 className="text-sm font-semibold">
+                    กรอกอัตโนมัติด้วย AI
+                  </h3>
                 </div>
 
                 <div className="mb-3 flex w-fit gap-1 rounded-lg bg-background p-0.5">
@@ -877,7 +883,9 @@ export function AddApplicantDialog({
                   ) : (
                     <SparklesIcon className="size-4" />
                   )}
-                  {profileAnalyzePending ? "กำลังวิเคราะห์…" : "วิเคราะห์ด้วย AI"}
+                  {profileAnalyzePending
+                    ? "กำลังวิเคราะห์…"
+                    : "วิเคราะห์ด้วย AI"}
                 </Button>
               </div>
 
@@ -936,7 +944,8 @@ export function AddApplicantDialog({
                     render={({ field, fieldState }) => (
                       <Field data-invalid={shouldShowFieldError(fieldState)}>
                         <FieldLabel htmlFor="add-applicant-name">
-                          ชื่อ-นามสกุล <span className="text-destructive">*</span>
+                          ชื่อ-นามสกุล{" "}
+                          <span className="text-destructive">*</span>
                         </FieldLabel>
                         <FieldContent>
                           <Input
@@ -1071,7 +1080,8 @@ export function AddApplicantDialog({
                   <FieldLabel>CV / Resume (PDF)</FieldLabel>
                   <FieldContent className="flex flex-col gap-2">
                     <p className="text-xs text-muted-foreground">
-                      ไม่จำเป็นถ้ากรอกข้อความโปรไฟล์ในส่วน กรอกอัตโนมัติด้วย AI ด้านบนแล้ว
+                      ไม่จำเป็นถ้ากรอกข้อความโปรไฟล์ในส่วน กรอกอัตโนมัติด้วย AI
+                      ด้านบนแล้ว
                     </p>
                     <div
                       className={cn(
@@ -1324,7 +1334,8 @@ export function AddApplicantDialog({
               <div className="flex gap-2.5 rounded-lg border border-border bg-secondary p-3">
                 <SparklesIcon className="mt-0.5 size-4 shrink-0 text-primary" />
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  AI ประเมินความเหมาะสมด้านทักษะ ประสบการณ์ และวัฒนธรรม พร้อมสร้างคำถามคัดกรองเบื้องต้น
+                  AI ประเมินความเหมาะสมด้านทักษะ ประสบการณ์ และวัฒนธรรม
+                  พร้อมสร้างคำถามคัดกรองเบื้องต้น
                 </p>
               </div>
 

@@ -750,6 +750,14 @@ Net effect: experience rows actually populate the dialog form on save; resume te
 
 **Edited:** `src/types/scraping.ts`, `src/server/routes/applicant-routes.ts`, `cowork-log.md`
 
+### [2026-05-12] - Replace Sonner with react-hot-toast
+
+**Prompt:** replace sonner to react-hot-toast
+
+**Output:** Removed `sonner` dependency; added `react-hot-toast`. New client `Toaster` in [src/components/ui/hot-toast.tsx](src/components/ui/hot-toast.tsx) (`position="top-center"`, popover CSS vars, flat border, no shadow). Root layout imports it instead of `@/components/ui/sonner`. All `import { toast } from "sonner"` → default `import toast from "react-hot-toast"` across features; `toast.message(...)` in resume-screener → `toast(...)`. `toast.promise` in data-table unchanged (same API). Deleted `src/components/ui/sonner.tsx`.
+
+**Edited:** `package.json`, `bun.lock`, `src/app/layout.tsx`, `src/components/ui/hot-toast.tsx`, 14 toast call sites, deleted `src/components/ui/sonner.tsx`, `cowork-log.md`
+
 ### [2026-05-12 00:46] - Client-side URL validation for Quick Fill link
 
 **Prompt:** Validate the Quick Fill link input client-side using shadcn Field validation.
