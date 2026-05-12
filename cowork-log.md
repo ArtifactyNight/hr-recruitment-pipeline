@@ -1,3 +1,11 @@
+### [2026-05-12] - Cowork log: newest-first reorder
+
+**Prompt:** reorder cowork-log.md latest should be above
+
+**Output:** Split file on `###` headings into 122 blocks; fixed one orphan `**Prompt**` (missing heading) before "Screener feature split" by inserting `### [2026-05-09] - Screener: tracker draft name/email from analyze`. Sorted globally newest-first: headers with `HH:mm` use that local time; date-only headers sort as end-of-day `23:59:59`; ties broken by original line order (later in file = newer). May 12 undated entries (README, evlog, toast migration, etc.) now appear above intra-day timestamps from that morning.
+
+**Edited:** `cowork-log.md`
+
 ### [2026-05-12] - README Tech Stack: evlog
 
 **Prompt:** Add evlog to Tech Stack in README.md
@@ -14,6 +22,30 @@
 
 **Edited:** `src/lib/ai-evlog.ts`, `src/lib/resume-screening-service.ts`, `src/lib/applicant-profile-map-service.ts`, `cowork-log.md`
 
+### [2026-05-12] - Replace Sonner with react-hot-toast
+
+**Prompt:** replace sonner to react-hot-toast
+
+**Output:** Removed `sonner` dependency; added `react-hot-toast`. New client `Toaster` in [src/components/ui/hot-toast.tsx](src/components/ui/hot-toast.tsx) (`position="top-center"`, popover CSS vars, flat border, no shadow). Root layout imports it instead of `@/components/ui/sonner`. All `import { toast } from "sonner"` → default `import toast from "react-hot-toast"` across features; `toast.message(...)` in resume-screener → `toast(...)`. `toast.promise` in data-table unchanged (same API). Deleted `src/components/ui/sonner.tsx`.
+
+**Edited:** `package.json`, `bun.lock`, `src/app/layout.tsx`, `src/components/ui/hot-toast.tsx`, 14 toast call sites, deleted `src/components/ui/sonner.tsx`, `cowork-log.md`
+
+### [2026-05-12] - SelectedDayEventsPanel: visible Google Meet URL
+
+**Prompt:** show google meet link in SelectedDayEventsPanel
+
+**Output:** In `fullscreen-calendar.tsx` `SelectedDayEventsPanel`, added a details row (Video icon + “Google Meet ·”) after ผู้เข้าร่วม: full `meetUrl` as `Link` when not cancelled; cancelled events show strikethrough muted text. Dropdown join/copy unchanged. Fixed typo `เกินกำหsนด` → `เกินกำหนด` in `InterviewDbStatusBadge`.
+
+**Edited:** `src/features/interviews/components/fullscreen-calendar.tsx`, `cowork-log.md`
+
+### [2026-05-12] - Pre-submit interview slot validation (useWatch + check-slot API)
+
+**Prompt:** Implement plan: `POST /interviews/check-slot`, refactor schedule dialog to react-hook-form + `useWatch` + debounced slot precheck before submit.
+
+**Output:** Added `evaluateInterviewSlotAvailability` helper and `POST /interviews/check-slot` in [src/server/routes/interview.ts](src/server/routes/interview.ts); create + patch now call the helper. [applicant-schedule-interview-dialog.tsx](src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx) uses `useForm`/`zodResolver`, `useWatch` on datetime + duration, `useDebounceValue` 500ms, Eden `check-slot` with `AbortController` + monotonic request id to ignore stale responses; submit disabled on conflict/checking/error; final `check-slot` before `onScheduleInterview`. Props: `initialFormState` replaces lifted `formState`/`setFormState`. Callers: [applicant-detail-dialog.tsx](src/features/applicants-tracker/components/applicant-detail-dialog.tsx), [interviews-calendar.tsx](src/features/interviews/components/interviews-calendar.tsx). [schemas.ts](src/features/applicants-tracker/schemas.ts): `durationMinutes` is `z.number()` for RHF resolver typing.
+
+**Edited:** `src/server/routes/interview.ts`, `src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx`, `src/features/applicants-tracker/schemas.ts`, `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `src/features/interviews/components/interviews-calendar.tsx`, `cowork-log.md`
+
 ### [2026-05-12 12:16] - Integrate evlog (Next App Router)
 
 **Prompt:** Install evlog, detect framework, set env.service to app name, useLogger + log.set in a route handler, createError for invalid input, curl locally and confirm one wide event in terminal.
@@ -21,6 +53,62 @@
 **Output:** Project is Next.js 16 (Elysia mounted at `/api/[[...slugs]]`); used `createEvlog` from `evlog/next` per docs—not `evlog/elysia` on the Elysia tree (that path is for standalone Elysia). Added `src/lib/evlog.ts` with `env.service: hr-recruitment-pipeline` and `src/app/api/evlog-demo/route.ts` with `withEvlog`, `useLogger()` (Next API is zero-arg; handler param is `event: Request`), `log.set({ route, demo })`, and `createError` when `hello` query missing. `curl http://127.0.0.1:3010/api/evlog-demo` returned 400 JSON and dev log showed one pretty wide event (`[hr-recruitment-pipeline]` GET /api/evlog-demo 400 + context + error).
 
 **Edited:** `package.json`, `bun.lock`, `src/lib/evlog.ts`, `src/app/api/evlog-demo/route.ts`, `cowork-log.md`
+
+### [2026-05-12 00:52] - Fix LinkedIn type: compstring* → company* (real Apify response)
+
+**Prompt:** Real Apify actor response uses `companyName` etc., not `compstringName` — mapper was silently filtering out every experience row.
+
+**Output:** Rewrote [src/types/scraping.ts](src/types/scraping.ts): renamed `compstringName` / `compstringLinkedinUrl` / `compstringId` / `compstringUniversalName` / `compstringLogo` → `companyName` / `companyLinkedinUrl` / `companyId` / `companyUniversalName` / `companyLogo` on both `currentPosition[]` and `experience[]`. Tightened nullability from the live response: `topSkills`, `services`, `coverPicture`, `featured`, `coverPicture` → `T | null`; `currentPosition[].location` / `employmentType` / `workplaceType` / `description` → `string | null`; same for `experience[]`; `education[].schoolLogo` / `profileTopEducation[].schoolLogo` → `string | null`; `location.parsed.regionCode` → `string | null`. Kept `companyId` / `companyUniversalName` / `companyLogo` / `experienceGroupId` optional on `experience[]` because the third row in the sample (Y.I.M.) omits them.
+
+Updated the inline mapper in [src/server/routes/applicant-routes.ts](src/server/routes/applicant-routes.ts) `/scrape-profile-url` LinkedIn branch: `e.compstringName` → `e.companyName` in both the `experiences` map and the synthesized resume text loop. Pulled the description trim into a local `description` to keep the truthy spread tidy now that the field is explicitly `string | null`.
+
+Net effect: experience rows actually populate the dialog form on save; resume text dump shows `- Frontend Developer @ PTT Digital Solutions Company Limited (2 yrs 10 mos)` instead of `- Frontend Developer @ undefined`.
+
+**Edited:** `src/types/scraping.ts`, `src/server/routes/applicant-routes.ts`, `cowork-log.md`
+
+### [2026-05-12 00:46] - Client-side URL validation for Quick Fill link
+
+**Prompt:** Validate the Quick Fill link input client-side using shadcn Field validation.
+
+**Output:** Added linear `manualProfileUrlError` derivation right after `profileAnalyzePending` ([src/features/applicants-tracker/components/add-applicant-dialog.tsx](src/features/applicants-tracker/components/add-applicant-dialog.tsx)): if non-empty and `!URL.canParse` → "Invalid URL"; if hostname matches JobsDB (`jobsdb.com` / `.jobsdb.com` / `th.jobsdb.com` / `.jobsdb.th`) → "JobsDB ยังไม่รองรับ". Gated display behind `manualProfileUrlTouched` (set on first `onChange` and on `onBlur`) so an empty field doesn't flash red. Wrapped the Quick Fill link `Input` in `Field` + `FieldContent` + conditional `FieldError`; supported-links hint hides while the error is visible. `data-invalid` on the `Field`, `aria-invalid` on the `Input`. Analyze button now also disables when `manualProfileUrlError.length > 0`. `handleOpenChange` resets `manualProfileUrlTouched` alongside the URL on sheet close. Kept the toast.error fallbacks in `handleAnalyzeProfile` as belt-and-braces (defense if someone toggles disabled in devtools).
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-12 00:32] - Wire scrape() dispatcher into API + add-applicant-dialog
+
+**Prompt:** Implement `scrape()` to API and `add-applicant-dialog.tsx`. Replace `/scrape-profile-url` to use the new dispatcher; one round-trip from the link tab.
+
+**Output:** Rewrote `POST /applicants/scrape-profile-url` ([src/server/routes/applicant-routes.ts](src/server/routes/applicant-routes.ts)) to call `scrape(url)` from [src/server/lib/scraping.ts](src/server/lib/scraping.ts). LinkedIn branch: inline `ScrapedLinkedinProfile` → `ApplicantProfileMap` mapper (name from first+last, email from `emails[0]` — empty under "no email" mode, latestRole from `currentPosition[0].position` ?? `experience[0].position`, deduped skills from `topSkills` ∪ `skills[].name`, filtered `experience` / `education` rows). Also synthesizes a `resumeText` dump (headline, location, about, exp lines `position @ compstringName (duration) — location`, education, top skills) so downstream AI screening still has prose. Other branch: feeds Firecrawl markdown into existing `mapProfileTextFromRaw` and returns the markdown as `resumeText`. Response shape: `{ url, source: "linkedin" | "other", title, mapped, resumeText }`. Error handler keeps the existing statusCode narrowing. Removed duplicate `mapProfileTextFromRaw` import (one absolute + one relative). Dropped `scrapeCandidateProfileUrl` import — [src/server/lib/profile-url-scrape.ts](src/server/lib/profile-url-scrape.ts) has no consumers now but kept (out of scope to delete).
+
+Mutation cast in [src/features/applicants-tracker/api/mutations.ts](src/features/applicants-tracker/api/mutations.ts) `scrapeProfileUrl` updated to the new shape.
+
+Dialog ([src/features/applicants-tracker/components/add-applicant-dialog.tsx](src/features/applicants-tracker/components/add-applicant-dialog.tsx)) `handleAnalyzeProfile` link branch: client-side JobsDB host guard (`*.jobsdb.com` / `*.jobsdb.hk` / `hk.jobsdb.com`) toasts `"JobsDB scraping ยังไม่รองรับ"` and short-circuits before the round-trip. On success, `setValue("resumeText", result.resumeText)` + `applyMappedProfile(result.mapped)` in one go — dropped the chained `mapProfileText.mutateAsync` call (saves ~1 Gemini call per LinkedIn scrape). Text-tab branch and `ai_review` flow untouched.
+
+All four touched files lint-clean.
+
+**Edited:** `src/server/routes/applicant-routes.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-12 00:14] - scrape(link) dispatcher in scraping.ts
+
+**Prompt:** Implement linear `scrape(link)` in `src/server/lib/scraping.ts` — auto-detect LinkedIn / JobsDB / fallback. LinkedIn via Apify actor `LpVuK3Zozwuipa5bp` (`profileScraperMode: "Profile details no email ($4 per 1k)"`, `queries: [link]`), JobsDB commented stub, fallback via Firecrawl. No component wiring yet.
+
+**Output:** Single top-to-bottom function (no extracted helpers): parse URL (→ 400), lowercase `hostname`, `if linkedin / else if jobsdb / else firecrawl`. LinkedIn branch uses existing `apifyClient` from `@/lib/apify`, calls actor with `waitSecs: 120`, reads `dataset(run.defaultDatasetId).listItems()`, casts `items[0]` to `ScrapedLinkedinProfile` from `@/types/scraping`. JobsDB branch throws `501` with `// TODO` lines outlining the future actor call so the same place is easy to edit. Firecrawl branch dynamically imports `@mendable/firecrawl-js` (already pulled in transitively via `firecrawl-aisdk`), calls `fc.v1.scrapeUrl(link, { formats: ["markdown"], onlyMainContent: true })`, narrows the result the same way `profile-url-scrape.ts` does, and returns `{ kind: "other", url, data: { title, markdown } }`. Public surface is a discriminated union `ScrapeResult` (`linkedin` / `other`). All failures throw `Object.assign(new Error(msg), { statusCode })` matching the existing pattern. Lints clean.
+
+**Edited:** `src/server/lib/scraping.ts`, `cowork-log.md`
+
+### [2026-05-11] - Add applicant: manual JD URL, lists, multi-PDF
+
+**Prompt:** Implement plan: move job posting URL to manual; experience/education/certificate dynamic lists; remove plain-text CV in manual; multi-file dropzone; Prisma Applicant fields + ApplicantResume; shadcn Field + RHF.
+**Output:** Schema `jobPostingUrl`, `experiences`/`educations`/`certificates` Json[], `ApplicantResume`; migration applied. Store: `addResumeFiles[]`, `addJobPostingUrl`, list flush setters; removed AI JD fetch state. `POST /with-resume` accepts `files[]` + extended JSON payload, uploads each PDF to R2 + resume rows, primary `cvFileKey` = first file. Dialog: FieldGroup manual form, `useFieldArray` for three lists, multi-PDF manual dropzone, job URL in manual only; AI step JD URL removed; AI PDF stays single-file via `setAddResumeFiles([file])`. Mutations + analyze/confirm use first file from array.
+**Edited:** `prisma/schema.prisma`, migration, `applicant-tracker-store.ts`, `add-applicant-dialog.tsx`, `mutations.ts`, `applicant-routes.ts`, `cowork-log.md`
+
+### [2026-05-11] - Add Applicant: shadcn Select for Target Role
+
+**Prompt:** Use shadcn Select component for target role.
+
+**Output:** Replaced native `<select>` with `Select` / `SelectTrigger` / `SelectValue` / `SelectContent` / `SelectGroup` / `SelectItem` from `@/components/ui/select` for both manual flow and AI review `jobId` field. Empty selection uses `value={field.value || undefined}` + `SelectValue placeholder="Select role"`. Full-width trigger (`className="w-full"`), `position="popper"` on content, `aria-invalid` + `FieldError` unchanged. AI review block now uses `Field` + `FieldLabel` + `FieldContent` instead of raw `Label` + `<p>` for errors.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
 
 ### [2026-05-11 22:10] - AI Resume Screener: Analyze button gated on full form
 
@@ -110,11 +198,72 @@
 
 **Edited:** `src/server/routes/applicant-routes.ts`, `cowork-log.md`
 
-### [2026-05-11] - Add applicant: manual JD URL, lists, multi-PDF
+### [2026-05-11 17:35] - Fix /with-resume payload validation mismatch
 
-**Prompt:** Implement plan: move job posting URL to manual; experience/education/certificate dynamic lists; remove plain-text CV in manual; multi-file dropzone; Prisma Applicant fields + ApplicantResume; shadcn Field + RHF.
-**Output:** Schema `jobPostingUrl`, `experiences`/`educations`/`certificates` Json[], `ApplicantResume`; migration applied. Store: `addResumeFiles[]`, `addJobPostingUrl`, list flush setters; removed AI JD fetch state. `POST /with-resume` accepts `files[]` + extended JSON payload, uploads each PDF to R2 + resume rows, primary `cvFileKey` = first file. Dialog: FieldGroup manual form, `useFieldArray` for three lists, multi-PDF manual dropzone, job URL in manual only; AI step JD URL removed; AI PDF stays single-file via `setAddResumeFiles([file])`. Mutations + analyze/confirm use first file from array.
-**Edited:** `prisma/schema.prisma`, migration, `applicant-tracker-store.ts`, `add-applicant-dialog.tsx`, `mutations.ts`, `applicant-routes.ts`, `cowork-log.md`
+**Prompt:** error with /resume route — backend validation expects `payload` string and `files` array, but request sends object payload and empty files object.
+
+**Output:** Updated `POST /applicants/with-resume` to accept both `payload` as JSON string **or** object. Handler now parses JSON only when payload is a string; object payload goes straight into Zod validation. Relaxed `files` request schema to allow either file array or empty object so multipart clients that send `files: {}` no longer fail TypeBox validation before business logic runs. Kept existing resume file extraction behavior and validations.
+
+**Edited:** `src/server/routes/applicant-routes.ts`, `cowork-log.md`
+
+### [2026-05-11 17:29] - Add Applicant: Dialog → Sheet
+
+**Prompt:** Convert shadcn Dialog to shadcn Sheet in add-applicant-dialog.tsx.
+
+**Output:** Swapped `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle` for `Sheet`/`SheetContent`/`SheetHeader`/`SheetTitle`. Sheet slides in from the right (`side="right"`), width overridden to `data-[side=right]:sm:max-w-xl md:data-[side=right]:sm:max-w-2xl` so the form has breathing room (default sheet cap is `sm:max-w-sm`). Scroll container switched from `max-h-[75vh] overflow-y-auto` to `flex-1 overflow-y-auto` to fit the full-height sheet. Header padding compacted to `px-5 py-4` and gets `pr-8` to clear the built-in `SheetClose` × button. Component name `AddApplicantDialog` and file name kept intact to avoid touching `src/app/(dashboard)/candidates/page.tsx`. `tsc --noEmit` + lints clean.
+
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-11 16:39] - Add Applicant Dialog v2 — Job URL fetch, skills/latestRole, drop certificates, typed JSON
+
+**Prompt:** Move job posting URL to top with fetch button (scrape data into form), add optional description to experience rows, remove certificates, add latest job role + skills fields, wire prisma-json-types-generator into schema + `src/types/types.ts`.
+
+**Output:** Schema: dropped `certificates Json[]`, added `latestRole String?` + `skills String[]`, and annotated `experiences`/`educations` with `/// [ApplicantExperience]` / `/// [ApplicantEducation]` for typed JSON output via `prisma-json-types-generator`. Migration `applicant_skills_latest_role_drop_certificates` applied. `src/types/types.ts` declares the matching `PrismaJson.ApplicantExperience` (with optional `description`) and `PrismaJson.ApplicantEducation` types. Store dropped all certificate state, added `addLatestRole` + `addSkills`, and widened experience draft with optional `description`. Backend `/applicants/with-resume` payload now persists `latestRole`/`skills`/experience description and no longer expects certificates. Added new `POST /applicants/scrape-job-url` route that fetches the URL, extracts `<title>` / `og:*` / `meta description`, and runs a keyword-based skill extractor — returns `{title, description, latestRole, skills}`. Dialog reflowed: Job Posting URL is now the first field with a Fetch button (calls scrape mutation, prefills latest role + merges skills), Experience rows gained a description textarea, Certificates section removed, new Latest Role input + Skills chip input (Enter/Comma to add, Backspace to remove last). Verified with `tsc --noEmit` + `eslint`.
+
+**Edited:** `prisma/schema.prisma`, `prisma/migrations/20260511094033_applicant_skills_latest_role_drop_certificates/migration.sql`, `src/types/types.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `src/features/applicants-tracker/api/mutations.ts`, `src/server/routes/applicant-routes.ts`, `cowork-log.md`
+
+### [2026-05-11 15:50] - Implement AI strictness end-to-end
+
+**Prompt:** implement ai strictness feature to backend `src/server/lib/resume-screening-service.ts` and wire full stack
+**Output:** Added strictness-aware screener prompting with levels `0|1|2` (lenient/balanced/strict), normalization defaulting to balanced, and evaluator input support in `evaluateResumeAgainstJob`. Threaded optional `strictness` through both backend analyze endpoints (`/applicants/analyze-draft` and `/screener/evaluate`) with request schema validation (`0..2`). Wired frontend draft analyze mutation to send strictness from Zustand state, and aligned store default/reset strictness to `1` to match slider domain.
+**Edited:** `src/features/screener/lib/screener-prompts.ts`, `src/server/lib/resume-screening-service.ts`, `src/server/routes/applicant-routes.ts`, `src/server/routes/screener-routes.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `cowork-log.md`
+
+### [2026-05-11 14:49] - Rework Add Applicant Dialog (Full New Fields)
+
+**Prompt:** Rework Add Applicant Dialog (Full New Fields)
+
+**Output:** Rebuilt add-applicant flow to `pick -> manual -> ai_review -> ai_result` with English UI copy and richer UX parity with the provided reference. Added new Zustand fields for AI mode (`addAiCvMode`, `addAiStrictness`, `addAiJdUrl`, `addFetchingJdUrl`) and reset wiring. Replaced dialog UI with mode cards, source chips, CV mode toggles, URL fetch simulation, strictness slider, and a full AI score-card result (recommendation badge, ring score, 3 fit dimensions + reasoning, strengths, suggested pre-screen questions, summary). Kept existing handler boundaries (`onManualSubmit`, `onAiAnalyze`, `onAiConfirmSubmit`) and updated candidates flow to transition to `ai_result` after analyze. Verified with ESLint + TypeScript checks.
+
+**Edited:** `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `src/app/(dashboard)/candidates/page.tsx`, `cowork-log.md`
+
+### 2026-05-11 04:27 - Refactor TanStack Query hooks to queryOptions/mutationOptions pattern
+
+**Prompt:** Migrate all `/api/` feature hooks to use `queryOptions`/`mutationOptions` factories instead of `return useQuery/useMutation` wrappers. Files named `queries.ts` and `mutations.ts`. Pattern from TanStack Query v5 docs.
+
+**Output:** Created `queries.ts` and `mutations.ts` for 5 features (applicants-tracker, dashboard, interviews, jobs, screener). Updated 7 consumer files (candidates/page, jobs/page, dashboard/page, applicant-detail-resume-section, interviews-calendar, job-description-dialog, resume-screener) to use `useQuery(featureQueries.xxx())` and `useMutation(featureMutations.xxx(queryClient))` pattern. Mutations needing queryClient accept it as a parameter. Old `use-*.ts` files remain but are no longer imported.
+
+**Edited:** 16 files created/modified. Zero new TS errors in new files.
+
+### [2026-05-11 01:05] - Update README + .env.example
+
+**Prompt:** Rewrite README in English: setup instructions + feature-based architecture explanation. Update .env.example to match.
+
+**Output:** Full README rewrite — stack table, prerequisites (Node ≥20/pnpm ≥9/PG ≥15), quick start steps, env vars table (all vars documented with required flag), Google OAuth setup section (what's needed + links), deep feature-based architecture section (why vs type-based, annotated directory tree, what goes in each subfolder, shared code map, API layer, pipeline stages). Updated .env.example: removed stale Clerk vars and unused GOOGLE_TOKEN_ENCRYPTION_KEY, added comments with setup links.
+
+**Edited:** README.md, .env.example
+
+### [2026-05-11 00:49] - Fix 4 applicant tracker features
+
+**Prompt:** Fix /with-screening add bug, add re-analyze AI button, inline edit applicant data, status badges in calendar/interview views
+
+**Output:**
+
+1. `/with-screening` bug — Eden Treaty sends multipart body; Elysia coerces JSON string `payload` field to object before TypeBox validation. Fixed by removing `JSON.stringify`/`JSON.parse` envelope — server body now accepts flat fields (`jobDescriptionId`, `name`, `email`, `source`, `report: t.Any()`, `file`), client sends raw object.
+2. Re-analyze AI — `ApplicantDetailAiScores` `hasData` branch had no button. Added "วิเคราะห์ใหม่" ghost button with `RefreshCwIcon` next to scores header row.
+3. Inline edit — Extended PATCH `/:id` server route to accept `name`/`email`/`phone`/`source`. Added `HeaderInlineEdit` (for name/email in dialog header) and `InlineEditRow`/`InlineSelectRow` for phone/source in detail grid. Save on blur/Enter, escape to cancel.
+4. Status badges — `interview-routes.ts` calendar-events endpoint now fetches `status` from DB (removed `CANCELLED` filter). Added `interviewDbStatus` to `GoogleCalendarListEvent` type, `Event` interface, and feed mapping. `InterviewDbStatusBadge` component computes OVERDUE (SCHEDULED + end past), shows CANCELLED/RESCHEDULED badges in `SelectedDayEventsPanel` and `InterviewMeetCard`. Grid cell events get colored left border.
+
+**Edited:** applicant-routes.ts, interview-routes.ts, use-applicants-mutations.ts, applicant-detail-ai-scores.tsx, applicant-detail-dialog.tsx, candidates/page.tsx, google-calendar-list-event.ts, google-calendar-feed.ts, fullscreen-calendar.tsx, applicant-detail-interview-section.tsx
 
 ### [2026-05-10] - /impeccable layout: calendar
 
@@ -181,6 +330,98 @@
 **Prompt:** (TH) move edit button to top (notes header); must click Edit before editing note
 **Output:** Header row `หมายเหตุ` + `แก้ไข` (outline, pencil); textarea `readOnly` until edit; edit mode shows `ยกเลิก` + `บันทึกหมายเหตุ`. Display derives from `applicant.notes` when viewing; draft only while editing; exit edit after save when `notesSaving` drops and draft matches server (`key={applicant.id}` already resets on row switch).
 **Edited:** `applicant-detail-notes-section.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Applicant detail: กำหนดนัด + Meet card
+
+**Prompt:** Applicant Interview CTA Plan — ปุ่มกำหนดนัดเมื่อยังไม่มี Meet / conflict check; ถ้ามี Meet แสดงข้อมูลใต้ AI score + ลิงก์เข้าประชุม
+**Output:** `GET|POST|PATCH /applicants` แนบ `interview` ล่าสุด (`SCHEDULED`|`RESCHEDULED`) ของ organizer ปัจจุบัน + interviewers; `TrackerApplicant.interview`; `ApplicantDetailInterviewSection` (ฟอร์ม datetime/duration/emails/notes + nested Dialog) + การ์ดสรุปนัด + `Meet` `target=_blank`; `ApplicantTracker` `POST /interviews` + invalidate `applicants` + `interviews-calendar-events` + อัปเดต detail + toast จากร่าง error (`DB_CONFLICT`/`GOOGLE_BUSY` ฯลฯ); `trackerInterviewFromScheduleResponse`; `POST /interviews` include interviewer `title`; cast Prisma `select` interviews→mapper เพราะ inference ไม่ติด nested select
+**Edited:** `applicant-routes.ts`, `interview-routes.ts`, `applicant-tracker-model.ts`, `schedule-interview-schema.ts`, `applicant-detail-interview-section.tsx`, `applicant-detail-dialog.tsx`, `applicant-tracker.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Applicant detail: footer schedule + redirect หลังบันทึกนัด
+
+**Prompt:** move schedule button to dialog footer (replace with schedule redirect); when schedule redirect to interviews page
+**Output:** `applicant-schedule-interview-dialog.tsx` — dialog ฟอร์มแยกจากเนื้อหาหลัก (portal sibling); state form + open อยู่ `ApplicantDetailDialog`; footer: `กำหนดนัดสัมภาษณ์` เมื่อยังไม่มีนัด, `ไปหน้านัดสัมภาษณ์` → `router.push('/interviews')` แทน `<Link>`; section เดิมเหลือการ์ด/ข้อความว่าง; `scheduleInterviewMut` `onSuccess` → `setDetail(null)` + `router.push('/interviews')`; `key={detail?.id ?? 'closed'}` บน dialog รีเซ็ต state เมื่อสลับผู้สมัคร
+**Edited:** `applicant-schedule-interview-dialog.tsx`, `applicant-detail-dialog.tsx`, `applicant-detail-interview-section.tsx`, `applicant-tracker.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Dashboard layout: Container + HeaderSection
+
+**Prompt:** create `container.tsx`, `header-section.tsx` and apply to all pages (from jobs header snippet)
+**Output:** Added `src/components/layout/container.tsx` (`px-4 py-6 md:px-6` + merge className) and `header-section.tsx` (title, optional description, optional actions). Wired jobs, interviews, settings, screener, candidates pages; refactored `ApplicantTrackerHeader` + `ResumeScreenerHeader` to compose `HeaderSection`. Tracker «เพิ่มผู้สมัคร» now calls `onAddClick` (opens add dialog) instead of unused prop + Link to `/screener`. Dashboard home unchanged (different chrome).
+**Edited:** `container.tsx`, `header-section.tsx`, `jobs/page.tsx`, `interviews/page.tsx`, `settings/page.tsx`, `screener/page.tsx`, `candidates/page.tsx`, `applicant-tracker-header.tsx`, `resume-screener-header.tsx`, `cowork-log.md`
+
+### [2026-05-10] - usehooks-ts: debounce, clipboard, isClient
+
+**Prompt:** Implement scoped plan — `useDebounceValue` on candidates search, `useCopyToClipboard` in screener + calendar, `useIsClient` in Kanban overlay; do not edit plan file.
+**Output:** `candidates/page.tsx` debounces via `usehooks-ts`; removed `debouncedSearch`/`setDebouncedSearch` from `applicant-tracker-store`. `resume-screener.tsx` + `fullscreen-calendar.tsx` (`SelectedDayEventsPanel`) use `useCopyToClipboard` + boolean success toasts. `kanban.tsx` `KanbanOverlay` gates portal with `useIsClient()` instead of `useSyncExternalStore`.
+**Edited:** `applicant-tracker-store.ts`, `candidates/page.tsx`, `resume-screener.tsx`, `fullscreen-calendar.tsx`, `kanban.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Screener report dialog + R2 resume attachments
+
+**Prompt:** Implement plan — screening report as large auto-opening dialog, summary bar, centered input; Cloudflare R2 PDF storage, signed download URLs, tracker detail resume section (collapsible), multipart add-to-tracker with PDF.
+**Output:** `screener-dialog-store` adds `reportDialogOpen`. `ScreenerReportPanel` → Dialog max-w-3xl; `ScreenerResultSummary` under centered `ResumeInputCard`. `add-to-tracker` uses `payload` JSON + optional `file`; uploads to R2 after applicant create when configured. `GET/POST/DELETE` `applicants/:id/resume-url` + `resume`. `TrackerApplicant` + list API include `cvText`/`cvFileKey`/`cvFileName`. `ApplicantDetailResumeSection` + `collapsible` UI. Env: `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
+**Edited:** `screener-dialog-store.ts`, `screener-report-panel.tsx`, `screener-result-summary.tsx`, `resume-screener.tsx`, `src/lib/r2.ts`, `screener-routes.ts`, `applicant-routes.ts`, `applicant-tracker-model.ts`, `applicant-detail-dialog.tsx`, `applicant-detail-resume-section.tsx`, `collapsible.tsx`, `candidates/page.tsx`, `package.json`/lockfile, `cowork-log.md`
+
+### [2026-05-10] - Screener: two columns + session AI history
+
+**Prompt:** Add AI screen history on right side, move AI form to left side.
+**Output:** `lg:grid-cols-2` layout — left: `ResumeInputCard` + `ScreenerResultSummary` (`max-w-2xl`); right: `ScreenerHistoryPanel` (sticky on large screens, scroll list, select to restore report/job, ล้างทั้งหมด). Each successful analyze prepends a `ScreenerHistoryEntry` (in-memory session). `activeHistoryId` tracks selection; form ล้าง / job change / PDF pick clears active highlight when current report cleared.
+**Edited:** `screener-history-panel.tsx`, `resume-screener.tsx`, `screener-result-summary.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Screener history: Prisma persistence + cursor pagination
+
+**Prompt:** Make AI screen history persistent with Prisma DB; add pagination.
+**Output:** New `ScreenerHistory` model (user FK, job snapshot, detected name/email, `report` JSON, index userId+createdAt). Migration `20260510120000_screener_history`. `POST /screener/evaluate` persists row after success (`historyId` optional if save fails). `GET /screener/history?limit&cursor` (cursor=id, take+1), `DELETE /screener/history` wipe for user. Client: `useInfiniteQuery` + โหลดเพิ่ม; ล้างทั้งหมด calls DELETE + invalidates.
+**Edited:** `schema.prisma`, `prisma/migrations/20260510120000_screener_history/migration.sql`, `screener-routes.ts`, `resume-screener.tsx`, `screener-history-panel.tsx`, `cowork-log.md`
+
+### [2026-05-10] - Screener prompt: Thai → English for cost saving
+
+**Prompt:** Change screener-prompts.ts instructions to English but keep output in Thai.
+**Output:** Rewrote system prompt and jdPrompt template from Thai to English. Rule #1 still mandates "All output text must be in Thai". Saves token cost since English tokenizes more efficiently than Thai.
+**Edited:** `screener-prompts.ts`, `cowork-log.md`
+
+### [2026-05-10 23:23] - Migrate Clerk to Better Auth
+
+**Prompt:** Remove Clerk and migrate to better-auth (Google OAuth only). Tasks: (1) migrate middleware to better-auth with Elysia auth plugin, (2) build sign-in page with shadcn UI.
+
+**Output:**
+
+- Created `src/middleware.ts` with cookie-based session check (public: `/sign-in`, `/api/auth/*`)
+- Created `src/lib/auth-client.ts` using `createAuthClient` from better-auth/react
+- Created `src/server/lib/auth-plugin.ts` — shared Elysia derive plugin calling `auth.api.getSession()`
+- Created `src/app/sign-in/page.tsx` — shadcn Card centered, Google OAuth button
+- Migrated all 5 route files (applicant, interview, dashboard, job, screener) from Clerk `auth()` + `ensureUserFromClerkId` to better-auth plugin pattern
+- Replaced `src/lib/get-google-token.ts` to read from Prisma `Account` table with token refresh via Google OAuth endpoint
+- Fixed `organizerUserId: number` → `string` in `interview-scheduling.ts` to match Prisma schema
+- Updated sidebar: replaced Clerk `UserButton` with Avatar + name + sign-out via `authClient.signOut()`
+- Removed `ClerkProvider` from `layout.tsx`
+- Deleted `src/proxy.ts`, `src/lib/clerk-db-user.ts`, `src/app/sign-in/[[...sign-in]]/`
+- Removed `@clerk/nextjs` package and Clerk env vars
+
+**Edited:** src/middleware.ts (new), src/lib/auth-client.ts (new), src/server/lib/auth-plugin.ts (new), src/app/sign-in/page.tsx (new), src/server/routes/applicant-routes.ts, src/server/routes/interview-routes.ts, src/server/routes/dashboard-routes.ts, src/server/routes/job-routes.ts, src/server/routes/screener-routes.ts, src/lib/get-google-token.ts, src/lib/auth.ts, src/server/lib/interview-scheduling.ts, src/features/dashboard/components/app-sidebar.tsx, src/app/layout.tsx, .env
+
+### [2026-05-10 04:18] - Add applicant dialog: React Hook Form
+
+**Prompt:** `/shadcn use react-hook-form`
+**Output:** Wired the add applicant dialog to `react-hook-form` with a Zod resolver, shadcn `FieldError` validation states, submit-based manual/AI-confirm saves, and grouped radix `SelectItem` composition while keeping Zustand synced as the tracker source of truth.
+**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
+
+### [2026-05-10 04:07] - Gmail resume intake brainstorming
+
+**Prompt:** brainstorm idea; pain point: HR need to get resume data and person from Gmail automatically and make it easy to use
+**Output:** Proposed Gmail resume intake concepts: watched inbox/label, automatic resume parsing, duplicate detection, review queue, job matching, applicant creation, candidate communication, and a pragmatic MVP path.
+**Edited:** `cowork-log.md`
+
+### [2026-05-10 02:12] - Improve screener prompt strictness
+
+**Prompt:** `make screener-prompts.ts more strict and better`
+**Output:** Rewrote `jdPrompt` + extracted `SCREENER_SYSTEM_PROMPT` with: explicit scoring rubric (0–10 per range), fitStatus→overallScore mapping rules, per-dimension evaluation criteria (skillFit/experienceFit/cultureFit), evidence-based enforcement (no guessing), field-level constraints (min counts, cite CV), integer-only scores, verbatim name/email extraction. Removed duplicated inline system prompt from `screener-routes.ts` in favor of single export.
+**Edited:** `src/features/screener/lib/screener-prompts.ts`, `src/server/routes/screener-routes.ts`, `cowork-log.md`
+
+### [2026-05-10 00:43] - Interviews calendar: add schedule CTA
+
+**Prompt:** `@src/components/ui/fullscreen-calendar.tsx:537-540 implement add schedule logic`
+**Output:** ปุ่ม `เพิ่มนัด` ใน `FullScreenCalendar` เรียก `onScheduleForDate(selectedDay)` และ disable เมื่อไม่มี handler/เป็นวันอดีต; หน้า `/interviews` เปิด dialog กำหนดนัดจากวันที่เลือก, เลือกผู้สมัครที่ยังไม่มีนัด, ส่ง `POST /interviews`, invalidate calendar/applicants; schedule dialog รองรับ field แทรกก่อนฟอร์ม + seeded datetime จากวันที่เลือก
+**Edited:** `src/components/ui/fullscreen-calendar.tsx`, `src/features/interviews/components/interviews-calendar.tsx`, `src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx`, `cowork-log.md`
 
 ### [2026-05-09] - Calendar sidebar: reminder, organizer, guests, notes
 
@@ -265,12 +506,6 @@
 **Prompt:** use 24 hours instead of 12
 **Output:** `HOURS_24` ใน `calendar-utils` เป็นเลเบล `00:00`–`23:00`; `event-sheet` `formatTime` ใช้ `HH:mm` แทน localized `p`
 **Edited:** `calendar-utils.ts`, `event-sheet.tsx`, `cowork-log.md`
-
-### [2026-05-09 12:00] - แปล UI ปฏิทินและแทร็กเกอร์เป็นไทย
-
-**Prompt:** translate component to thai (frontend)
-**Output:** Hardcode ข้อความ UI เป็นภาษาไทยใน `calendar-header`, `calendar-controls`, `create-event-dialog`, `event-sheet`, `schedule-popover`; ใช้ `date-fns` `th` locale สำหรับชื่อเดือน/วัน (`PPP`, หัวสัปดาห์ปฏิทิน, เวลาแบบ localized `p`). แก้ `applicant-detail-dialog`, `applicant-tracker-table`, `tracker-card` ให้ `format` วันที่ด้วย `th`. ปรับข้อความเล็กน้อยใน `interviews-calendar-client` (prefill bar).
-**Edited:** `calendar-header.tsx`, `calendar-controls.tsx`, `create-event-dialog.tsx`, `event-sheet.tsx`, `schedule-popover.tsx`, `applicant-detail-dialog.tsx`, `applicant-tracker-table.tsx`, `tracker-card.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
 
 ### [2026-05-09] - Interviews: สร้างนัดผ่าน `CreateEventDialog`
 
@@ -380,6 +615,8 @@
 **Output:** Replaced `ToggleGroup`/`ToggleGroupItem` with `Tabs`/`TabsList`/`TabsTrigger` from `@/components/ui/tabs`; controlled `value={view}` + `onViewChange` guard for board/table; kept border + trigger spacing/icons.
 **Edited:** `src/features/applicants-tracker/components/applicant-tracker-header.tsx`, `cowork-log.md`
 
+### [2026-05-09] - Screener: tracker draft name/email from analyze
+
 **Prompt:** fix candidate name and email don't set to dialog
 **Output:** Moved draft name/email off Zustand into `ResumeScreener` state (`trackerDraftName`/`trackerDraftEmail`); opening runs `openTrackerDraft()` that copies trimmed `detectedName`/`detectedEmail` then `setTrackerDialogOpen(true)`. Zustand store only tracks `trackerDialogOpen` + JD dialog. `AddToTrackerDialog` is fully controlled via props (no stale subscription vs Radix open lifecycle).
 
@@ -388,6 +625,96 @@
 **Prompt:** split component to feature based; use zustand for dialog
 **Output:** Split `resume-screener.tsx` into `resume-screener-header`, `job-description-dialog` (open button + `useQuery` for JD when dialog open), `add-to-tracker-dialog`, `resume-input-card`, `screener-report-panel`, `fit-row`, `report-bullet-block`; helpers/types in `lib/resume-screener-utils.ts`; `store/screener-dialog-store.ts` holds `jdDialogOpen`, tracker open + name/email + `openTrackerDialog`. `ResumeScreener` composes pieces and keeps jobs/evaluate/add mutations.
 **Edited:** `src/features/screener/**`, `cowork-log.md`
+
+### 2026-05-09 - Kanban board pattern (Card + overlay)
+
+**Prompt:** change kanban style to match reui task board pattern (Card columns, Badge count, Grip column handle, full-card item handle, dashed overlay).
+**Output:** `ApplicantKanbanStageColumn`: `Card`/`CardHeader`/`CardContent` per stage, `Badge` จำนวน, `KanbanColumnHandle` + ghost `Button` + `GripVerticalIcon`; responsive `KanbanBoard` grid. `TrackerCard`: `Card`/`CardContent` แถวชื่อ+คะแนน, รายละเอียดด้วยปุ่ม `ChevronRight` (`stopPropagation`); `KanbanItemHandle` ห่อการ์ดเมื่อลาก; `asHandle`/`isOverlay` สำหรับ overlay. `KanbanOverlay` ฟังก์ชัน children แสดงคอลัมน์/การ์ดจริง พร้อม `border-dashed bg-muted/10`.
+**Edited:** `src/features/applicants-tracker/components/applicant-kanban-board-view.tsx`, `tracker-card.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Kanban tracker card layout
+
+**Prompt:** add kanban card, here's layout i need (reference: avatar left, name+role, score top-right, source+date row, tags pills)
+**Output:** `TrackerCard`: แถวบน `Avatar` size lg สีพื้นหลัง `#FFCC00` + อักษรย่อ, ชื่อหนา + ตำแหน่งรอง, Badge คะแนน + ปุ่มเปิด; แถวกลาง `Tag` + แหล่งที่มา / `Clock` + วันที่ (`EEE, d MMM` locale th); แถวล่าง pill `row.tags` (`rounded-full bg-muted`) เมื่อมีแท็ก
+**Edited:** `src/features/applicants-tracker/components/tracker-card.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Jobs CRUD table (JD + สถานะ)
+
+**Prompt:** CRUD Jobs (Table) - job description - toggle status (switch) using shadcn table
+**Output:** เพิ่ม `jobRoutes` (`GET/POST /api/jobs`, `PATCH/DELETE /api/jobs/:id`) พร้อม auth แบบ Clerk, ลบ JD ได้เมื่อไม่มีผู้สมัคร (409 ถ้ามี). UI: `JobsPageClient` + TanStack Table (`JobsTable`) คอลัมน์ชื่อ/รายละเอียดงาน/จำนวนผู้สมัคร/Switch รับสมัคร/แก้ไข-ลบ; `JobFormDialog` สร้าง-แก้ title+description+requirements+Switch; invalidate `jobs-admin` และ `screener-jobs` หลัง mutation.
+**Edited:** `src/server/job-routes.ts`, `src/server/elysia-app.ts`, `src/features/jobs/lib/job-description-schema.ts`, `src/features/jobs/components/jobs-table.tsx`, `job-form-dialog.tsx`, `jobs-page-client.tsx`, `src/app/(dashboard)/jobs/page.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interviews header + create sheet
+
+**Prompt:** (1) ย้ายปุ่มเชื่อมบัญชีไปข้างปุ่มสร้างนัด (2) สร้างนัดใช้ shadcn Sheet
+**Output:** `CalendarHeader` รับ `interviewsBeforePrimary` แสดง Badge เชื่อมแล้วหรือปุ่มเชื่อม Google ก่อนปุ่มสร้างนัด; ลบแถบซ้ำด้านบน (เหลือแถบ applicant prefill เมื่อมี query). ฟอร์มสร้างนัดจาก `Dialog` → `Sheet` slide จากขวา พร้อม footer ปิด/สร้าง.
+**Edited:** `src/components/calendar/calendar-header.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interview EventSheet + GET detail
+
+**Prompt:** Plan: card → EventSheet (`mode=interview`), `GET /interviews/:id`, ลบ bloc ผู้ร่วมสัมภาษณ์ใน event-sheet
+**Output:** `event-sheet` interview mode ตัดรายชื่อผู้ร่วม เหลือ header + Meet + `children`. `/interviews` ใช้ `CalendarView` + `eventSheetMode="interview"` + `InterviewEventSheetBody` (`useQuery` detail) + `InterviewEventSheetForm` (patch/delete, `key`=`id+updatedAt` หลีก setState ใน effect); ลบ manage `Dialog` และ prop ที่ไม่มีใน `CalendarView`
+**Edited:** `src/components/calendar/event-sheet.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interview EventSheet classic UI
+
+**Prompt:** keep old event-sheet ui — propose new time, info, attendee list
+**Output:** `InterviewEventSheetContent` คืนแถบเครื่องมือ (Pen/FileText/Layers/Trash2), ปุ่ม Propose new time (scroll ไป `#interview-sheet-reschedule`), รายชื่อ Guests จาก `event.participants`, Google Meet, บล็อก info (reminder/organizer/phone/users/notes) + ข้อความ notes แบบ default; `EventSheet`/`CalendarView` รับ `interviewRescheduleSectionId`; body ห่อฟอร์มแก้ไขด้วย id นั้น
+**Edited:** `src/components/calendar/event-sheet.tsx`, `src/components/calendar/calendar-view.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Interview sheet toolbar dialogs
+
+**Prompt:** ยกเลิกนัด → ไอคอนลบด้านบน; แก้ไข → ไอคอนแก้ไข; กดแล้วเป็น dialog
+**Output:** Export `InterviewEventSheetToolbarHandlers`; `CalendarView` เก็บ state + setter จาก `renderEventSheetChildren` Parm ที่ 3; `EventSheet` ส่ง `interviewToolbar` — Pen/FileText/Layers + Propose new time → `onEdit`, Trash → `onDelete`. ฟอร์มอยู่ใน `Dialog`; ยกเลิกนัดอยู่ใน `AlertDialog` แบบ controlled + ปุ่ม destructive ธรรมดา (`cancelMut`). ตัด `#interview-sheet-reschedule` / `interviewRescheduleSectionId`
+**Edited:** `event-sheet.tsx`, `calendar-view.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - Event sheet metadata from Google Calendar API
+
+**Prompt:** `@event-sheet.tsx:343-378` implement real API (Google Calendar or etc.)
+**Output:** เพิ่ม `fetchPrimaryCalendarEvent` + `snapshotFromGoogleCalendarEvent` แมป reminders / organizer.email / เบอร์ dial-in (`conferenceData` phone entryPoints) / นับ RSVP จาก attendees / description จาก `events.get`. `GET /interviews/:id` คืน `calendarSnapshot` เมื่อมี `googleEventId` + เชื่อม Google; include `organizer.email` ใน list+detail; `InterviewEventSheetContent` ใช้ `useQuery` คีย์เดียวกับฟอร์มแก้ไข แสดงข้อความจริง และ merge โน้ต DB+Google แทน placeholder; เติม `Event`/`interviewToCalendarEvent` (`organizerEmail`, `googleEventId`, `description`, รวมอีเมลผู้สมัครเป็น guest)
+**Edited:** `google-calendar-service.ts`, `interview-routes.ts`, `src/types/interview-calendar-snapshot.ts`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `mock-data/events.ts`, `cowork-log.md`
+
+### 2026-05-09 - ปฏิทินแสดงนัดที่ยกเลิก
+
+**Prompt:** ตอนยกเลิกนัดให้เก็บ data อยู่แต่ขึ้นสถานะใน event-card ว่ายกเลิก  
+**Output:** เอา filter `status !== CANCELLED` ออกจาก `GET /interviews` เพื่อดึงแถวที่ยกเลิกมาแสดง; เพิ่ม `interviewStatus` + `CalendarInterviewStatus` ใน `CalendarEvent`; `interviewToCalendarEvent` ส่ง `status` และ prefix ชื่อ `(ยกเลิก)`; `EventCard` — border เส้นประ muted, จุดสีเทา, title line-through, Badge/label ยกเลิก, ซ่อนลิงก์ Meet เมื่อยกเลิก; `InterviewEventSheetContent` — banner อธิบาย + `canUseToolbar` false เมื่อ cancelled; toolbar ไม่ register จนกว่า row โหลดและไม่ใช่ CANCELLED  
+**Edited:** `interview-routes.ts`, `calendar-event.ts`, `event-card.tsx`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### 2026-05-09 - ลบ mock ปฏิทิน
+
+**Prompt:** remove calendar mock data
+**Output:** ลบ `src/mock-data/events.ts`; ประเภทเหตุการณ์อยู่ที่ `types/calendar-event.ts` (`CalendarEvent`). Zustand ใช้ `calendarEvents: []` + `setCalendarEvents` แทน `customEvents|null` และ demo-week template; เพิ่ม event จาก Create dialog เขียนลง store ด้วย `crypto.randomUUID()`. `/interviews` sync จาก API และ unmount เคลียร์เป็น `[]`. Header โชว์ "วันนี้" จาก store อย่างเดียว
+**Edited:** `calendar-store.ts`, `calendar-view.tsx`, `calendar-day-column.tsx`, `calendar-header.tsx`, `event-card.tsx`, `event-sheet.tsx`, `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`; ลบ `mock-data/events.ts`
+
+### [2026-05-09] - Interview status: ReUI Badge แทน prefix ในชื่อ
+
+**Prompt:** status prefix use reui badge  
+**Output:** ลบ prefix ข้อความ `[ยกเลิก]`/`[เลื่อน]` ออกจาก `title` ใน `interviewToCalendarEvent`; เพิ่ม `CalendarInterviewStatusBadge` (`@/components/reui/badge`, `destructive-light`/`warning-light`, pill) ใน `event-card` และหัว `event-sheet` (interview + default mode)  
+**Edited:** `calendar-interview-status-badge.tsx`, `event-card.tsx`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### [2026-05-09] - สร้างนัด: Alert เมื่อนัดทับในระบบ
+
+**Prompt:** ถ้าขึ้นว่ามีนัดทับในระบบ แจ้งด้วย shadcn `alert.tsx` ใน `create-event-dialog.tsx`
+**Output:** โหมดสัมภาษณ์แสดง `Alert` destructive + `AlertTriangle` เมื่อข้อความ error จาก API มี `"นัดที่ทับ"` (ตรงกับ `DB_CONFLICT` ใน `interview-routes`); ส่ง `interviewDbOverlapMessage` จาก `createMut`; ไม่ toast ซ้ำสำหรับเคสนี้; ปิด dialog / เปลี่ยนวันเวลาผู้สมัคร → `reset()` mutation
+**Edited:** `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
+
+### [2026-05-09] - Google Calendar: Clerk OAuth access token
+
+**Prompt:** use `getGoogleToken` / `clerkClient.users.getUserOauthAccessToken` instead of stored refresh token
+**Output:** `src/lib/get-google-token.ts`: `getGoogleToken`, `getGoogleTokenForUserId`, `clerkGoogleLinkStatus` (provider `oauth_google`). Interview routes + Calendar API ใช้ access token ต่อคำขอ; `google-calendar-service` ใช้ `OAuth2Client` + `access_token` เท่านั้น (ไม่ต้อง `GOOGLE_CLIENT_*`). ลบ `/api/integrations/google/start|callback`, `google-oauth-state`, `google-token-crypto`; `/integrations/google/status` อิง Clerk `externalAccounts`. UI `/interviews` ปุ่มเชื่อมไป `/settings` + `ClerkAccountSettings` (`UserProfile` hash) บนหน้าตั้งค่า; `README` อัปเดต; `proxy.ts` เอา public OAuth routes ออก; `interviews/page` ห่อ `Suspense` ให้ build ผ่าน
+**Edited:** `get-google-token.ts`, `google-calendar-service.ts`, `interview-routes.ts`, `interviews-calendar.tsx`, `settings/page.tsx`, `clerk-account-settings.tsx`, `interviews/page.tsx`, `proxy.ts`, `README.md`, `cowork-log.md`; ลบ `google/start`, `google/callback`, `google-oauth-state.ts`, `google-token-crypto.ts`
+
+### [2026-05-09] - ลบ flow เชื่อม Google แยก (ใช้ token ตอน sign-in)
+
+**Prompt:** ลบการเชื่อมบัญชี Google — sign-in ได้ permission แล้ว เรียก Calendar ผ่าน `get-google-token.ts`
+**Output:** ลบ `clerkGoogleLinkStatus`, `/api/integrations/google/status`, `integrationsGoogleRoutes`; `NO_GOOGLE_OAUTH_TOKEN` + ข้อ 403 เมื่อไม่มี token; หน้า `/interviews` ไม่ query status / ไม่ปิดการสร้างนัด — ลบปุ่มเชื่อม Badge คำใบ้; `CreateEventDialog` ไม่รับ `googleLinked`; ลบ `ClerkAccountSettings` + คืนหน้า settings เรียบ; README ลบ status route + flow เชื่อมใน settings
+**Edited:** `get-google-token.ts`, `interview-routes.ts`, `elysia-app.ts`, `interviews-calendar.tsx`, `create-event-dialog.tsx`, `settings/page.tsx`, `README.md`, ลบ `clerk-account-settings.tsx`, `cowork-log.md`
+
+### [2026-05-09 12:00] - แปล UI ปฏิทินและแทร็กเกอร์เป็นไทย
+
+**Prompt:** translate component to thai (frontend)
+**Output:** Hardcode ข้อความ UI เป็นภาษาไทยใน `calendar-header`, `calendar-controls`, `create-event-dialog`, `event-sheet`, `schedule-popover`; ใช้ `date-fns` `th` locale สำหรับชื่อเดือน/วัน (`PPP`, หัวสัปดาห์ปฏิทิน, เวลาแบบ localized `p`). แก้ `applicant-detail-dialog`, `applicant-tracker-table`, `tracker-card` ให้ `format` วันที่ด้วย `th`. ปรับข้อความเล็กน้อยใน `interviews-calendar-client` (prefill bar).
+**Edited:** `calendar-header.tsx`, `calendar-controls.tsx`, `create-event-dialog.tsx`, `event-sheet.tsx`, `schedule-popover.tsx`, `applicant-detail-dialog.tsx`, `applicant-tracker-table.tsx`, `tracker-card.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
 
 ### 2026-05-08 - Applicant tracker feature split
 
@@ -494,320 +821,3 @@
 **Prompt:** setup r2 with s3 sdk (.env R2\_\* vars)
 **Output:** Installed `@aws-sdk/client-s3`. Added `src/lib/r2-s3.ts`: `getR2S3Client()` (endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`, region `auto`), `getR2BucketName()`, `getR2PublicBaseUrl()`, `getR2PublicObjectUrl(key)` for public R2.dev/custom URLs.
 **Edited:** `src/lib/r2-s3.ts`, `package.json`, `bun.lock`, `cowork-log.md`
-
-### 2026-05-09 - Kanban board pattern (Card + overlay)
-
-**Prompt:** change kanban style to match reui task board pattern (Card columns, Badge count, Grip column handle, full-card item handle, dashed overlay).
-**Output:** `ApplicantKanbanStageColumn`: `Card`/`CardHeader`/`CardContent` per stage, `Badge` จำนวน, `KanbanColumnHandle` + ghost `Button` + `GripVerticalIcon`; responsive `KanbanBoard` grid. `TrackerCard`: `Card`/`CardContent` แถวชื่อ+คะแนน, รายละเอียดด้วยปุ่ม `ChevronRight` (`stopPropagation`); `KanbanItemHandle` ห่อการ์ดเมื่อลาก; `asHandle`/`isOverlay` สำหรับ overlay. `KanbanOverlay` ฟังก์ชัน children แสดงคอลัมน์/การ์ดจริง พร้อม `border-dashed bg-muted/10`.
-**Edited:** `src/features/applicants-tracker/components/applicant-kanban-board-view.tsx`, `tracker-card.tsx`, `cowork-log.md`
-
-### 2026-05-09 - Kanban tracker card layout
-
-**Prompt:** add kanban card, here's layout i need (reference: avatar left, name+role, score top-right, source+date row, tags pills)
-**Output:** `TrackerCard`: แถวบน `Avatar` size lg สีพื้นหลัง `#FFCC00` + อักษรย่อ, ชื่อหนา + ตำแหน่งรอง, Badge คะแนน + ปุ่มเปิด; แถวกลาง `Tag` + แหล่งที่มา / `Clock` + วันที่ (`EEE, d MMM` locale th); แถวล่าง pill `row.tags` (`rounded-full bg-muted`) เมื่อมีแท็ก
-**Edited:** `src/features/applicants-tracker/components/tracker-card.tsx`, `cowork-log.md`
-
-### 2026-05-09 - Jobs CRUD table (JD + สถานะ)
-
-**Prompt:** CRUD Jobs (Table) - job description - toggle status (switch) using shadcn table
-**Output:** เพิ่ม `jobRoutes` (`GET/POST /api/jobs`, `PATCH/DELETE /api/jobs/:id`) พร้อม auth แบบ Clerk, ลบ JD ได้เมื่อไม่มีผู้สมัคร (409 ถ้ามี). UI: `JobsPageClient` + TanStack Table (`JobsTable`) คอลัมน์ชื่อ/รายละเอียดงาน/จำนวนผู้สมัคร/Switch รับสมัคร/แก้ไข-ลบ; `JobFormDialog` สร้าง-แก้ title+description+requirements+Switch; invalidate `jobs-admin` และ `screener-jobs` หลัง mutation.
-**Edited:** `src/server/job-routes.ts`, `src/server/elysia-app.ts`, `src/features/jobs/lib/job-description-schema.ts`, `src/features/jobs/components/jobs-table.tsx`, `job-form-dialog.tsx`, `jobs-page-client.tsx`, `src/app/(dashboard)/jobs/page.tsx`, `cowork-log.md`
-
-### 2026-05-09 - Interviews header + create sheet
-
-**Prompt:** (1) ย้ายปุ่มเชื่อมบัญชีไปข้างปุ่มสร้างนัด (2) สร้างนัดใช้ shadcn Sheet
-**Output:** `CalendarHeader` รับ `interviewsBeforePrimary` แสดง Badge เชื่อมแล้วหรือปุ่มเชื่อม Google ก่อนปุ่มสร้างนัด; ลบแถบซ้ำด้านบน (เหลือแถบ applicant prefill เมื่อมี query). ฟอร์มสร้างนัดจาก `Dialog` → `Sheet` slide จากขวา พร้อม footer ปิด/สร้าง.
-**Edited:** `src/components/calendar/calendar-header.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
-
-### 2026-05-09 - Interview EventSheet + GET detail
-
-**Prompt:** Plan: card → EventSheet (`mode=interview`), `GET /interviews/:id`, ลบ bloc ผู้ร่วมสัมภาษณ์ใน event-sheet
-**Output:** `event-sheet` interview mode ตัดรายชื่อผู้ร่วม เหลือ header + Meet + `children`. `/interviews` ใช้ `CalendarView` + `eventSheetMode="interview"` + `InterviewEventSheetBody` (`useQuery` detail) + `InterviewEventSheetForm` (patch/delete, `key`=`id+updatedAt` หลีก setState ใน effect); ลบ manage `Dialog` และ prop ที่ไม่มีใน `CalendarView`
-**Edited:** `src/components/calendar/event-sheet.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
-
-### 2026-05-09 - Interview EventSheet classic UI
-
-**Prompt:** keep old event-sheet ui — propose new time, info, attendee list
-**Output:** `InterviewEventSheetContent` คืนแถบเครื่องมือ (Pen/FileText/Layers/Trash2), ปุ่ม Propose new time (scroll ไป `#interview-sheet-reschedule`), รายชื่อ Guests จาก `event.participants`, Google Meet, บล็อก info (reminder/organizer/phone/users/notes) + ข้อความ notes แบบ default; `EventSheet`/`CalendarView` รับ `interviewRescheduleSectionId`; body ห่อฟอร์มแก้ไขด้วย id นั้น
-**Edited:** `src/components/calendar/event-sheet.tsx`, `src/components/calendar/calendar-view.tsx`, `src/features/interviews/components/interviews-calendar-client.tsx`, `cowork-log.md`
-
-### 2026-05-09 - Interview sheet toolbar dialogs
-
-**Prompt:** ยกเลิกนัด → ไอคอนลบด้านบน; แก้ไข → ไอคอนแก้ไข; กดแล้วเป็น dialog
-**Output:** Export `InterviewEventSheetToolbarHandlers`; `CalendarView` เก็บ state + setter จาก `renderEventSheetChildren` Parm ที่ 3; `EventSheet` ส่ง `interviewToolbar` — Pen/FileText/Layers + Propose new time → `onEdit`, Trash → `onDelete`. ฟอร์มอยู่ใน `Dialog`; ยกเลิกนัดอยู่ใน `AlertDialog` แบบ controlled + ปุ่ม destructive ธรรมดา (`cancelMut`). ตัด `#interview-sheet-reschedule` / `interviewRescheduleSectionId`
-**Edited:** `event-sheet.tsx`, `calendar-view.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
-
-### 2026-05-09 - Event sheet metadata from Google Calendar API
-
-**Prompt:** `@event-sheet.tsx:343-378` implement real API (Google Calendar or etc.)
-**Output:** เพิ่ม `fetchPrimaryCalendarEvent` + `snapshotFromGoogleCalendarEvent` แมป reminders / organizer.email / เบอร์ dial-in (`conferenceData` phone entryPoints) / นับ RSVP จาก attendees / description จาก `events.get`. `GET /interviews/:id` คืน `calendarSnapshot` เมื่อมี `googleEventId` + เชื่อม Google; include `organizer.email` ใน list+detail; `InterviewEventSheetContent` ใช้ `useQuery` คีย์เดียวกับฟอร์มแก้ไข แสดงข้อความจริง และ merge โน้ต DB+Google แทน placeholder; เติม `Event`/`interviewToCalendarEvent` (`organizerEmail`, `googleEventId`, `description`, รวมอีเมลผู้สมัครเป็น guest)
-**Edited:** `google-calendar-service.ts`, `interview-routes.ts`, `src/types/interview-calendar-snapshot.ts`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `mock-data/events.ts`, `cowork-log.md`
-
-### 2026-05-09 - ปฏิทินแสดงนัดที่ยกเลิก
-
-**Prompt:** ตอนยกเลิกนัดให้เก็บ data อยู่แต่ขึ้นสถานะใน event-card ว่ายกเลิก  
-**Output:** เอา filter `status !== CANCELLED` ออกจาก `GET /interviews` เพื่อดึงแถวที่ยกเลิกมาแสดง; เพิ่ม `interviewStatus` + `CalendarInterviewStatus` ใน `CalendarEvent`; `interviewToCalendarEvent` ส่ง `status` และ prefix ชื่อ `(ยกเลิก)`; `EventCard` — border เส้นประ muted, จุดสีเทา, title line-through, Badge/label ยกเลิก, ซ่อนลิงก์ Meet เมื่อยกเลิก; `InterviewEventSheetContent` — banner อธิบาย + `canUseToolbar` false เมื่อ cancelled; toolbar ไม่ register จนกว่า row โหลดและไม่ใช่ CANCELLED  
-**Edited:** `interview-routes.ts`, `calendar-event.ts`, `event-card.tsx`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
-
-### 2026-05-09 - ลบ mock ปฏิทิน
-
-**Prompt:** remove calendar mock data
-**Output:** ลบ `src/mock-data/events.ts`; ประเภทเหตุการณ์อยู่ที่ `types/calendar-event.ts` (`CalendarEvent`). Zustand ใช้ `calendarEvents: []` + `setCalendarEvents` แทน `customEvents|null` และ demo-week template; เพิ่ม event จาก Create dialog เขียนลง store ด้วย `crypto.randomUUID()`. `/interviews` sync จาก API และ unmount เคลียร์เป็น `[]`. Header โชว์ "วันนี้" จาก store อย่างเดียว
-**Edited:** `calendar-store.ts`, `calendar-view.tsx`, `calendar-day-column.tsx`, `calendar-header.tsx`, `event-card.tsx`, `event-sheet.tsx`, `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`; ลบ `mock-data/events.ts`
-
-### [2026-05-09] - Interview status: ReUI Badge แทน prefix ในชื่อ
-
-**Prompt:** status prefix use reui badge  
-**Output:** ลบ prefix ข้อความ `[ยกเลิก]`/`[เลื่อน]` ออกจาก `title` ใน `interviewToCalendarEvent`; เพิ่ม `CalendarInterviewStatusBadge` (`@/components/reui/badge`, `destructive-light`/`warning-light`, pill) ใน `event-card` และหัว `event-sheet` (interview + default mode)  
-**Edited:** `calendar-interview-status-badge.tsx`, `event-card.tsx`, `event-sheet.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
-
-### [2026-05-09] - สร้างนัด: Alert เมื่อนัดทับในระบบ
-
-**Prompt:** ถ้าขึ้นว่ามีนัดทับในระบบ แจ้งด้วย shadcn `alert.tsx` ใน `create-event-dialog.tsx`
-**Output:** โหมดสัมภาษณ์แสดง `Alert` destructive + `AlertTriangle` เมื่อข้อความ error จาก API มี `"นัดที่ทับ"` (ตรงกับ `DB_CONFLICT` ใน `interview-routes`); ส่ง `interviewDbOverlapMessage` จาก `createMut`; ไม่ toast ซ้ำสำหรับเคสนี้; ปิด dialog / เปลี่ยนวันเวลาผู้สมัคร → `reset()` mutation
-**Edited:** `create-event-dialog.tsx`, `interviews-calendar-client.tsx`, `cowork-log.md`
-
-### [2026-05-09] - Google Calendar: Clerk OAuth access token
-
-**Prompt:** use `getGoogleToken` / `clerkClient.users.getUserOauthAccessToken` instead of stored refresh token
-**Output:** `src/lib/get-google-token.ts`: `getGoogleToken`, `getGoogleTokenForUserId`, `clerkGoogleLinkStatus` (provider `oauth_google`). Interview routes + Calendar API ใช้ access token ต่อคำขอ; `google-calendar-service` ใช้ `OAuth2Client` + `access_token` เท่านั้น (ไม่ต้อง `GOOGLE_CLIENT_*`). ลบ `/api/integrations/google/start|callback`, `google-oauth-state`, `google-token-crypto`; `/integrations/google/status` อิง Clerk `externalAccounts`. UI `/interviews` ปุ่มเชื่อมไป `/settings` + `ClerkAccountSettings` (`UserProfile` hash) บนหน้าตั้งค่า; `README` อัปเดต; `proxy.ts` เอา public OAuth routes ออก; `interviews/page` ห่อ `Suspense` ให้ build ผ่าน
-**Edited:** `get-google-token.ts`, `google-calendar-service.ts`, `interview-routes.ts`, `interviews-calendar.tsx`, `settings/page.tsx`, `clerk-account-settings.tsx`, `interviews/page.tsx`, `proxy.ts`, `README.md`, `cowork-log.md`; ลบ `google/start`, `google/callback`, `google-oauth-state.ts`, `google-token-crypto.ts`
-
-### [2026-05-09] - ลบ flow เชื่อม Google แยก (ใช้ token ตอน sign-in)
-
-**Prompt:** ลบการเชื่อมบัญชี Google — sign-in ได้ permission แล้ว เรียก Calendar ผ่าน `get-google-token.ts`
-**Output:** ลบ `clerkGoogleLinkStatus`, `/api/integrations/google/status`, `integrationsGoogleRoutes`; `NO_GOOGLE_OAUTH_TOKEN` + ข้อ 403 เมื่อไม่มี token; หน้า `/interviews` ไม่ query status / ไม่ปิดการสร้างนัด — ลบปุ่มเชื่อม Badge คำใบ้; `CreateEventDialog` ไม่รับ `googleLinked`; ลบ `ClerkAccountSettings` + คืนหน้า settings เรียบ; README ลบ status route + flow เชื่อมใน settings
-**Edited:** `get-google-token.ts`, `interview-routes.ts`, `elysia-app.ts`, `interviews-calendar.tsx`, `create-event-dialog.tsx`, `settings/page.tsx`, `README.md`, ลบ `clerk-account-settings.tsx`, `cowork-log.md`
-
-### [2026-05-10] - Applicant detail: กำหนดนัด + Meet card
-
-**Prompt:** Applicant Interview CTA Plan — ปุ่มกำหนดนัดเมื่อยังไม่มี Meet / conflict check; ถ้ามี Meet แสดงข้อมูลใต้ AI score + ลิงก์เข้าประชุม
-**Output:** `GET|POST|PATCH /applicants` แนบ `interview` ล่าสุด (`SCHEDULED`|`RESCHEDULED`) ของ organizer ปัจจุบัน + interviewers; `TrackerApplicant.interview`; `ApplicantDetailInterviewSection` (ฟอร์ม datetime/duration/emails/notes + nested Dialog) + การ์ดสรุปนัด + `Meet` `target=_blank`; `ApplicantTracker` `POST /interviews` + invalidate `applicants` + `interviews-calendar-events` + อัปเดต detail + toast จากร่าง error (`DB_CONFLICT`/`GOOGLE_BUSY` ฯลฯ); `trackerInterviewFromScheduleResponse`; `POST /interviews` include interviewer `title`; cast Prisma `select` interviews→mapper เพราะ inference ไม่ติด nested select
-**Edited:** `applicant-routes.ts`, `interview-routes.ts`, `applicant-tracker-model.ts`, `schedule-interview-schema.ts`, `applicant-detail-interview-section.tsx`, `applicant-detail-dialog.tsx`, `applicant-tracker.tsx`, `cowork-log.md`
-
-### [2026-05-10] - Applicant detail: footer schedule + redirect หลังบันทึกนัด
-
-**Prompt:** move schedule button to dialog footer (replace with schedule redirect); when schedule redirect to interviews page
-**Output:** `applicant-schedule-interview-dialog.tsx` — dialog ฟอร์มแยกจากเนื้อหาหลัก (portal sibling); state form + open อยู่ `ApplicantDetailDialog`; footer: `กำหนดนัดสัมภาษณ์` เมื่อยังไม่มีนัด, `ไปหน้านัดสัมภาษณ์` → `router.push('/interviews')` แทน `<Link>`; section เดิมเหลือการ์ด/ข้อความว่าง; `scheduleInterviewMut` `onSuccess` → `setDetail(null)` + `router.push('/interviews')`; `key={detail?.id ?? 'closed'}` บน dialog รีเซ็ต state เมื่อสลับผู้สมัคร
-**Edited:** `applicant-schedule-interview-dialog.tsx`, `applicant-detail-dialog.tsx`, `applicant-detail-interview-section.tsx`, `applicant-tracker.tsx`, `cowork-log.md`
-
-### [2026-05-10 00:43] - Interviews calendar: add schedule CTA
-
-**Prompt:** `@src/components/ui/fullscreen-calendar.tsx:537-540 implement add schedule logic`
-**Output:** ปุ่ม `เพิ่มนัด` ใน `FullScreenCalendar` เรียก `onScheduleForDate(selectedDay)` และ disable เมื่อไม่มี handler/เป็นวันอดีต; หน้า `/interviews` เปิด dialog กำหนดนัดจากวันที่เลือก, เลือกผู้สมัครที่ยังไม่มีนัด, ส่ง `POST /interviews`, invalidate calendar/applicants; schedule dialog รองรับ field แทรกก่อนฟอร์ม + seeded datetime จากวันที่เลือก
-**Edited:** `src/components/ui/fullscreen-calendar.tsx`, `src/features/interviews/components/interviews-calendar.tsx`, `src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx`, `cowork-log.md`
-
-### [2026-05-10 02:12] - Improve screener prompt strictness
-
-**Prompt:** `make screener-prompts.ts more strict and better`
-**Output:** Rewrote `jdPrompt` + extracted `SCREENER_SYSTEM_PROMPT` with: explicit scoring rubric (0–10 per range), fitStatus→overallScore mapping rules, per-dimension evaluation criteria (skillFit/experienceFit/cultureFit), evidence-based enforcement (no guessing), field-level constraints (min counts, cite CV), integer-only scores, verbatim name/email extraction. Removed duplicated inline system prompt from `screener-routes.ts` in favor of single export.
-**Edited:** `src/features/screener/lib/screener-prompts.ts`, `src/server/routes/screener-routes.ts`, `cowork-log.md`
-
-### [2026-05-10] - Dashboard layout: Container + HeaderSection
-
-**Prompt:** create `container.tsx`, `header-section.tsx` and apply to all pages (from jobs header snippet)
-**Output:** Added `src/components/layout/container.tsx` (`px-4 py-6 md:px-6` + merge className) and `header-section.tsx` (title, optional description, optional actions). Wired jobs, interviews, settings, screener, candidates pages; refactored `ApplicantTrackerHeader` + `ResumeScreenerHeader` to compose `HeaderSection`. Tracker «เพิ่มผู้สมัคร» now calls `onAddClick` (opens add dialog) instead of unused prop + Link to `/screener`. Dashboard home unchanged (different chrome).
-**Edited:** `container.tsx`, `header-section.tsx`, `jobs/page.tsx`, `interviews/page.tsx`, `settings/page.tsx`, `screener/page.tsx`, `candidates/page.tsx`, `applicant-tracker-header.tsx`, `resume-screener-header.tsx`, `cowork-log.md`
-
-### [2026-05-10] - usehooks-ts: debounce, clipboard, isClient
-
-**Prompt:** Implement scoped plan — `useDebounceValue` on candidates search, `useCopyToClipboard` in screener + calendar, `useIsClient` in Kanban overlay; do not edit plan file.
-**Output:** `candidates/page.tsx` debounces via `usehooks-ts`; removed `debouncedSearch`/`setDebouncedSearch` from `applicant-tracker-store`. `resume-screener.tsx` + `fullscreen-calendar.tsx` (`SelectedDayEventsPanel`) use `useCopyToClipboard` + boolean success toasts. `kanban.tsx` `KanbanOverlay` gates portal with `useIsClient()` instead of `useSyncExternalStore`.
-**Edited:** `applicant-tracker-store.ts`, `candidates/page.tsx`, `resume-screener.tsx`, `fullscreen-calendar.tsx`, `kanban.tsx`, `cowork-log.md`
-
-### [2026-05-10] - Screener report dialog + R2 resume attachments
-
-**Prompt:** Implement plan — screening report as large auto-opening dialog, summary bar, centered input; Cloudflare R2 PDF storage, signed download URLs, tracker detail resume section (collapsible), multipart add-to-tracker with PDF.
-**Output:** `screener-dialog-store` adds `reportDialogOpen`. `ScreenerReportPanel` → Dialog max-w-3xl; `ScreenerResultSummary` under centered `ResumeInputCard`. `add-to-tracker` uses `payload` JSON + optional `file`; uploads to R2 after applicant create when configured. `GET/POST/DELETE` `applicants/:id/resume-url` + `resume`. `TrackerApplicant` + list API include `cvText`/`cvFileKey`/`cvFileName`. `ApplicantDetailResumeSection` + `collapsible` UI. Env: `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
-**Edited:** `screener-dialog-store.ts`, `screener-report-panel.tsx`, `screener-result-summary.tsx`, `resume-screener.tsx`, `src/lib/r2.ts`, `screener-routes.ts`, `applicant-routes.ts`, `applicant-tracker-model.ts`, `applicant-detail-dialog.tsx`, `applicant-detail-resume-section.tsx`, `collapsible.tsx`, `candidates/page.tsx`, `package.json`/lockfile, `cowork-log.md`
-
-### [2026-05-10] - Screener: two columns + session AI history
-
-**Prompt:** Add AI screen history on right side, move AI form to left side.
-**Output:** `lg:grid-cols-2` layout — left: `ResumeInputCard` + `ScreenerResultSummary` (`max-w-2xl`); right: `ScreenerHistoryPanel` (sticky on large screens, scroll list, select to restore report/job, ล้างทั้งหมด). Each successful analyze prepends a `ScreenerHistoryEntry` (in-memory session). `activeHistoryId` tracks selection; form ล้าง / job change / PDF pick clears active highlight when current report cleared.
-**Edited:** `screener-history-panel.tsx`, `resume-screener.tsx`, `screener-result-summary.tsx`, `cowork-log.md`
-
-### [2026-05-10] - Screener history: Prisma persistence + cursor pagination
-
-**Prompt:** Make AI screen history persistent with Prisma DB; add pagination.
-**Output:** New `ScreenerHistory` model (user FK, job snapshot, detected name/email, `report` JSON, index userId+createdAt). Migration `20260510120000_screener_history`. `POST /screener/evaluate` persists row after success (`historyId` optional if save fails). `GET /screener/history?limit&cursor` (cursor=id, take+1), `DELETE /screener/history` wipe for user. Client: `useInfiniteQuery` + โหลดเพิ่ม; ล้างทั้งหมด calls DELETE + invalidates.
-**Edited:** `schema.prisma`, `prisma/migrations/20260510120000_screener_history/migration.sql`, `screener-routes.ts`, `resume-screener.tsx`, `screener-history-panel.tsx`, `cowork-log.md`
-
-### [2026-05-10] - Screener prompt: Thai → English for cost saving
-
-**Prompt:** Change screener-prompts.ts instructions to English but keep output in Thai.
-**Output:** Rewrote system prompt and jdPrompt template from Thai to English. Rule #1 still mandates "All output text must be in Thai". Saves token cost since English tokenizes more efficiently than Thai.
-**Edited:** `screener-prompts.ts`, `cowork-log.md`
-
-### [2026-05-10 04:07] - Gmail resume intake brainstorming
-
-**Prompt:** brainstorm idea; pain point: HR need to get resume data and person from Gmail automatically and make it easy to use
-**Output:** Proposed Gmail resume intake concepts: watched inbox/label, automatic resume parsing, duplicate detection, review queue, job matching, applicant creation, candidate communication, and a pragmatic MVP path.
-**Edited:** `cowork-log.md`
-
-### [2026-05-10 04:18] - Add applicant dialog: React Hook Form
-
-**Prompt:** `/shadcn use react-hook-form`
-**Output:** Wired the add applicant dialog to `react-hook-form` with a Zod resolver, shadcn `FieldError` validation states, submit-based manual/AI-confirm saves, and grouped radix `SelectItem` composition while keeping Zustand synced as the tracker source of truth.
-**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
-
-### [2026-05-11 17:35] - Fix /with-resume payload validation mismatch
-
-**Prompt:** error with /resume route — backend validation expects `payload` string and `files` array, but request sends object payload and empty files object.
-
-**Output:** Updated `POST /applicants/with-resume` to accept both `payload` as JSON string **or** object. Handler now parses JSON only when payload is a string; object payload goes straight into Zod validation. Relaxed `files` request schema to allow either file array or empty object so multipart clients that send `files: {}` no longer fail TypeBox validation before business logic runs. Kept existing resume file extraction behavior and validations.
-
-**Edited:** `src/server/routes/applicant-routes.ts`, `cowork-log.md`
-
-### [2026-05-10 23:23] - Migrate Clerk to Better Auth
-
-**Prompt:** Remove Clerk and migrate to better-auth (Google OAuth only). Tasks: (1) migrate middleware to better-auth with Elysia auth plugin, (2) build sign-in page with shadcn UI.
-
-**Output:**
-
-- Created `src/middleware.ts` with cookie-based session check (public: `/sign-in`, `/api/auth/*`)
-- Created `src/lib/auth-client.ts` using `createAuthClient` from better-auth/react
-- Created `src/server/lib/auth-plugin.ts` — shared Elysia derive plugin calling `auth.api.getSession()`
-- Created `src/app/sign-in/page.tsx` — shadcn Card centered, Google OAuth button
-- Migrated all 5 route files (applicant, interview, dashboard, job, screener) from Clerk `auth()` + `ensureUserFromClerkId` to better-auth plugin pattern
-- Replaced `src/lib/get-google-token.ts` to read from Prisma `Account` table with token refresh via Google OAuth endpoint
-- Fixed `organizerUserId: number` → `string` in `interview-scheduling.ts` to match Prisma schema
-- Updated sidebar: replaced Clerk `UserButton` with Avatar + name + sign-out via `authClient.signOut()`
-- Removed `ClerkProvider` from `layout.tsx`
-- Deleted `src/proxy.ts`, `src/lib/clerk-db-user.ts`, `src/app/sign-in/[[...sign-in]]/`
-- Removed `@clerk/nextjs` package and Clerk env vars
-
-**Edited:** src/middleware.ts (new), src/lib/auth-client.ts (new), src/server/lib/auth-plugin.ts (new), src/app/sign-in/page.tsx (new), src/server/routes/applicant-routes.ts, src/server/routes/interview-routes.ts, src/server/routes/dashboard-routes.ts, src/server/routes/job-routes.ts, src/server/routes/screener-routes.ts, src/lib/get-google-token.ts, src/lib/auth.ts, src/server/lib/interview-scheduling.ts, src/features/dashboard/components/app-sidebar.tsx, src/app/layout.tsx, .env
-
-### [2026-05-11 00:49] - Fix 4 applicant tracker features
-
-**Prompt:** Fix /with-screening add bug, add re-analyze AI button, inline edit applicant data, status badges in calendar/interview views
-
-**Output:**
-
-1. `/with-screening` bug — Eden Treaty sends multipart body; Elysia coerces JSON string `payload` field to object before TypeBox validation. Fixed by removing `JSON.stringify`/`JSON.parse` envelope — server body now accepts flat fields (`jobDescriptionId`, `name`, `email`, `source`, `report: t.Any()`, `file`), client sends raw object.
-2. Re-analyze AI — `ApplicantDetailAiScores` `hasData` branch had no button. Added "วิเคราะห์ใหม่" ghost button with `RefreshCwIcon` next to scores header row.
-3. Inline edit — Extended PATCH `/:id` server route to accept `name`/`email`/`phone`/`source`. Added `HeaderInlineEdit` (for name/email in dialog header) and `InlineEditRow`/`InlineSelectRow` for phone/source in detail grid. Save on blur/Enter, escape to cancel.
-4. Status badges — `interview-routes.ts` calendar-events endpoint now fetches `status` from DB (removed `CANCELLED` filter). Added `interviewDbStatus` to `GoogleCalendarListEvent` type, `Event` interface, and feed mapping. `InterviewDbStatusBadge` component computes OVERDUE (SCHEDULED + end past), shows CANCELLED/RESCHEDULED badges in `SelectedDayEventsPanel` and `InterviewMeetCard`. Grid cell events get colored left border.
-
-**Edited:** applicant-routes.ts, interview-routes.ts, use-applicants-mutations.ts, applicant-detail-ai-scores.tsx, applicant-detail-dialog.tsx, candidates/page.tsx, google-calendar-list-event.ts, google-calendar-feed.ts, fullscreen-calendar.tsx, applicant-detail-interview-section.tsx
-
-### [2026-05-11 01:05] - Update README + .env.example
-
-**Prompt:** Rewrite README in English: setup instructions + feature-based architecture explanation. Update .env.example to match.
-
-**Output:** Full README rewrite — stack table, prerequisites (Node ≥20/pnpm ≥9/PG ≥15), quick start steps, env vars table (all vars documented with required flag), Google OAuth setup section (what's needed + links), deep feature-based architecture section (why vs type-based, annotated directory tree, what goes in each subfolder, shared code map, API layer, pipeline stages). Updated .env.example: removed stale Clerk vars and unused GOOGLE_TOKEN_ENCRYPTION_KEY, added comments with setup links.
-
-**Edited:** README.md, .env.example
-
-### 2026-05-11 04:27 - Refactor TanStack Query hooks to queryOptions/mutationOptions pattern
-
-**Prompt:** Migrate all `/api/` feature hooks to use `queryOptions`/`mutationOptions` factories instead of `return useQuery/useMutation` wrappers. Files named `queries.ts` and `mutations.ts`. Pattern from TanStack Query v5 docs.
-
-**Output:** Created `queries.ts` and `mutations.ts` for 5 features (applicants-tracker, dashboard, interviews, jobs, screener). Updated 7 consumer files (candidates/page, jobs/page, dashboard/page, applicant-detail-resume-section, interviews-calendar, job-description-dialog, resume-screener) to use `useQuery(featureQueries.xxx())` and `useMutation(featureMutations.xxx(queryClient))` pattern. Mutations needing queryClient accept it as a parameter. Old `use-*.ts` files remain but are no longer imported.
-
-**Edited:** 16 files created/modified. Zero new TS errors in new files.
-
-### [2026-05-11 14:49] - Rework Add Applicant Dialog (Full New Fields)
-
-**Prompt:** Rework Add Applicant Dialog (Full New Fields)
-
-**Output:** Rebuilt add-applicant flow to `pick -> manual -> ai_review -> ai_result` with English UI copy and richer UX parity with the provided reference. Added new Zustand fields for AI mode (`addAiCvMode`, `addAiStrictness`, `addAiJdUrl`, `addFetchingJdUrl`) and reset wiring. Replaced dialog UI with mode cards, source chips, CV mode toggles, URL fetch simulation, strictness slider, and a full AI score-card result (recommendation badge, ring score, 3 fit dimensions + reasoning, strengths, suggested pre-screen questions, summary). Kept existing handler boundaries (`onManualSubmit`, `onAiAnalyze`, `onAiConfirmSubmit`) and updated candidates flow to transition to `ai_result` after analyze. Verified with ESLint + TypeScript checks.
-
-**Edited:** `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `src/app/(dashboard)/candidates/page.tsx`, `cowork-log.md`
-
-### [2026-05-11 15:50] - Implement AI strictness end-to-end
-
-**Prompt:** implement ai strictness feature to backend `src/server/lib/resume-screening-service.ts` and wire full stack
-**Output:** Added strictness-aware screener prompting with levels `0|1|2` (lenient/balanced/strict), normalization defaulting to balanced, and evaluator input support in `evaluateResumeAgainstJob`. Threaded optional `strictness` through both backend analyze endpoints (`/applicants/analyze-draft` and `/screener/evaluate`) with request schema validation (`0..2`). Wired frontend draft analyze mutation to send strictness from Zustand state, and aligned store default/reset strictness to `1` to match slider domain.
-**Edited:** `src/features/screener/lib/screener-prompts.ts`, `src/server/lib/resume-screening-service.ts`, `src/server/routes/applicant-routes.ts`, `src/server/routes/screener-routes.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `cowork-log.md`
-
-### [2026-05-11 16:39] - Add Applicant Dialog v2 — Job URL fetch, skills/latestRole, drop certificates, typed JSON
-
-**Prompt:** Move job posting URL to top with fetch button (scrape data into form), add optional description to experience rows, remove certificates, add latest job role + skills fields, wire prisma-json-types-generator into schema + `src/types/types.ts`.
-
-**Output:** Schema: dropped `certificates Json[]`, added `latestRole String?` + `skills String[]`, and annotated `experiences`/`educations` with `/// [ApplicantExperience]` / `/// [ApplicantEducation]` for typed JSON output via `prisma-json-types-generator`. Migration `applicant_skills_latest_role_drop_certificates` applied. `src/types/types.ts` declares the matching `PrismaJson.ApplicantExperience` (with optional `description`) and `PrismaJson.ApplicantEducation` types. Store dropped all certificate state, added `addLatestRole` + `addSkills`, and widened experience draft with optional `description`. Backend `/applicants/with-resume` payload now persists `latestRole`/`skills`/experience description and no longer expects certificates. Added new `POST /applicants/scrape-job-url` route that fetches the URL, extracts `<title>` / `og:*` / `meta description`, and runs a keyword-based skill extractor — returns `{title, description, latestRole, skills}`. Dialog reflowed: Job Posting URL is now the first field with a Fetch button (calls scrape mutation, prefills latest role + merges skills), Experience rows gained a description textarea, Certificates section removed, new Latest Role input + Skills chip input (Enter/Comma to add, Backspace to remove last). Verified with `tsc --noEmit` + `eslint`.
-
-**Edited:** `prisma/schema.prisma`, `prisma/migrations/20260511094033_applicant_skills_latest_role_drop_certificates/migration.sql`, `src/types/types.ts`, `src/features/applicants-tracker/store/applicant-tracker-store.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `src/features/applicants-tracker/api/mutations.ts`, `src/server/routes/applicant-routes.ts`, `cowork-log.md`
-
-### [2026-05-11] - Add Applicant: shadcn Select for Target Role
-
-**Prompt:** Use shadcn Select component for target role.
-
-**Output:** Replaced native `<select>` with `Select` / `SelectTrigger` / `SelectValue` / `SelectContent` / `SelectGroup` / `SelectItem` from `@/components/ui/select` for both manual flow and AI review `jobId` field. Empty selection uses `value={field.value || undefined}` + `SelectValue placeholder="Select role"`. Full-width trigger (`className="w-full"`), `position="popper"` on content, `aria-invalid` + `FieldError` unchanged. AI review block now uses `Field` + `FieldLabel` + `FieldContent` instead of raw `Label` + `<p>` for errors.
-
-**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
-
-### [2026-05-11 17:29] - Add Applicant: Dialog → Sheet
-
-**Prompt:** Convert shadcn Dialog to shadcn Sheet in add-applicant-dialog.tsx.
-
-**Output:** Swapped `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle` for `Sheet`/`SheetContent`/`SheetHeader`/`SheetTitle`. Sheet slides in from the right (`side="right"`), width overridden to `data-[side=right]:sm:max-w-xl md:data-[side=right]:sm:max-w-2xl` so the form has breathing room (default sheet cap is `sm:max-w-sm`). Scroll container switched from `max-h-[75vh] overflow-y-auto` to `flex-1 overflow-y-auto` to fit the full-height sheet. Header padding compacted to `px-5 py-4` and gets `pr-8` to clear the built-in `SheetClose` × button. Component name `AddApplicantDialog` and file name kept intact to avoid touching `src/app/(dashboard)/candidates/page.tsx`. `tsc --noEmit` + lints clean.
-
-**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
-
-### [2026-05-12 00:52] - Fix LinkedIn type: compstring* → company* (real Apify response)
-
-**Prompt:** Real Apify actor response uses `companyName` etc., not `compstringName` — mapper was silently filtering out every experience row.
-
-**Output:** Rewrote [src/types/scraping.ts](src/types/scraping.ts): renamed `compstringName` / `compstringLinkedinUrl` / `compstringId` / `compstringUniversalName` / `compstringLogo` → `companyName` / `companyLinkedinUrl` / `companyId` / `companyUniversalName` / `companyLogo` on both `currentPosition[]` and `experience[]`. Tightened nullability from the live response: `topSkills`, `services`, `coverPicture`, `featured`, `coverPicture` → `T | null`; `currentPosition[].location` / `employmentType` / `workplaceType` / `description` → `string | null`; same for `experience[]`; `education[].schoolLogo` / `profileTopEducation[].schoolLogo` → `string | null`; `location.parsed.regionCode` → `string | null`. Kept `companyId` / `companyUniversalName` / `companyLogo` / `experienceGroupId` optional on `experience[]` because the third row in the sample (Y.I.M.) omits them.
-
-Updated the inline mapper in [src/server/routes/applicant-routes.ts](src/server/routes/applicant-routes.ts) `/scrape-profile-url` LinkedIn branch: `e.compstringName` → `e.companyName` in both the `experiences` map and the synthesized resume text loop. Pulled the description trim into a local `description` to keep the truthy spread tidy now that the field is explicitly `string | null`.
-
-Net effect: experience rows actually populate the dialog form on save; resume text dump shows `- Frontend Developer @ PTT Digital Solutions Company Limited (2 yrs 10 mos)` instead of `- Frontend Developer @ undefined`.
-
-**Edited:** `src/types/scraping.ts`, `src/server/routes/applicant-routes.ts`, `cowork-log.md`
-
-### [2026-05-12] - Replace Sonner with react-hot-toast
-
-**Prompt:** replace sonner to react-hot-toast
-
-**Output:** Removed `sonner` dependency; added `react-hot-toast`. New client `Toaster` in [src/components/ui/hot-toast.tsx](src/components/ui/hot-toast.tsx) (`position="top-center"`, popover CSS vars, flat border, no shadow). Root layout imports it instead of `@/components/ui/sonner`. All `import { toast } from "sonner"` → default `import toast from "react-hot-toast"` across features; `toast.message(...)` in resume-screener → `toast(...)`. `toast.promise` in data-table unchanged (same API). Deleted `src/components/ui/sonner.tsx`.
-
-**Edited:** `package.json`, `bun.lock`, `src/app/layout.tsx`, `src/components/ui/hot-toast.tsx`, 14 toast call sites, deleted `src/components/ui/sonner.tsx`, `cowork-log.md`
-
-### [2026-05-12] - SelectedDayEventsPanel: visible Google Meet URL
-
-**Prompt:** show google meet link in SelectedDayEventsPanel
-
-**Output:** In `fullscreen-calendar.tsx` `SelectedDayEventsPanel`, added a details row (Video icon + “Google Meet ·”) after ผู้เข้าร่วม: full `meetUrl` as `Link` when not cancelled; cancelled events show strikethrough muted text. Dropdown join/copy unchanged. Fixed typo `เกินกำหsนด` → `เกินกำหนด` in `InterviewDbStatusBadge`.
-
-**Edited:** `src/features/interviews/components/fullscreen-calendar.tsx`, `cowork-log.md`
-
-### [2026-05-12 00:46] - Client-side URL validation for Quick Fill link
-
-**Prompt:** Validate the Quick Fill link input client-side using shadcn Field validation.
-
-**Output:** Added linear `manualProfileUrlError` derivation right after `profileAnalyzePending` ([src/features/applicants-tracker/components/add-applicant-dialog.tsx](src/features/applicants-tracker/components/add-applicant-dialog.tsx)): if non-empty and `!URL.canParse` → "Invalid URL"; if hostname matches JobsDB (`jobsdb.com` / `.jobsdb.com` / `th.jobsdb.com` / `.jobsdb.th`) → "JobsDB ยังไม่รองรับ". Gated display behind `manualProfileUrlTouched` (set on first `onChange` and on `onBlur`) so an empty field doesn't flash red. Wrapped the Quick Fill link `Input` in `Field` + `FieldContent` + conditional `FieldError`; supported-links hint hides while the error is visible. `data-invalid` on the `Field`, `aria-invalid` on the `Input`. Analyze button now also disables when `manualProfileUrlError.length > 0`. `handleOpenChange` resets `manualProfileUrlTouched` alongside the URL on sheet close. Kept the toast.error fallbacks in `handleAnalyzeProfile` as belt-and-braces (defense if someone toggles disabled in devtools).
-
-**Edited:** `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
-
-### [2026-05-12 00:32] - Wire scrape() dispatcher into API + add-applicant-dialog
-
-**Prompt:** Implement `scrape()` to API and `add-applicant-dialog.tsx`. Replace `/scrape-profile-url` to use the new dispatcher; one round-trip from the link tab.
-
-**Output:** Rewrote `POST /applicants/scrape-profile-url` ([src/server/routes/applicant-routes.ts](src/server/routes/applicant-routes.ts)) to call `scrape(url)` from [src/server/lib/scraping.ts](src/server/lib/scraping.ts). LinkedIn branch: inline `ScrapedLinkedinProfile` → `ApplicantProfileMap` mapper (name from first+last, email from `emails[0]` — empty under "no email" mode, latestRole from `currentPosition[0].position` ?? `experience[0].position`, deduped skills from `topSkills` ∪ `skills[].name`, filtered `experience` / `education` rows). Also synthesizes a `resumeText` dump (headline, location, about, exp lines `position @ compstringName (duration) — location`, education, top skills) so downstream AI screening still has prose. Other branch: feeds Firecrawl markdown into existing `mapProfileTextFromRaw` and returns the markdown as `resumeText`. Response shape: `{ url, source: "linkedin" | "other", title, mapped, resumeText }`. Error handler keeps the existing statusCode narrowing. Removed duplicate `mapProfileTextFromRaw` import (one absolute + one relative). Dropped `scrapeCandidateProfileUrl` import — [src/server/lib/profile-url-scrape.ts](src/server/lib/profile-url-scrape.ts) has no consumers now but kept (out of scope to delete).
-
-Mutation cast in [src/features/applicants-tracker/api/mutations.ts](src/features/applicants-tracker/api/mutations.ts) `scrapeProfileUrl` updated to the new shape.
-
-Dialog ([src/features/applicants-tracker/components/add-applicant-dialog.tsx](src/features/applicants-tracker/components/add-applicant-dialog.tsx)) `handleAnalyzeProfile` link branch: client-side JobsDB host guard (`*.jobsdb.com` / `*.jobsdb.hk` / `hk.jobsdb.com`) toasts `"JobsDB scraping ยังไม่รองรับ"` and short-circuits before the round-trip. On success, `setValue("resumeText", result.resumeText)` + `applyMappedProfile(result.mapped)` in one go — dropped the chained `mapProfileText.mutateAsync` call (saves ~1 Gemini call per LinkedIn scrape). Text-tab branch and `ai_review` flow untouched.
-
-All four touched files lint-clean.
-
-**Edited:** `src/server/routes/applicant-routes.ts`, `src/features/applicants-tracker/api/mutations.ts`, `src/features/applicants-tracker/components/add-applicant-dialog.tsx`, `cowork-log.md`
-
-### [2026-05-12 00:14] - scrape(link) dispatcher in scraping.ts
-
-**Prompt:** Implement linear `scrape(link)` in `src/server/lib/scraping.ts` — auto-detect LinkedIn / JobsDB / fallback. LinkedIn via Apify actor `LpVuK3Zozwuipa5bp` (`profileScraperMode: "Profile details no email ($4 per 1k)"`, `queries: [link]`), JobsDB commented stub, fallback via Firecrawl. No component wiring yet.
-
-**Output:** Single top-to-bottom function (no extracted helpers): parse URL (→ 400), lowercase `hostname`, `if linkedin / else if jobsdb / else firecrawl`. LinkedIn branch uses existing `apifyClient` from `@/lib/apify`, calls actor with `waitSecs: 120`, reads `dataset(run.defaultDatasetId).listItems()`, casts `items[0]` to `ScrapedLinkedinProfile` from `@/types/scraping`. JobsDB branch throws `501` with `// TODO` lines outlining the future actor call so the same place is easy to edit. Firecrawl branch dynamically imports `@mendable/firecrawl-js` (already pulled in transitively via `firecrawl-aisdk`), calls `fc.v1.scrapeUrl(link, { formats: ["markdown"], onlyMainContent: true })`, narrows the result the same way `profile-url-scrape.ts` does, and returns `{ kind: "other", url, data: { title, markdown } }`. Public surface is a discriminated union `ScrapeResult` (`linkedin` / `other`). All failures throw `Object.assign(new Error(msg), { statusCode })` matching the existing pattern. Lints clean.
-
-**Edited:** `src/server/lib/scraping.ts`, `cowork-log.md`
-
-### [2026-05-12] - Pre-submit interview slot validation (useWatch + check-slot API)
-
-**Prompt:** Implement plan: `POST /interviews/check-slot`, refactor schedule dialog to react-hook-form + `useWatch` + debounced slot precheck before submit.
-
-**Output:** Added `evaluateInterviewSlotAvailability` helper and `POST /interviews/check-slot` in [src/server/routes/interview.ts](src/server/routes/interview.ts); create + patch now call the helper. [applicant-schedule-interview-dialog.tsx](src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx) uses `useForm`/`zodResolver`, `useWatch` on datetime + duration, `useDebounceValue` 500ms, Eden `check-slot` with `AbortController` + monotonic request id to ignore stale responses; submit disabled on conflict/checking/error; final `check-slot` before `onScheduleInterview`. Props: `initialFormState` replaces lifted `formState`/`setFormState`. Callers: [applicant-detail-dialog.tsx](src/features/applicants-tracker/components/applicant-detail-dialog.tsx), [interviews-calendar.tsx](src/features/interviews/components/interviews-calendar.tsx). [schemas.ts](src/features/applicants-tracker/schemas.ts): `durationMinutes` is `z.number()` for RHF resolver typing.
-
-**Edited:** `src/server/routes/interview.ts`, `src/features/applicants-tracker/components/applicant-schedule-interview-dialog.tsx`, `src/features/applicants-tracker/schemas.ts`, `src/features/applicants-tracker/components/applicant-detail-dialog.tsx`, `src/features/interviews/components/interviews-calendar.tsx`, `cowork-log.md`
