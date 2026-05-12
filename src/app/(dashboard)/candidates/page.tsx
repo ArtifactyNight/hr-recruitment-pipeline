@@ -8,7 +8,7 @@ import { applicantMutations } from "@/features/applicants-tracker/api/mutations"
 import { applicantQueries } from "@/features/applicants-tracker/api/queries";
 import { applicantKeys } from "@/features/applicants-tracker/api/query-keys";
 import { AddApplicantDialog } from "@/features/applicants-tracker/components/add-applicant-dialog";
-import { ApplicantDetailDialog } from "@/features/applicants-tracker/components/applicant-detail-dialog";
+import { ApplicantDetailSheet } from "@/features/applicants-tracker/components/applicant-detail-sheet";
 import { ApplicantKanbanBoardView } from "@/features/applicants-tracker/components/applicant-kanban-board-view";
 import type { ScheduleInterviewSubmitInput } from "@/features/applicants-tracker/components/applicant-schedule-interview-dialog";
 import { ApplicantTrackerControls } from "@/features/applicants-tracker/components/applicant-tracker-controls";
@@ -229,7 +229,7 @@ export default function CandidatesPage() {
         }
       />
 
-      <ApplicantDetailDialog
+      <ApplicantDetailSheet
         key={detail?.id ?? "closed"}
         applicant={detail}
         onOpenChange={(open) => {

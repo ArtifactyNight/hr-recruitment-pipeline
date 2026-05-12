@@ -1,3 +1,27 @@
+### [2026-05-12] - AI screening preview dialog footer close
+
+**Prompt:** Add close button on dialog footer.
+
+**Output:** `DialogFooter` + `DialogClose` with outline `ปิด` button; `className="mx-0 mb-0 rounded-b-xl"` so margins match `DialogContent` `p-0`.
+
+**Edited:** `applicant-detail-ai-scores.tsx`, `cowork-log.md`
+
+### [2026-05-12] - AI preview dialog: button under reanalyze, flat sections
+
+**Prompt:** (1) Move “Show more AI result” under the reanalyze button. (2) Unwrap accordion in screening preview.
+
+**Output:** Stacked `วิเคราะห์ใหม่` + preview trigger in a right-aligned column beside the section title; removed footer strip. Replaced accordion with sequential `<section>` blocks (`gap-8`) and numbered lists.
+
+**Edited:** `applicant-detail-ai-scores.tsx`, `applicant-screening-preview.tsx`, `cowork-log.md`
+
+### [2026-05-12] - AI Screening Preview in dialog from AI scores
+
+**Prompt:** Move AI Screening Preview into a dialog; open via “Show more AI result” in the AI scoring section.
+
+**Output:** Extracted `ApplicantScreeningPreviewContent` to `applicant-screening-preview.tsx`. Removed inline preview card from applicant detail sheet. `ApplicantDetailAiScores` (when scores exist) adds footer button + `Dialog` with title/description and scrollable accordion body.
+
+**Edited:** `applicant-screening-preview.tsx`, `applicant-detail-ai-scores.tsx`, `applicant-detail-dialog.tsx`, `cowork-log.md`
+
 ### [2026-05-12] - Ignore cancelled Google events in slot availability
 
 **Prompt:** interview.ts evaluateInterviewSlotAvailability / busy check — ignore cancelled events.

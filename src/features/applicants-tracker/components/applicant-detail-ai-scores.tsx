@@ -2,10 +2,22 @@
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ApplicantScreeningPreviewContent } from "@/features/applicants-tracker/components/applicant-screening-preview";
 import type { TrackerApplicant } from "@/features/applicants-tracker/types";
 import { formatScoreOneDecimal } from "@/features/applicants-tracker/utils";
 import { RiSparklingFill } from "@remixicon/react";
 import { Loader2Icon, RefreshCwIcon } from "lucide-react";
+import { useState } from "react";
 
 type ApplicantDetailAiScoresProps = {
   row: TrackerApplicant;
@@ -18,6 +30,7 @@ export function ApplicantDetailAiScores({
   screenAiPending = false,
   onScreenWithAi,
 }: ApplicantDetailAiScoresProps) {
+  const [screeningPreviewOpen, setScreeningPreviewOpen] = useState(false);
   const { overallScore, skillFit, experienceFit, cultureFit } = row;
   const hasData =
     overallScore != null ||
@@ -109,27 +122,38 @@ export function ApplicantDetailAiScores({
           </span>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-start justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               คะแนนความเหมาะสม (AI)
             </p>
-            {onScreenWithAi ? (
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              {onScreenWithAi ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-muted-foreground"
+                  disabled={screenAiPending || !hasResumeEvidence}
+                  onClick={onScreenWithAi}
+                >
+                  {screenAiPending ? (
+                    <Loader2Icon className="size-3 animate-spin" />
+                  ) : (
+                    <RefreshCwIcon className="size-3" />
+                  )}
+                  วิเคราะห์ใหม่
+                </Button>
+              ) : null}
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground"
-                disabled={screenAiPending || !hasResumeEvidence}
-                onClick={onScreenWithAi}
+                className="h-7 px-2 text-xs"
+                onClick={() => setScreeningPreviewOpen(true)}
               >
-                {screenAiPending ? (
-                  <Loader2Icon className="size-3 animate-spin" />
-                ) : (
-                  <RefreshCwIcon className="size-3" />
-                )}
-                วิเคราะห์ใหม่
+                Show more AI result
               </Button>
-            ) : null}
+            </div>
           </div>
           <div className="flex flex-wrap gap-x-8 gap-y-2">
             <div>
@@ -153,6 +177,29 @@ export function ApplicantDetailAiScores({
           </div>
         </div>
       </div>
+      <Dialog
+        open={screeningPreviewOpen}
+        onOpenChange={setScreeningPreviewOpen}
+      >
+        <DialogContent className="gap-0 p-0 sm:max-w-lg">
+          <DialogHeader className="gap-1 border-b border-border/80 px-4 py-4">
+            <DialogTitle>AI Screening Preview</DialogTitle>
+            <DialogDescription>
+              จุดแข็ง ช่องว่าง และคำถามที่บันทึกจากผลวิเคราะห์ล่าสุด
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[min(70vh,520px)] px-4 py-4">
+            <ApplicantScreeningPreviewContent applicant={row} />
+          </ScrollArea>
+          <DialogFooter className="mx-0 mb-0 rounded-b-xl">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                ปิด
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
