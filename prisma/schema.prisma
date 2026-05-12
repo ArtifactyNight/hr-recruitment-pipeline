@@ -175,8 +175,11 @@ model ScreeningResult {
   skillReason        String
   experienceReason   String
   cultureReason      String
+  /// [ScreeningStrength]
   strengths          Json[]
+  /// [ScreeningConcern]
   concerns           Json[]
+  /// [ScreeningQuestion]
   suggestedQuestions Json[]
   createdAt          DateTime  @default(now())
 }

@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ScrollFade from "@/components/ui/scroll-fade";
@@ -621,6 +627,93 @@ function ApplicantBackgroundSection({
   );
 }
 
+function ApplicantScreeningPreviewSection({
+  applicant,
+}: {
+  applicant: TrackerApplicant;
+}) {
+  const blocks: Array<{
+    title: string;
+    items: Array<string>;
+    emptyMessage: string;
+  }> = [
+    {
+      title: "จุดแข็ง",
+      items: applicant.strengths,
+      emptyMessage: "ยังไม่มีจุดแข็งจาก AI",
+    },
+    {
+      title: "ข้อกังวล",
+      items: applicant.gaps,
+      emptyMessage: "ยังไม่มีช่องว่างหรือข้อกังวลจาก AI",
+    },
+    {
+      title: "คำถามที่ควรถาม",
+      items: applicant.suggestedQuestions,
+      emptyMessage: "ยังไม่มีคำถามแนะนำจาก AI",
+    },
+  ];
+  const hasScreeningPreview = blocks.some((block) => block.items.length > 0);
+
+  return (
+    <div className="rounded-xl border border-border/80 p-4">
+      <div className="mb-3 flex flex-col gap-1">
+        <p className="text-sm font-medium">AI Screening Preview</p>
+        <p className="text-xs text-muted-foreground">
+          จุดแข็ง ช่องว่าง และคำถามที่บันทึกจากผลวิเคราะห์ล่าสุด
+        </p>
+      </div>
+      {hasScreeningPreview ? (
+        <Accordion
+          type="single"
+          collapsible
+          defaultValue={blocks.find((block) => block.items.length > 0)?.title}
+          className="rounded-lg border border-border/80 px-3"
+        >
+          {blocks.map((block) => (
+            <AccordionItem key={block.title} value={block.title}>
+              <AccordionTrigger>
+                <div>
+                  <p>{block.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {block.items.length} รายการ
+                  </p>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                {block.items.length > 0 ? (
+                  <ol className="flex flex-col gap-2">
+                    {block.items.map((item, index) => (
+                      <li
+                        key={`${block.title}-${String(index)}-${item.slice(0, 24)}`}
+                        className="flex gap-2 text-sm leading-relaxed"
+                      >
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm bg-muted text-xs font-medium text-muted-foreground">
+                          {index + 1}
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {block.emptyMessage}
+                  </p>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      ) : (
+        <p className="rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground">
+          ยังไม่มีข้อมูล strength, gap หรือคำถามที่บันทึกไว้ กด “วิเคราะห์ด้วย
+          AI” เพื่อสร้าง preview จาก resume/CV
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ApplicantDetailDialog({
   applicant,
   onOpenChange,
@@ -789,6 +882,7 @@ export function ApplicantDetailDialog({
                     screenAiPending={screenAiPending}
                     onScreenWithAi={onScreenWithAi}
                   />
+                  <ApplicantScreeningPreviewSection applicant={applicant} />
                   <ApplicantBackgroundSection
                     applicant={applicant}
                     patchPending={patchPending}

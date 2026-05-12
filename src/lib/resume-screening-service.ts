@@ -130,10 +130,15 @@ export function fileHasBytes(file: unknown): file is File {
   );
 }
 
-export function toJsonArray(values: Array<string>): Prisma.InputJsonValue[] {
-  const out: Prisma.InputJsonValue[] = [];
+export function normalizeScreeningTextList(
+  values: Array<string>,
+): Array<string> {
+  const out: Array<string> = [];
   for (const value of values) {
-    out.push(value);
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      out.push(trimmed);
+    }
   }
   return out;
 }
@@ -176,9 +181,9 @@ export function fitReportToScreeningScalars(
     skillReason: report.skillReason,
     experienceReason: report.experienceReason,
     cultureReason: report.cultureReason,
-    strengths: toJsonArray(report.strengths),
-    concerns: toJsonArray(report.concerns),
-    suggestedQuestions: toJsonArray(report.suggestedQuestions),
+    strengths: normalizeScreeningTextList(report.strengths),
+    concerns: normalizeScreeningTextList(report.concerns),
+    suggestedQuestions: normalizeScreeningTextList(report.suggestedQuestions),
   };
 }
 

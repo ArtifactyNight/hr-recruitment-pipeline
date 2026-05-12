@@ -54,7 +54,7 @@ const sourceUnion = t.Union([
   t.Literal("OTHER"),
 ]);
 
-function strengthsToTags(raw: unknown): Array<string> {
+function screeningTextList(raw: unknown): Array<string> {
   if (!Array.isArray(raw)) {
     return [];
   }
@@ -67,7 +67,7 @@ function strengthsToTags(raw: unknown): Array<string> {
       }
     }
   }
-  return out.slice(0, 5);
+  return out;
 }
 
 function applicantInterviewSubset(
@@ -157,6 +157,8 @@ function applicantListFields(
     experienceFit: number;
     cultureFit: number;
     strengths: unknown;
+    concerns: unknown;
+    suggestedQuestions: unknown;
   } | null,
 ) {
   if (!sr) {
@@ -165,15 +167,22 @@ function applicantListFields(
       skillFit: null as number | null,
       experienceFit: null as number | null,
       cultureFit: null as number | null,
+      strengths: [] as Array<string>,
+      gaps: [] as Array<string>,
+      suggestedQuestions: [] as Array<string>,
       tags: [] as Array<string>,
     };
   }
+  const strengths = screeningTextList(sr.strengths);
   return {
     overallScore: sr.overallScore,
     skillFit: sr.skillFit,
     experienceFit: sr.experienceFit,
     cultureFit: sr.cultureFit,
-    tags: strengthsToTags(sr.strengths),
+    strengths,
+    gaps: screeningTextList(sr.concerns),
+    suggestedQuestions: screeningTextList(sr.suggestedQuestions),
+    tags: strengths.slice(0, 5),
   };
 }
 
@@ -368,6 +377,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
               experienceFit: true,
               cultureFit: true,
               strengths: true,
+              concerns: true,
+              suggestedQuestions: true,
             },
           },
           interviews: applicantInterviewSubset(user!.id),
@@ -797,6 +808,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
             experienceFit: true,
             cultureFit: true,
             strengths: true,
+            concerns: true,
+            suggestedQuestions: true,
           },
         },
         interviews: applicantInterviewSubset(user!.id),
@@ -1178,6 +1191,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                 experienceFit: true,
                 cultureFit: true,
                 strengths: true,
+                concerns: true,
+                suggestedQuestions: true,
               },
             },
             interviews: applicantInterviewSubset(user!.id),
@@ -1323,6 +1338,8 @@ export const applicantRoutes = new Elysia({ prefix: "/applicants" })
                 experienceFit: true,
                 cultureFit: true,
                 strengths: true,
+                concerns: true,
+                suggestedQuestions: true,
               },
             },
             interviews: applicantInterviewSubset(user!.id),

@@ -13,5 +13,9 @@ declare global {
       school: string;
       degree: string;
     };
+
+    type ScreeningStrength = string;
+    type ScreeningConcern = string;
+    type ScreeningQuestion = string;
   }
 }

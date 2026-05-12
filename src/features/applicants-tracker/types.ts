@@ -34,6 +34,9 @@ export type TrackerApplicant = {
   skillFit: number | null;
   experienceFit: number | null;
   cultureFit: number | null;
+  strengths: Array<string>;
+  gaps: Array<string>;
+  suggestedQuestions: Array<string>;
   notes: string | null;
   cvText: string | null;
   cvFileKey: string | null;
