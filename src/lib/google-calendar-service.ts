@@ -234,7 +234,7 @@ export async function fetchPrimaryCalendarEvent(opts: {
   return res.data;
 }
 
-/** true = slot has clash on primary calendar busy blocks */
+/** true = slot overlaps a blocking event on primary (cancelled + transparent ignored) */
 export async function hasPrimaryCalendarBusyOverlap(opts: {
   accessToken: string;
   rangeStartIso: string;
@@ -243,23 +243,30 @@ export async function hasPrimaryCalendarBusyOverlap(opts: {
   slotEnd: Date;
 }): Promise<boolean> {
   const cal = calendarAuthorizedClient(opts.accessToken);
-  const res = await cal.freebusy.query({
-    requestBody: {
+  let pageToken: string | undefined;
+  do {
+    const res = await cal.events.list({
+      calendarId: "primary",
       timeMin: opts.rangeStartIso,
       timeMax: opts.rangeEndIso,
-      items: [{ id: "primary" }],
-    },
-  });
-  const primaryCal = res.data.calendars?.primary;
-  const busy = primaryCal?.busy ?? [];
-  for (const b of busy) {
-    if (!b.start || !b.end) continue;
-    const bs = new Date(b.start).getTime();
-    const be = new Date(b.end).getTime();
-    if (opts.slotStart.getTime() < be && opts.slotEnd.getTime() > bs) {
-      return true;
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: 2500,
+      pageToken,
+    });
+    for (const ev of res.data.items ?? []) {
+      if (ev.status === "cancelled") continue;
+      if (ev.transparency === "transparent") continue;
+      const win = eventWindowIso(ev);
+      if (!win) continue;
+      const bs = new Date(win.startIso).getTime();
+      const be = new Date(win.endIso).getTime();
+      if (opts.slotStart.getTime() < be && opts.slotEnd.getTime() > bs) {
+        return true;
+      }
     }
-  }
+    pageToken = res.data.nextPageToken ?? undefined;
+  } while (pageToken);
   return false;
 }
 

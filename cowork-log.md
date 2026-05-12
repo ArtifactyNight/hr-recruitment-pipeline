@@ -1,3 +1,11 @@
+### [2026-05-12] - Ignore cancelled Google events in slot availability
+
+**Prompt:** interview.ts evaluateInterviewSlotAvailability / busy check — ignore cancelled events.
+
+**Output:** Replaced Freebusy query with `events.list` (expanded instances, paginated). Overlap uses same interval logic as before but skips `status === "cancelled"` and `transparency === "transparent"` so cancelled invites do not block scheduling.
+
+**Edited:** `src/lib/google-calendar-service.ts` (`hasPrimaryCalendarBusyOverlap`), `cowork-log.md`
+
 ### [2026-05-12] - Multi-interview applicants: API + tracker + detail + schedule overlap
 
 **Prompt:** Implement grilled spec — unlimited meets per applicant; `interviews[]` + computed `interview`; tracker incoming/+N/last; detail preview + sections; schedule overlap warn; Thai relative times; 60s clock.
