@@ -16,7 +16,7 @@ import { ApplicantScreeningPreviewContent } from "@/features/applicants-tracker/
 import type { TrackerApplicant } from "@/features/applicants-tracker/types";
 import { formatScoreOneDecimal } from "@/features/applicants-tracker/utils";
 import { RiSparklingFill } from "@remixicon/react";
-import { Loader2Icon, RefreshCwIcon } from "lucide-react";
+import { InfoIcon, Loader2Icon, RefreshCwIcon } from "lucide-react";
 import { useState } from "react";
 
 type ApplicantDetailAiScoresProps = {
@@ -146,12 +146,12 @@ export function ApplicantDetailAiScores({
               ) : null}
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
+                variant="ghost"
+                size="icon-sm"
                 className="h-7 px-2 text-xs"
                 onClick={() => setScreeningPreviewOpen(true)}
               >
-                Show more AI result
+                <InfoIcon className="size-4 shrink-0" aria-hidden />
               </Button>
             </div>
           </div>
