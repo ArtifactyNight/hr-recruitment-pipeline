@@ -375,6 +375,7 @@ export const applicantMutations = {
         durationMinutes: number;
         interviewerEmails?: string[];
         extraNotes?: string;
+        eventTitle?: string;
       }) => {
         const { data, error } = await api.api.interviews.post(
           {
@@ -383,6 +384,7 @@ export const applicantMutations = {
             durationMinutes: input.durationMinutes,
             interviewerEmails: input.interviewerEmails ?? [],
             extraNotes: input.extraNotes,
+            eventTitle: input.eventTitle,
           },
           { fetch: { credentials: "include" } },
         );

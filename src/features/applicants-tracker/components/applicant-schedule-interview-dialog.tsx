@@ -46,6 +46,8 @@ export type ScheduleInterviewSubmitInput = {
   applicantId: string;
   scheduledAt: string;
   durationMinutes: number;
+  /** Non-empty overrides Google Calendar event summary (Meet title in listings). */
+  eventTitle?: string;
   interviewerEmails?: Array<string>;
   extraNotes?: string;
 };
@@ -66,6 +68,7 @@ export type ApplicantScheduleInterviewDialogProps = {
 export type ScheduleInterviewFormState = {
   datetimeLocal: string;
   durationMinutes: string;
+  meetTitle: string;
   interviewerEmailsRaw: string;
   extraNotes: string;
 };
@@ -74,6 +77,10 @@ const slotFieldsSchema = scheduleInterviewFormSchema.pick({
   datetimeLocal: true,
   durationMinutes: true,
 });
+
+export function defaultMeetTitleForApplicant(applicantName: string): string {
+  return `สัมภาษณ์ - ${applicantName}`;
+}
 
 function datetimeLocalValue(date: Date): string {
   return format(date, "yyyy-MM-dd'T'HH:mm");
@@ -92,6 +99,7 @@ export function emptyScheduleInterviewFormState(): ScheduleInterviewFormState {
   return {
     datetimeLocal: "",
     durationMinutes: "60",
+    meetTitle: "",
     interviewerEmailsRaw: "",
     extraNotes: "",
   };
@@ -102,6 +110,7 @@ export function defaultScheduleInterviewFormState(): ScheduleInterviewFormState 
   return {
     datetimeLocal: defaultDatetimeLocalValue(),
     durationMinutes: "60",
+    meetTitle: "",
     interviewerEmailsRaw: "",
     extraNotes: "",
   };
@@ -122,6 +131,7 @@ export function scheduleInterviewFormStateForDate(
     return {
       datetimeLocal: datetimeLocalValue(next),
       durationMinutes: "60",
+      meetTitle: "",
       interviewerEmailsRaw: "",
       extraNotes: "",
     };
@@ -130,6 +140,7 @@ export function scheduleInterviewFormStateForDate(
   return {
     datetimeLocal: datetimeLocalValue(slot),
     durationMinutes: "60",
+    meetTitle: "",
     interviewerEmailsRaw: "",
     extraNotes: "",
   };
@@ -142,6 +153,7 @@ function formValuesFromState(
   return {
     datetimeLocal: state.datetimeLocal,
     durationMinutes: Number.isFinite(dur) ? dur : 60,
+    meetTitle: state.meetTitle ?? "",
     interviewerEmailsRaw: state.interviewerEmailsRaw ?? "",
     extraNotes:
       state.extraNotes.trim() === "" ? undefined : state.extraNotes.trim(),
@@ -342,10 +354,12 @@ export function ApplicantScheduleInterviewDialog({
           return;
         }
 
+        const titleTrimmed = values.meetTitle?.trim() ?? "";
         await onScheduleInterview({
           applicantId,
           scheduledAt: slot.toISOString(),
           durationMinutes: values.durationMinutes,
+          eventTitle: titleTrimmed === "" ? undefined : titleTrimmed,
           interviewerEmails: emailsResult.emails,
           extraNotes: values.extraNotes,
         });
@@ -446,6 +460,23 @@ export function ApplicantScheduleInterviewDialog({
                 ) : null}
               </FieldContent>
             </Field>
+            <Field data-invalid={formState.errors.meetTitle ? true : undefined}>
+              <FieldLabel htmlFor={`meet-title-${applicantId}`}>
+                หัวข้อ Google Meet / ปฏิทิน
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id={`meet-title-${applicantId}`}
+                  {...register("meetTitle")}
+                  disabled={schedulePending}
+                  maxLength={1024}
+                  placeholder="สัมภาษณ์ - ชื่อผู้สมัคร"
+                />
+                {formState.errors.meetTitle?.message ? (
+                  <FieldError>{formState.errors.meetTitle.message}</FieldError>
+                ) : null}
+              </FieldContent>
+            </Field>
             <Field
               data-invalid={
                 formState.errors.interviewerEmailsRaw ? true : undefined
@@ -475,7 +506,7 @@ export function ApplicantScheduleInterviewDialog({
               data-invalid={formState.errors.extraNotes ? true : undefined}
             >
               <FieldLabel htmlFor={`notes-${applicantId}`}>
-                ข้อความที่ต้องการแนบไปยัง Google Meet
+                ข้อความที่ต้องการแนบไปยัง Google Meet / ปฏิทิน
               </FieldLabel>
               <FieldContent>
                 <Textarea

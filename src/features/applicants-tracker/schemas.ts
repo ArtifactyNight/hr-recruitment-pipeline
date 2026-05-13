@@ -36,6 +36,8 @@ export type ApplicantProfileMap = z.infer<typeof applicantProfileMapSchema>;
 export const scheduleInterviewFormSchema = z.object({
   datetimeLocal: z.string().min(1, "เลือกวันและเวลา"),
   durationMinutes: z.number().int().min(15).max(480),
+  /** Google Calendar event summary (shown as Meet-related title); empty → server default. */
+  meetTitle: z.string().max(1024).optional(),
   interviewerEmailsRaw: z.string().optional(),
   extraNotes: z.string().max(16_000).optional(),
 });

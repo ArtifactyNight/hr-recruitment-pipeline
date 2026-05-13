@@ -512,7 +512,10 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         ),
       );
 
-      const summary = `สัมภาษณ์ - ${applicant.name}`;
+      const customTitle =
+        typeof body.eventTitle === "string" ? body.eventTitle.trim() : "";
+      const summary =
+        customTitle.length > 0 ? customTitle : `สัมภาษณ์ - ${applicant.name}`;
 
       let google: { eventId: string; meetLink: string | null | undefined };
       try {
@@ -604,6 +607,8 @@ export const interviewRoutes = new Elysia({ prefix: "/interviews" })
         interviewerIds: t.Optional(t.Array(t.String())),
         interviewerEmails: t.Optional(t.Array(t.String())),
         extraNotes: t.Optional(t.String()),
+        /** Overrides Google Calendar event summary (Meet listing title). */
+        eventTitle: t.Optional(t.String()),
         descriptionOverride: t.Optional(t.String()),
       }),
     },

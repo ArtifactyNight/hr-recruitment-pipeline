@@ -54,6 +54,7 @@ export const interviewMutations = {
             durationMinutes: input.durationMinutes,
             interviewerEmails: input.interviewerEmails,
             extraNotes: input.extraNotes,
+            eventTitle: input.eventTitle,
           },
           { fetch: { credentials: "include" } },
         );

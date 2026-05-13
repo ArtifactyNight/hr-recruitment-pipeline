@@ -951,3 +951,9 @@ All four touched files lint-clean.
 **Prompt:** setup r2 with s3 sdk (.env R2\_\* vars)
 **Output:** Installed `@aws-sdk/client-s3`. Added `src/lib/r2-s3.ts`: `getR2S3Client()` (endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`, region `auto`), `getR2BucketName()`, `getR2PublicBaseUrl()`, `getR2PublicObjectUrl(key)` for public R2.dev/custom URLs.
 **Edited:** `src/lib/r2-s3.ts`, `package.json`, `bun.lock`, `cowork-log.md`
+
+### 2026-05-13 - Editable Google Meet / calendar title when scheduling
+
+**Prompt:** allow user to change google meet title in applicant-schedule-interview-dialog
+**Output:** Form field `meetTitle` (max 1024) maps to optional `eventTitle` on `POST /api/interviews`; server uses it as Google Calendar `summary` when non-empty, else keeps `สัมภาษณ์ - {name}`. Exported `defaultMeetTitleForApplicant`; sheet seeds title on open; interviews calendar syncs title when applicant selection changes (`useInterviewsCalendarStore.getState()` merge). Mutations forward `eventTitle`.
+**Edited:** `applicant-schedule-interview-dialog.tsx`, `schemas.ts`, `interview.ts`, `applicantMutations.scheduleInterview`, `interviewMutations.schedule`, `applicant-detail-sheet.tsx`, `interviews-calendar.tsx`, `cowork-log.md`

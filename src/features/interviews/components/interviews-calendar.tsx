@@ -12,6 +12,7 @@ import { applicantMutations } from "@/features/applicants-tracker/api/mutations"
 import { ApplicantDetailSheet } from "@/features/applicants-tracker/components/applicant-detail-sheet";
 import {
   ApplicantScheduleInterviewDialog,
+  defaultMeetTitleForApplicant,
   emptyScheduleInterviewFormState,
   scheduleInterviewFormStateForDate,
   type ScheduleInterviewSubmitInput,
@@ -32,7 +33,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, startOfDay } from "date-fns";
 import { th } from "date-fns/locale";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 
@@ -198,6 +199,15 @@ export function InterviewsCalendar() {
       (a) => a.id === effectiveSelectedApplicantId,
     );
   }, [scheduleApplicants, effectiveSelectedApplicantId]);
+
+  useEffect(() => {
+    if (!scheduleOpen || !selectedApplicantForOverlap) return;
+    const store = useInterviewsCalendarStore.getState();
+    store.setScheduleForm({
+      ...store.scheduleForm,
+      meetTitle: defaultMeetTitleForApplicant(selectedApplicantForOverlap.name),
+    });
+  }, [scheduleOpen, selectedApplicantForOverlap?.id]);
 
   const openScheduleForDate = useCallback(
     (date: Date) => {

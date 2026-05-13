@@ -24,6 +24,7 @@ import { ApplicantDetailNotesSection } from "@/features/applicants-tracker/compo
 import { ApplicantDetailResumeSection } from "@/features/applicants-tracker/components/applicant-detail-resume-section";
 import {
   ApplicantScheduleInterviewDialog,
+  defaultMeetTitleForApplicant,
   defaultScheduleInterviewFormState,
   emptyScheduleInterviewFormState,
   type ScheduleInterviewFormState,
@@ -644,9 +645,13 @@ export function ApplicantDetailSheet({
   );
 
   const openScheduleDialog = useCallback(() => {
-    setScheduleForm(defaultScheduleInterviewFormState());
+    if (!applicant) return;
+    setScheduleForm({
+      ...defaultScheduleInterviewFormState(),
+      meetTitle: defaultMeetTitleForApplicant(applicant.name),
+    });
     setScheduleOpen(true);
-  }, []);
+  }, [applicant]);
 
   return (
     <>
