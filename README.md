@@ -197,4 +197,6 @@ bunx prisma migrate dev  # Create/apply migrations (team/production)
 
 ![Applicant management](https://m1r.ai/T2Qn1.png)
 
-![Additional applicant view](https://m1r.ai/d9qO.png)
+![Calendar](https://m1r.ai/nIfB0.png)
+
+![Job Management](https://m1r.ai/d9qO.png)
