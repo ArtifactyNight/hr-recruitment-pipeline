@@ -49,6 +49,8 @@ bun run dev
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with Google.
 
+**Test user:** Sign in with the Google account `**career@hotelplus.asia`**. The setup instructions add a test user for that address; using the same email avoids a mismatch between OAuth and your database user row.
+
 After schema changes: `bunx prisma generate` (also runs on `bun install`) and either `bunx prisma migrate dev` (tracked migrations) or `bunx prisma db push` (prototype only).
 
 **Production:** `bun run start` runs `prisma migrate deploy` then `next start`.
@@ -56,6 +58,7 @@ After schema changes: `bunx prisma generate` (also runs on `bun install`) and ei
 ---
 
 ## Environment variables
+
 
 | Variable                       | Required | Description                                        |
 | ------------------------------ | -------- | -------------------------------------------------- |
@@ -65,20 +68,21 @@ After schema changes: `bunx prisma generate` (also runs on `bun install`) and ei
 | `NEXT_PUBLIC_APP_URL`          | Yes      | Same as `BETTER_AUTH_URL`, exposed to the client   |
 | `GOOGLE_CLIENT_ID`             | Yes      | Google OAuth client ID                             |
 | `GOOGLE_CLIENT_SECRET`         | Yes      | Google OAuth client secret                         |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Yes      | Gemini API key for AI resume screening           |
-| `R2_ACCOUNT_ID`                | Yes\*    | Cloudflare R2 account ID                           |
-| `R2_ACCESS_KEY_ID`           | Yes\*    | R2 access key                                      |
-| `R2_SECRET_ACCESS_KEY`       | Yes\*    | R2 secret key                                      |
-| `R2_BUCKET_NAME`             | Yes\*    | R2 bucket name                                     |
-| `R2_PUBLIC_URL`              | Yes\*    | Public base URL of the R2 bucket                   |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Yes      | Gemini API key for AI resume screening             |
+| `R2_ACCOUNT_ID`                | Yes      | Cloudflare R2 account ID                           |
+| `R2_ACCESS_KEY_ID`             | Yes      | R2 access key                                      |
+| `R2_SECRET_ACCESS_KEY`         | Yes      | R2 secret key                                      |
+| `R2_BUCKET_NAME`               | Yes      | R2 bucket name                                     |
+| `R2_PUBLIC_URL`                | Yes      | Public base URL of the R2 bucket                   |
 
-\*R2 is required for PDF resume uploads; without it the server returns `503` on upload. Text-only resumes still work — you can use placeholder values to defer storage setup.
+
+R2 is required for PDF resume uploads; without it the server returns `503` on upload. Text-only resumes still work — you can use placeholder values to defer storage setup.
 
 ---
 
 ## Google OAuth setup
 
-[Better Auth](https://www.better-auth.com/) handles OAuth, sessions, token storage, and refresh rotation. The Google OAuth access token is stored in your own `Account` table (Prisma); [`src/lib/get-google-token.ts`](src/lib/get-google-token.ts) reads it with a plain database query — no separate vendor token API for Calendar calls.
+[Better Auth](https://www.better-auth.com/) handles OAuth, sessions, token storage, and refresh rotation. The Google OAuth access token is stored in your own `Account` table (Prisma); `[src/lib/get-google-token.ts](src/lib/get-google-token.ts)` reads it with a plain database query — no separate vendor token API for Calendar calls.
 
 You need:
 
@@ -94,20 +98,22 @@ You need:
 
 The goal is **full-stack TypeScript** with minimal drift between UI and API: validate on the server, infer types on the client, and keep server state out of global client stores.
 
-| Concern | Choice | Rationale |
-| ------- | ------ | --------- |
-| Framework | **Next.js** (App Router), **React 19** | File-based routing, server components where they fit, one deployable for UI + API route glue |
-| UI | **Tailwind CSS**, **shadcn/ui** | Consistent components with little bespoke CSS |
-| HTTP API | **Elysia** + **Eden Treaty** | TypeBox-validated REST: bad requests fail before handlers; response shapes live in the type graph. Eden derives a typed client from Elysia — **no hand-written API types and no codegen**. Route changes surface as TypeScript errors in callers. Compared to tRPC you keep a normal REST surface; compared to raw `fetch` you avoid types that silently drift |
-| Database | **PostgreSQL** + **Prisma** | Relational model for hiring data, migrations, type-safe queries |
-| Auth | **Better Auth** + Google OAuth | Sessions and refresh without custom JWT plumbing. Google tokens live in **your** DB so Calendar usage is a Prisma read, not a third-party token microservice |
-| Data Fetching | **TanStack Query** + **Elysia Eden Treaty** | Caching, background refetch, optimistic updates for applicants, jobs, interviews — all derived from the same Elysia types |
-| State Management | **Zustand** | Dialogs, wizard steps, filters. Rule: **if it came from the server, TanStack Query; if it only exists in the browser, Zustand** |
-| AI | **Vercel AI SDK** + **Gemini** (`@ai-sdk/google`) | Library that support 20+ providers. I pick this to structured output for fit scoring and parsing data |
-| Files | **Cloudflare R2** (S3-compatible) | Presigned URLs for PDF uploads |
-| Calendar | **Google Calendar API** + **Meet** | Scheduling, Meet links, conflict checks |
-| Logging | **evlog** | Structured / wide events with Next.js and Elysia adapters |
-| Scraping | **Apify** (`apify-client`) | Structured profile import (e.g. LinkedIn via a hosted actor and dataset API) without running your own headless stack. Generic URLs in the same flow use **Firecrawl**; set `APIFY_API_TOKEN` (see `src/lib/scraping.ts`) |
+
+| Concern          | Choice                                            | Rationale                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework        | **Next.js** (App Router), **React 19**            | File-based routing, server components where they fit, one deployable for UI + API route glue                                                                                                                                                                                                                                                                   |
+| UI               | **Tailwind CSS**, **shadcn/ui**                   | Consistent components with little bespoke CSS                                                                                                                                                                                                                                                                                                                  |
+| HTTP API         | **Elysia** + **Eden Treaty**                      | TypeBox-validated REST: bad requests fail before handlers; response shapes live in the type graph. Eden derives a typed client from Elysia — **no hand-written API types and no codegen**. Route changes surface as TypeScript errors in callers. Compared to tRPC you keep a normal REST surface; compared to raw `fetch` you avoid types that silently drift |
+| Database         | **PostgreSQL** + **Prisma**                       | Relational model for hiring data, migrations, type-safe queries                                                                                                                                                                                                                                                                                                |
+| Auth             | **Better Auth** + Google OAuth                    | Sessions and refresh without custom JWT plumbing. Google tokens live in **your** DB so Calendar usage is a Prisma read, not a third-party token microservice                                                                                                                                                                                                   |
+| Data Fetching    | **TanStack Query** + **Elysia Eden Treaty**       | Caching, background refetch, optimistic updates for applicants, jobs, interviews — all derived from the same Elysia types                                                                                                                                                                                                                                      |
+| State Management | **Zustand**                                       | Dialogs, wizard steps, filters. Rule: **if it came from the server, TanStack Query; if it only exists in the browser, Zustand**                                                                                                                                                                                                                                |
+| AI               | **Vercel AI SDK** + **Gemini** (`@ai-sdk/google`) | Library that support 20+ providers. I pick this to structured output for fit scoring and parsing data                                                                                                                                                                                                                                                          |
+| Files            | **Cloudflare R2** (S3-compatible)                 | Presigned URLs for PDF uploads                                                                                                                                                                                                                                                                                                                                 |
+| Calendar         | **Google Calendar API** + **Meet**                | Scheduling, Meet links, conflict checks                                                                                                                                                                                                                                                                                                                        |
+| Logging          | **evlog**                                         | Structured / wide events with Next.js and Elysia adapters                                                                                                                                                                                                                                                                                                      |
+| Scraping         | **Apify** (`apify-client`)                        | Structured profile import (e.g. LinkedIn via a hosted actor and dataset API) without running your own headless stack. Generic URLs in the same flow use **Firecrawl**; set `APIFY_API_TOKEN` (see `src/lib/scraping.ts`)                                                                                                                                       |
+
 
 New dependencies should have a clear justification — this table is the baseline.
 
@@ -137,15 +143,15 @@ Conventions:
 
 - `api/` — TanStack Query only; no ad-hoc `fetch` in feature code  
 - `lib/` — Pure functions, no React, no side effects  
-- `store/` — UI state only; no server cache here  
+- `store/` — UI state only; no server cache here
 
 Shared: `src/components/`, `src/lib/` (auth, Prisma, Eden client), `src/server/` (Elysia app, routes), `src/types/`.
 
 ### API layer
 
-[`src/server/index.ts`](src/server/index.ts) exports `elysiaApp` with prefix `/api`. It is wired through the Next.js catch-all [`src/app/api/[[...slugs]]/route.ts`](src/app/api/[[...slugs]]/route.ts). Import the typed Eden client as `api` from `@/lib/api` and call routes like functions.
+`[src/server/index.ts](src/server/index.ts)` exports `elysiaApp` with prefix `/api`. It is wired through the Next.js catch-all `[src/app/api/[[...slugs]]/route.ts](src/app/api/[[...slugs]]/route.ts)`. Import the typed Eden client as `api` from `@/lib/api` and call routes like functions.
 
-**Better Auth** lives on a separate handler: [`src/app/api/auth/[...all]/route.ts`](src/app/api/auth/[...all]/route.ts) (`/api/auth/*`).
+**Better Auth** lives on a separate handler: `[src/app/api/auth/[...all]/route.ts](src/app/api/auth/[...all]/route.ts)` (`/api/auth/`*).
 
 Elysia routes (non-exhaustive):
 
@@ -183,3 +189,12 @@ bunx prisma studio       # Database GUI
 bunx prisma db push      # Sync schema without a migration (local/prototype)
 bunx prisma migrate dev  # Create/apply migrations (team/production)
 ```
+
+---
+
+## Screenshot
+
+Home
+Applicant
+Applicant Management
+Job Management
