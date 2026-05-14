@@ -107,6 +107,7 @@ The goal is **full-stack TypeScript** with minimal drift between UI and API: val
 | Files | **Cloudflare R2** (S3-compatible) | Presigned URLs for PDF uploads |
 | Calendar | **Google Calendar API** + **Meet** | Scheduling, Meet links, conflict checks |
 | Logging | **evlog** | Structured / wide events with Next.js and Elysia adapters |
+| Scraping | **Apify** (`apify-client`) | Structured profile import (e.g. LinkedIn via a hosted actor and dataset API) without running your own headless stack. Generic URLs in the same flow use **Firecrawl**; set `APIFY_API_TOKEN` (see `src/lib/scraping.ts`) |
 
 New dependencies should have a clear justification — this table is the baseline.
 
